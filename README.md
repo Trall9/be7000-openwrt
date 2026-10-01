@@ -10,10 +10,40 @@
 > [CHANGELOG](CHANGELOG.md).
 
 Основа — порт поддержки BE7000 от [kravasuper](https://github.com/kravasuper/openwrt)
-(ветка `xiaomi_be7000`), перенесённый на свежий OpenWrt main. Спасибо
-[kravasuper](https://github.com/kravasuper/openwrt),
-[timofey-maykov](https://github.com/timofey-maykov/be7000-openwrt) (Beam WRT) и
-[Quarx2k](https://github.com/Quarx2k/OpenWRT-BE7000).
+(ветка `xiaomi_be7000`), перенесённый на свежий OpenWrt main, с фиксами Ethernet из
+[Beam WRT](https://github.com/timofey-maykov/be7000-openwrt) (timofey-maykov) и находками
+[Quarx2k](https://github.com/Quarx2k/OpenWRT-BE7000). **Полный список авторов — что у кого
+взято и что доработано здесь — в [CREDITS.md](CREDITS.md).**
+
+## Зачем разметка QWRT 80 МБ
+
+Стоковый загрузчик Xiaomi делит флеш на два слота по 40 МБ (A/B). В 40 МБ помещается только
+минимальная OpenWrt: ядро, Wi-Fi, LuCI и пара пакетов. Загрузчик QWRT отдаёт системе один
+раздел **80 МБ**, и это даёт:
+
+- **всё нужное сразу в прошивке** — AmneziaWG, Podkop/sing-box, zapret, samba, Docker-интеграция,
+  графики, каталог приложений (образ 53 МБ — в стоковый слот не помещается);
+- **~20 МБ свободной памяти** под настройки и пакеты из каталога (в стоковой разметке после
+  прошивки остаются единицы мегабайт);
+- **драйверы и программы из каталога ставятся во флеш**, не только на USB-диск.
+
+Цена: нет второго слота для автоматического отката. Поэтому обновление — только через
+recovery загрузчика (он не стирается), а `sysupgrade` отключён, чтобы не стереть единственную систему.
+
+## Чем отличается от других сборок для BE7000
+
+| | Эта сборка | [Beam WRT](https://github.com/timofey-maykov/be7000-openwrt) | [Quarx2k](https://github.com/Quarx2k/OpenWRT-BE7000) | [kravasuper](https://github.com/kravasuper/openwrt) |
+|---|---|---|---|---|
+| Разметка | QWRT, 1 × 80 МБ | сток, 2 × 40 МБ (A/B) | без записи во флеш (kexec с USB) | сток, 2 × 40 МБ |
+| Ядро / Wi-Fi | 6.18.54 / драйверы ядра 7.2 | 6.18.36 / 6.18 | 6.18.52 / нативные | 6.18.36 / 6.18 |
+| Откат на сток | через QWRT recovery | слотом (сток остаётся) | вынуть флешку | слотом |
+| Каталог приложений, Entware, фид kmod | ✅ | — | — | — |
+| AmneziaWG + быстрая настройка `vpn://` | ✅ | AmneziaWG | — | — |
+| Podkop, zapret, byedpi | ✅ | — | — | — |
+| Docker, qBittorrent, Jackett на USB-диск | ✅ | — | — | — |
+
+Сравнение — по репозиториям авторов на сентябрь 2026; у них могло что-то добавиться.
+Если у вас стоковый загрузчик и вы хотите сохранить сток во втором слоте — берите Beam WRT.
 
 ## Версии компонентов (beta2)
 
@@ -34,7 +64,7 @@
 ## Что внутри
 
 - **Wi-Fi:** 2.4 ГГц (ath11k, Wi-Fi 6) + 5 ГГц (ath12k QCN9274, Wi-Fi 7, до 160 МГц), 802.11k/v, WPA3.
-- **VPN:** WireGuard, **AmneziaWG** (AWG 2.0), OpenVPN. Страница **VPN → Быстрая настройка**:
+- **VPN:** WireGuard, **AmneziaWG** (пакеты YAAWG 3.1.2; протокол AWG 2.0 — I1–I5, диапазоны H, конфиги старого формата без I1 тоже работают), OpenVPN. Страница **VPN → Быстрая настройка**:
   вставить `.conf` или ключ `vpn://` из AmneziaVPN → «только выбранные сайты» или «весь трафик».
 - **Обход блокировок** (выключены по умолчанию): **zapret**, **Podkop** (sing-box: VLESS/Reality,
   Trojan, Shadowsocks, Hysteria2), byedpi, pbr, **DNS over HTTPS**.
