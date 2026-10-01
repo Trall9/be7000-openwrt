@@ -1,0 +1,47 @@
+From 6ddf7e66988e4ffac3e376fea4eeca53ff190b44 Mon Sep 17 00:00:00 2001
+From: Trall9 <Trall9@users.noreply.github.com>
+Date: Thu, 1 Oct 2026 20:45:51 +0200
+Subject: [PATCH 4/5] be7000: feed patch minidlna for ffmpeg 9 (ch_layout)
+
+---
+ feed-patches/apply.sh                              |  6 ++++++
+ .../minidlna/patches/080-ffmpeg-ch-layout.patch    | 14 ++++++++++++++
+ 2 files changed, 20 insertions(+)
+ create mode 100755 feed-patches/apply.sh
+ create mode 100644 feed-patches/packages/multimedia/minidlna/patches/080-ffmpeg-ch-layout.patch
+
+diff --git a/feed-patches/apply.sh b/feed-patches/apply.sh
+new file mode 100755
+index 00000000..bf5ab638
+--- /dev/null
++++ b/feed-patches/apply.sh
+@@ -0,0 +1,6 @@
++#!/bin/sh
++# Патчи к фидам OpenWrt, которых ещё нет в upstream. Запускать после ./scripts/feeds update.
++cd "$(dirname "$0")/.." || exit 1
++for f in $(cd feed-patches && find . -name '*.patch'); do
++	mkdir -p "feeds/${f%/*}" && cp "feed-patches/$f" "feeds/$f" && echo "feed patch: $f"
++done
+diff --git a/feed-patches/packages/multimedia/minidlna/patches/080-ffmpeg-ch-layout.patch b/feed-patches/packages/multimedia/minidlna/patches/080-ffmpeg-ch-layout.patch
+new file mode 100644
+index 00000000..c412f961
+--- /dev/null
++++ b/feed-patches/packages/multimedia/minidlna/patches/080-ffmpeg-ch-layout.patch
+@@ -0,0 +1,14 @@
++--- a/libav.h
+++++ b/libav.h
++@@ -174,7 +174,11 @@ lav_get_interlaced(AVStream *s)
++ #define lav_codec_tag(s) s->codecpar->codec_tag
++ #define lav_sample_rate(s) s->codecpar->sample_rate
++ #define lav_bit_rate(s) s->codecpar->bit_rate
+++#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 24, 100)
+++#define lav_channels(s) s->codecpar->ch_layout.nb_channels
+++#else
++ #define lav_channels(s) s->codecpar->channels
+++#endif
++ #define lav_width(s) s->codecpar->width
++ #define lav_height(s) s->codecpar->height
++ #define lav_profile(s) s->codecpar->profile
+-- 
+2.43.0
+

@@ -1,0 +1,53 @@
+#!/bin/sh
+# IPv6 в LAN без делегирования префикса (IA_PD).
+# Типовой случай: BE7000 стоит за роутером провайдера, тот даёт wan только /64
+# (SLAAC/IA_NA) и не делегирует префикс дальше. Штатный OpenWrt раздаёт в LAN
+# только из делегированного префикса → клиентам достаётся один ULA, IPv6-интернета
+# у них нет. Решение — relay odhcpd (RA/DHCPv6/NDP из сети провайдера в LAN) +
+# NAT66 как страховка для клиентов без GUA. Подробности: IPV6_НАСТРОЙКА (26.09).
+#
+# Срабатывает один раз, только если настройки DHCP для LAN не трогали:
+#   network.globals.be7000_ipv6_relay: не задано — можно; 1 — применено;
+#   0 — владелец отказался (выставить вручную, чтобы скрипт не вмешивался).
+
+[ "$ACTION" = ifup ] && [ "$INTERFACE" = wan6 ] || exit 0
+[ -z "$(uci -q get network.globals.be7000_ipv6_relay)" ] || exit 0
+
+(
+	# IA_PD может прийти не сразу после ifup
+	sleep 60
+	[ -z "$(uci -q get network.globals.be7000_ipv6_relay)" ] || exit 0
+	st=$(ifstatus wan6) || exit 0
+	# префикс делегирован — штатный server-режим работает сам
+	[ -n "$(echo "$st" | jsonfilter -e '@["ipv6-prefix"][0].address')" ] && exit 0
+	# на wan должен быть глобальный адрес, иначе раздавать нечего
+	echo "$st" | jsonfilter -e '@["ipv6-address"][*].address' | grep -qE '^[23]' || exit 0
+	# настройки DHCP LAN уже меняли руками — не вмешиваемся
+	ra=$(uci -q get dhcp.lan.ra)
+	[ -z "$ra" ] || [ "$ra" = server ] || exit 0
+	uci -q get dhcp.wan6 >/dev/null && exit 0
+
+	wz=$(uci show firewall | sed -n "s/^firewall\.\(@zone\[[0-9]*\]\)\.name='wan'$/\1/p" | head -1)
+	uci -q batch <<-EOF
+		set dhcp.wan6=dhcp
+		set dhcp.wan6.interface='wan6'
+		set dhcp.wan6.master='1'
+		set dhcp.wan6.ra='relay'
+		set dhcp.wan6.dhcpv6='relay'
+		set dhcp.wan6.ndp='relay'
+		set dhcp.lan.ra='relay'
+		set dhcp.lan.dhcpv6='relay'
+		set dhcp.lan.ndp='relay'
+		set network.wan6.sourcefilter='0'
+		set network.globals.be7000_ipv6_relay='1'
+		${wz:+set firewall.$wz.masq6='1'}
+		commit dhcp
+		commit network
+		commit firewall
+	EOF
+	logger -t be7000-ipv6 "провайдер не делегирует префикс (IA_PD) — включён relay IPv6 в LAN + NAT66"
+	/etc/init.d/odhcpd restart
+	fw4 -q reload
+	# sourcefilter применяется при поднятии wan6
+	ifup wan6
+) </dev/null >/dev/null 2>&1 &

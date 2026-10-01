@@ -1,0 +1,41 @@
+#!/bin/sh
+# Пакеты beta2: zapret, https-dns-proxy, vnstat2, statistics, watchcat, banIP.
+# Правило: ничего, что меняет DNS/маршрутизацию, само не включается — включает владелец.
+[ "$(board_name)" = "xiaomi,be7000" ] || exit 0
+
+# https-dns-proxy: пакет включён по умолчанию, перехватывает DNS всей LAN
+# (force_dns) и переписывает upstream dnsmasq — на чистой установке и поверх
+# Podkop/adblock-fast это сюрприз. Выключаем, если владелец им ещё не пользовался
+# (признак: dnsmasq уже смотрит на 127.0.0.1#505x — значит включал до бэкапа).
+if [ -x /etc/init.d/https-dns-proxy ]; then
+	if uci -q get dhcp.@dnsmasq[0].server | grep -q '127.0.0.1#505'; then
+		/etc/init.d/https-dns-proxy enable
+	else
+		/etc/init.d/https-dns-proxy disable
+		/etc/init.d/https-dns-proxy stop 2>/dev/null
+	fi
+fi
+
+# vnstat2: база по умолчанию в RAM (/var/lib/vnstat) — история пропадала бы
+# при каждой перезагрузке. Храним во флеше, сохраняем раз в 30 мин.
+if [ -f /etc/vnstat.conf ]; then
+	mkdir -p /etc/vnstat
+	sed -i -e 's|^;*DatabaseDir .*|DatabaseDir "/etc/vnstat"|' \
+	       -e 's|^;*SaveInterval .*|SaveInterval 30|' /etc/vnstat.conf
+	grep -qx '/etc/vnstat/' /etc/sysupgrade.conf 2>/dev/null || echo '/etc/vnstat/' >> /etc/sysupgrade.conf
+	if ! uci -q get vnstat.@vnstat[0].interface >/dev/null; then
+		uci -q add_list vnstat.@vnstat[0].interface='wan'
+		uci -q add_list vnstat.@vnstat[0].interface='br-lan'
+		uci -q commit vnstat
+	fi
+fi
+
+# watchcat: заводское «нет пинга 8.8.8.8 6 ч → перезагрузка» оставляем, но
+# пингуем два независимых адреса, чтобы сбой одного сервиса не ребутал роутер.
+if uci -q get watchcat.@watchcat[0] >/dev/null && \
+   [ "$(uci -q get watchcat.@watchcat[0].pinghosts)" = "8.8.8.8" ]; then
+	uci -q set watchcat.@watchcat[0].pinghosts='8.8.8.8 1.1.1.1'
+	uci -q commit watchcat
+fi
+
+exit 0

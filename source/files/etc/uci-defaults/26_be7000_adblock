@@ -1,0 +1,25 @@
+#!/bin/sh
+# adblock-fast: в заводском конфиге пакета ВСЕ списки выключены — включение
+# службы в LuCI падает с «No blocked list URLs nor blocked-domains enabled».
+# Включаем Hagezi Pro (~230 тыс. доменов, баланс блокировки и ложных
+# срабатываний; 1Hosts Lite слишком мал — 3.7 тыс., без doubleclick), если
+# пользователь не выбрал свои. Саму службу не включаем — это решает владелец.
+[ -f /etc/config/adblock-fast ] || exit 0
+# Служба в образе включена (rc.d), а конфиг — enabled=0 → на каждой загрузке
+# «[ERROR] The adblock-fast is currently disabled!». Выключенный конфиг = выключенная
+# служба; кнопка «Включить» в LuCI включает обратно и то, и другое.
+[ "$(uci -q get adblock-fast.config.enabled)" = "1" ] || /etc/init.d/adblock-fast disable 2>/dev/null
+if uci -q show adblock-fast | grep "=file_url" >/dev/null && \
+   ! uci -q show adblock-fast | grep -E "@file_url\[[0-9]+\]\.enabled='1'" >/dev/null && \
+   [ -z "$(uci -q get adblock-fast.config.dnsmasq_config_file_url)" ]; then
+	i=0
+	while uci -q get adblock-fast.@file_url[$i] >/dev/null; do
+		if [ "$(uci -q get adblock-fast.@file_url[$i].name)" = "Hagezi - Pro" ]; then
+			uci -q set adblock-fast.@file_url[$i].enabled='1'
+			uci -q commit adblock-fast
+			break
+		fi
+		i=$((i + 1))
+	done
+fi
+exit 0

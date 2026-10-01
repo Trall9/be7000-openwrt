@@ -1,0 +1,266 @@
+#!/bin/sh
+# be7000-vpn — быстрая настройка туннелей WireGuard / AmneziaWG из .conf
+# (бэкенд страницы LuCI «VPN → Быстрая настройка»; работает и из SSH).
+#
+#   be7000-vpn status                          — JSON: туннели, рукопожатие, трафик
+#   be7000-vpn import <file.conf> <имя> full   — весь трафик устройств сети через туннель
+#   be7000-vpn import <file.conf> <имя> sites <домен> [домен…]
+#                                              — через туннель только эти сайты
+#   be7000-vpn delete <имя>                    — удалить туннель и его правила
+#   be7000-vpn test <имя>                      — внешний IP через туннель
+#
+# Маршрутизация — через pbr (правила «be7000-vpn:<имя>»), сам туннель маршрут по
+# умолчанию не трогает (route_allowed_ips=0): трафик самого роутера (обновления,
+# торренты, DNS) остаётся на провайдере. IPv6: туннели от VPN-сервисов обычно
+# только IPv4, поэтому IPv6 к «своим» сайтам (или весь IPv6 устройств в режиме
+# full) блокируется — устройства сразу переходят на IPv4 и идут в туннель,
+# а не утекают мимо него.
+
+. /usr/share/libubox/jshn.sh
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+valid_name() { echo "$1" | grep -qE '^[a-z][a-z0-9_]{0,10}$'; }
+
+# ---------- разбор .conf ----------
+# conf_get <секция Interface|Peer> <ключ> — первое значение (первый Peer)
+conf_get() {
+	awk -v sec="$2" -v key="$3" '
+		/^[[:space:]]*\[/ { s=$0; gsub(/[][[:space:]]/, "", s); if (s == "Peer") np++; next }
+		{
+			line=$0; sub(/[#;].*$/, "", line)
+			i=index(line, "="); if (!i) next
+			k=substr(line, 1, i-1); v=substr(line, i+1)
+			gsub(/^[[:space:]]+|[[:space:]]+$/, "", k); gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+			cur = (np ? "Peer" : "Interface")
+			if (cur == sec && tolower(k) == tolower(key) && (sec != "Peer" || np == 1) && !found) { print v; found=1 }
+		}' "$1"
+}
+
+AWG_KEYS="Jc:awg_jc Jmin:awg_jmin Jmax:awg_jmax S1:awg_s1 S2:awg_s2 S3:awg_s3 S4:awg_s4
+H1:awg_h1 H2:awg_h2 H3:awg_h3 H4:awg_h4 I1:awg_i1 I2:awg_i2 I3:awg_i3 I4:awg_i4 I5:awg_i5
+HeaderProtectionKey:awg_header_protection_key ContentPaddingAddition:awg_content_padding_addition
+RekeyAfterTime:awg_rekey_after_time RekeyTimeout:awg_rekey_timeout RejectAfterTime:awg_reject_after_time
+KeepaliveTimeout:awg_keepalive_timeout MaxHandshakeAttempts:awg_max_handshake_attempts"
+AWG_FLAGS="RandomTrailers:awg_random_trailers DisableCookies:awg_disable_cookies"
+
+is_awg() {
+	local kv
+	for kv in $AWG_KEYS $AWG_FLAGS; do
+		[ -n "$(conf_get "$1" Interface "${kv%%:*}")" ] && return 0
+	done
+	return 1
+}
+
+lan_subnets() {
+	local st a m
+	st=$(ubus call network.interface.lan status 2>/dev/null)
+	a=$(echo "$st" | jsonfilter -e '@["ipv4-address"][0].address' 2>/dev/null)
+	m=$(echo "$st" | jsonfilter -e '@["ipv4-address"][0].mask' 2>/dev/null)
+	[ -n "$a" ] || { a=$(uci -q get network.lan.ipaddr); a=${a%%/*}; m=24; }
+	# адрес роутера → сеть (192.168.1.1/24 → 192.168.1.0/24)
+	echo "$a/${m:-24}" | awk -F'[./]' '{
+		m=$5; ip=(($1*256+$2)*256+$3)*256+$4; sz=2^(32-m); net=int(ip/sz)*sz
+		printf "%d.%d.%d.%d/%d", int(net/16777216)%256, int(net/65536)%256, int(net/256)%256, net%256, m }'
+}
+
+# секция pbr-правила туннеля
+pbr_policy() { uci -q show pbr | sed -n "s/^pbr\.\([^.]*\)\.name='be7000-vpn:$1'$/\1/p" | head -n1; }
+
+ensure_vpn_zone() {
+	if ! uci -q show firewall | grep -q "\.name='vpn'"; then
+		uci -q batch <<-'EOT'
+			set firewall.vpn=zone
+			set firewall.vpn.name='vpn'
+			set firewall.vpn.input='REJECT'
+			set firewall.vpn.output='ACCEPT'
+			set firewall.vpn.forward='REJECT'
+			set firewall.vpn.masq='1'
+			set firewall.vpn.mtu_fix='1'
+			set firewall.lan_vpn=forwarding
+			set firewall.lan_vpn.src='lan'
+			set firewall.lan_vpn.dest='vpn'
+		EOT
+	fi
+}
+
+zone_section() { uci -q show firewall | sed -n "s/^firewall\.\([^.]*\)\.name='vpn'$/\1/p" | head -n1; }
+
+reload_all() {
+	/etc/init.d/network reload >/dev/null 2>&1
+	/etc/init.d/firewall reload >/dev/null 2>&1
+	/etc/init.d/dnsmasq restart >/dev/null 2>&1
+	/etc/init.d/pbr enabled || /etc/init.d/pbr enable
+	/etc/init.d/pbr restart >/dev/null 2>&1
+}
+
+# ---------- import ----------
+do_import() {
+	local file="$1" name="$2" mode="$3"; shift 3
+	local proto peer kv v addr ep host port pk ka mtu z lan d
+	[ -r "$file" ] || die "нет файла конфигурации"
+	valid_name "$name" || die "имя: латиница/цифры/_ , начинается с буквы, до 11 символов"
+	uci -q get network."$name" >/dev/null && die "интерфейс $name уже существует"
+	case "$mode" in
+		full) ;;
+		sites) [ $# -gt 0 ] || die "укажите хотя бы один сайт" ;;
+		*) die "режим: full или sites" ;;
+	esac
+	pk=$(conf_get "$file" Interface PrivateKey)
+	[ -n "$pk" ] || die "в конфигурации нет [Interface] PrivateKey"
+	[ -n "$(conf_get "$file" Peer PublicKey)" ] || die "в конфигурации нет [Peer] PublicKey"
+	ep=$(conf_get "$file" Peer Endpoint)
+	[ -n "$ep" ] || die "в конфигурации нет [Peer] Endpoint"
+
+	if is_awg "$file"; then proto=amneziawg; else proto=wireguard; fi
+	peer="${name}_peer"
+
+	uci -q batch <<-EOT
+		set network.$name=interface
+		set network.$name.proto='$proto'
+		set network.$name.private_key='$pk'
+		set network.$name.be7000_vpn='$mode'
+		set network.$peer=${proto}_$name
+		set network.$peer.description='be7000-vpn'
+		set network.$peer.public_key='$(conf_get "$file" Peer PublicKey)'
+		set network.$peer.route_allowed_ips='0'
+	EOT
+	for addr in $(conf_get "$file" Interface Address | tr ',' ' '); do
+		uci -q add_list network."$name".addresses="$addr"
+	done
+	mtu=$(conf_get "$file" Interface MTU); [ -n "$mtu" ] && uci -q set network."$name".mtu="$mtu"
+	if [ "$proto" = amneziawg ]; then
+		for kv in $AWG_KEYS; do
+			v=$(conf_get "$file" Interface "${kv%%:*}")
+			[ -n "$v" ] && uci -q set network."$name"."${kv#*:}"="$v"
+		done
+		for kv in $AWG_FLAGS; do
+			v=$(conf_get "$file" Interface "${kv%%:*}")
+			echo "$v" | grep -qiE '^(on|1|true|yes)$' && uci -q set network."$name"."${kv#*:}"='1'
+		done
+	fi
+	v=$(conf_get "$file" Peer PresharedKey); [ -n "$v" ] && uci -q set network."$peer".preshared_key="$v"
+	case "$ep" in
+		\[*\]:*) host=${ep%%]:*}; host=${host#[}; port=${ep##*]:} ;;
+		*:*)     host=${ep%:*}; port=${ep##*:} ;;
+		*)       host=$ep; port=51820 ;;
+	esac
+	uci -q set network."$peer".endpoint_host="$host"
+	uci -q set network."$peer".endpoint_port="$port"
+	ka=$(conf_get "$file" Peer PersistentKeepalive); ka=${ka%%-*}
+	uci -q set network."$peer".persistent_keepalive="${ka:-25}"
+	v=$(conf_get "$file" Peer AllowedIPs); [ -n "$v" ] || v="0.0.0.0/0"
+	for addr in $(echo "$v" | tr ',' ' '); do
+		uci -q add_list network."$peer".allowed_ips="$addr"
+	done
+
+	# firewall: туннель — в зону vpn (NAT из LAN)
+	ensure_vpn_zone
+	z=$(zone_section)
+	uci -q del_list firewall."$z".network="$name"
+	uci -q add_list firewall."$z".network="$name"
+
+	# pbr: маршрутизация
+	uci -q set pbr.config.enabled='1'
+	uci -q add_list pbr.config.supported_interface="$name" 2>/dev/null
+	uci -q add pbr policy >/dev/null
+	uci -q set pbr.@policy[-1].name="be7000-vpn:$name"
+	uci -q set pbr.@policy[-1].interface="$name"
+	uci -q set pbr.@policy[-1].enabled='1'
+	if [ "$mode" = full ]; then
+		lan=$(lan_subnets)
+		uci -q set pbr.@policy[-1].src_addr="$lan"
+		# IPv6 устройств сети мимо туннеля не пускаем (туннель обычно только IPv4)
+		uci -q batch <<-EOT
+			set firewall.be7000_vpn6_$name=rule
+			set firewall.be7000_vpn6_$name.name='be7000-vpn:$name (IPv6 мимо VPN закрыт)'
+			set firewall.be7000_vpn6_$name.src='lan'
+			set firewall.be7000_vpn6_$name.dest='wan'
+			set firewall.be7000_vpn6_$name.family='ipv6'
+			set firewall.be7000_vpn6_$name.proto='all'
+			set firewall.be7000_vpn6_$name.target='REJECT'
+		EOT
+	else
+		uci -q set pbr.@policy[-1].dest_addr="$*"
+		uci -q set network."$name".be7000_vpn_sites="$*"
+		# IPv6 этих сайтов: на AAAA-запрос dnsmasq отвечает «::» (A-записи — как
+		# обычно, их pbr кладёт в свой набор и ведёт в туннель). Устройство не может
+		# подключиться к ::, мгновенно переходит на IPv4 → в туннель, а не мимо него.
+		# (Отдельный nftset для AAAA не годится: на домен в dnsmasq действует одна
+		# директива nftset, и её уже занимает pbr.)
+		for d in "$@"; do
+			uci -q del_list dhcp.@dnsmasq[0].address="/$d/::"
+			uci -q add_list dhcp.@dnsmasq[0].address="/$d/::"
+		done
+	fi
+	uci -q commit network; uci -q commit firewall; uci -q commit pbr; uci -q commit dhcp
+	rm -f "$file"
+	reload_all
+	echo "OK: $name ($proto, $mode)"
+}
+
+# ---------- delete ----------
+do_delete() {
+	local name="$1" s z
+	valid_name "$name" || die "неверное имя"
+	[ -n "$(uci -q get network."$name".be7000_vpn)" ] || die "$name не создан через быструю настройку"
+	for s in $(uci -q get network."$name".be7000_vpn_sites); do
+		uci -q del_list dhcp.@dnsmasq[0].address="/$s/::"
+	done
+	for s in $(uci -q show network | sed -n "s/^network\.\([^.=]*\)=\(amneziawg\|wireguard\)_$name$/\1/p"); do
+		uci -q delete network."$s"
+	done
+	uci -q delete network."$name"
+	z=$(zone_section); [ -n "$z" ] && uci -q del_list firewall."$z".network="$name"
+	uci -q delete firewall.be7000_vpn6_"$name"
+	while s=$(pbr_policy "$name") && [ -n "$s" ]; do
+		uci -q delete pbr."$s" || break
+	done
+	uci -q del_list pbr.config.supported_interface="$name"
+	uci -q commit network; uci -q commit firewall; uci -q commit pbr; uci -q commit dhcp
+	reload_all
+	echo "OK: $name удалён"
+}
+
+# ---------- status ----------
+do_status() {
+	local ifs name proto mode now hs rx tx ep sites tool
+	now=$(date +%s)
+	json_init
+	json_add_array tunnels
+	for name in $(uci -q show network | sed -n "s/^network\.\([^.]*\)\.be7000_vpn=.*/\1/p"); do
+		proto=$(uci -q get network."$name".proto); mode=$(uci -q get network."$name".be7000_vpn)
+		tool=wg; [ "$proto" = amneziawg ] && tool=awg
+		hs=$($tool show "$name" latest-handshakes 2>/dev/null | awk '{print $2; exit}')
+		set -- $($tool show "$name" transfer 2>/dev/null | awk '{print $2, $3; exit}')
+		rx=${1:-0}; tx=${2:-0}
+		ep=$(uci -q get network."${name}_peer".endpoint_host)
+		sites=$(uci -q get pbr."$(pbr_policy "$name")".dest_addr 2>/dev/null)
+		json_add_object
+		json_add_string name "$name"
+		json_add_string proto "$proto"
+		json_add_string mode "$mode"
+		json_add_string endpoint "$ep"
+		json_add_string sites "$sites"
+		json_add_boolean up "$(ip link show "$name" >/dev/null 2>&1 && echo 1 || echo 0)"
+		json_add_int handshake_age "$([ -n "$hs" ] && [ "$hs" -gt 0 ] && echo $((now - hs)) || echo -1)"
+		json_add_int rx "$rx"
+		json_add_int tx "$tx"
+		json_close_object
+	done
+	json_close_array
+	json_dump
+}
+
+do_test() {
+	valid_name "$1" || die "неверное имя"
+	curl -4 -s -m 12 --interface "$1" https://ifconfig.me || die "нет ответа через $1"
+}
+
+case "$1" in
+	status) do_status ;;
+	import) shift; [ $# -ge 3 ] || die "usage: import <file> <name> full|sites [domains]"; do_import "$@" ;;
+	delete) do_delete "$2" ;;
+	test)   do_test "$2" ;;
+	*) echo "usage: be7000-vpn status|import|delete|test"; exit 2 ;;
+esac

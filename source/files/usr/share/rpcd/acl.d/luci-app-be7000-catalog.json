@@ -1,0 +1,18 @@
+{
+	"luci-app-be7000-catalog": {
+		"description": "Каталог приложений BE7000: установка и удаление софта, форматирование USB-диска",
+		"read": {
+			"file": {
+				"/usr/share/be7000/catalog.json": [ "read" ],
+				"/usr/bin/be7000-catalog": [ "exec" ],
+				"/usr/bin/opt-install": [ "exec" ]
+			}
+		},
+		"write": {
+			"file": {
+				"/usr/bin/be7000-catalog": [ "exec" ],
+				"/usr/bin/opt-install": [ "exec" ]
+			}
+		}
+	}
+}

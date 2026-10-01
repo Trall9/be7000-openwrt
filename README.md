@@ -1,0 +1,100 @@
+# OpenWrt для Xiaomi BE7000 (QWRT-разметка, раздел 80 МБ)
+
+Сборка OpenWrt для **Xiaomi BE7000 (RC06, IPQ9574 + QCN9274)** под разметку
+**QWRT-загрузчика** (один раздел `rootfs` 80 МБ). За счёт большого раздела в
+прошивку помещается всё нужное сразу: VPN, обход блокировок, samba, DLNA,
+**каталог приложений** с установкой в один клик.
+
+> ⚠️ **beta2 сейчас собирается и проверяется на железе.** Образ появится в
+> [Releases](../../releases) после проверки. Предыдущая версия (beta1i) — у автора.
+
+Основа — порт поддержки BE7000 от [kravasuper](https://github.com/kravasuper/openwrt)
+(ветка `xiaomi_be7000`), перенесённый на свежий OpenWrt main. Спасибо
+[kravasuper](https://github.com/kravasuper/openwrt),
+[timofey-maykov](https://github.com/timofey-maykov/be7000-openwrt) (Beam WRT) и
+[Quarx2k](https://github.com/Quarx2k/OpenWRT-BE7000).
+
+## Версии компонентов (beta2)
+
+| | |
+|---|---|
+| OpenWrt | main @ `31ef8052` (01.10.2026) |
+| Ядро | **6.18.54** — самый свежий longterm (kernel.org) |
+| Драйверы Wi-Fi | backports **7.2** (ath11k / ath12k из ядра 7.2) + патчи BE7000 |
+| Пакеты | фиды OpenWrt на 01.10.2026 (`source/feeds.lock`) |
+
+## Для кого
+
+| Ваша разметка | Подходит? |
+|---|---|
+| QWRT-загрузчик, `rootfs` 80 МБ (`/proc/mtd`: `mtd23 05000000 "rootfs"`, раздела `rootfs_1` нет) | **да** |
+| Стоковый загрузчик, два слота по 40 МБ | **нет** — образ в слот не помещается. Берите [Beam WRT](https://github.com/timofey-maykov/be7000-openwrt) |
+
+## Что внутри
+
+- **Wi-Fi:** 2.4 ГГц (ath11k, Wi-Fi 6) + 5 ГГц (ath12k QCN9274, Wi-Fi 7, до 160 МГц), 802.11k/v, WPA3.
+- **VPN:** WireGuard, **AmneziaWG** (AWG 2.0), OpenVPN. Страница **VPN → Быстрая настройка**:
+  вставить `.conf` или ключ `vpn://` из AmneziaVPN → «только выбранные сайты» или «весь трафик».
+- **Обход блокировок** (выключены по умолчанию): **zapret**, **Podkop** (sing-box: VLESS/Reality,
+  Trojan, Shadowsocks, Hysteria2), byedpi, pbr, **DNS over HTTPS**.
+- **Сеть:** SQM, UPnP, DDNS, adblock-fast, nlbwmon, vnStat, графики (collectd), watchcat, banIP, IPv6
+  (сам включает relay + NAT66, если провайдер не выдаёт префикс).
+- **Диск:** samba4 + wsdd2, minidlna, NTFS/exFAT/ext4, автомонтирование, **форматирование USB-диска
+  в ext4 из LuCI**.
+- **Каталог приложений** (Службы → Каталог приложений): ~50 избранных программ по категориям,
+  установка и удаление одной кнопкой:
+  - во **флеш** роутера — из фидов OpenWrt (с русским переводом LuCI);
+  - на **USB-диск** — qBittorrent, Xray, Tailscale, Docker, Jackett;
+  - в **Entware** на USB-диске (~3000 пакетов) — AdGuard Home, Syncthing, File Browser, rclone,
+    v2rayA, Python, Node.js…
+  - **драйверы** (USB-модемы 4G/5G, интернет с телефона по USB, принтеры, NFS, MultiWAN) — из
+    фида этой прошивки (все ~930 kmod собраны под её ядро).
+- Полный список из 10 000+ пакетов — как обычно, Система → Программное обеспечение
+  (списки пакетов скачиваются сами при подключении к интернету).
+- LuCI на русском.
+
+## Установка (с QWRT)
+
+Нужно: ПК с кабелем в LAN-порт, файл `…-squashfs-factory.ubi` из Releases.
+
+1. В SSH текущей прошивки проверьте `fw_printenv loadaddr` → должно быть `loadaddr=0x50000000`
+   (иначе `fw_setenv loadaddr 0x50000000`). Если `fw_printenv` нет — не продолжайте.
+2. Сохраните настройки, если нужны.
+3. ПК: статический адрес `192.168.1.10 / 255.255.255.0`.
+4. Роутер: питание OFF → зажать **Reset** → питание ON → держать 10–15 с (мигает оранжевым) → отпустить.
+5. Браузер: `http://192.168.1.1` → **FIRMWARE UPDATE** → `…-factory.ubi`. Ждать 3–5 мин.
+6. ПК вернуть на DHCP. LuCI: `http://192.168.1.1`, пароль root пустой — задайте сразу.
+   Wi-Fi: `BE7000` / `BE7000_5G`, пароль `be7000setup` — смените.
+
+**Обновление** — только так же, через recovery (`sysupgrade` на разметке QWRT намеренно
+отключён: запасного слота нет). Откат на QWRT — тот же recovery с QWRT `…-nand-factory.bin`.
+
+## Фид пакетов
+
+Прошивка сама подключает `https://trall9.github.io/be7000-openwrt/<версия>/` — драйверы (kmod)
+под её ядро и пакеты сборки (zapret, podkop, amneziawg, byedpi…). Пакеты подписаны ключом
+сборки; ключ встроен в прошивку. Официальный target-фид OpenWrt отключён: его kmod собраны
+под другое ядро и не устанавливаются.
+
+## Сборка из исходников
+
+```sh
+git clone https://github.com/Trall9/be7000-openwrt.git
+cd be7000-openwrt
+./build.sh ~/openwrt-be7000 $(nproc)
+```
+
+`source/patches/` — изменения поверх OpenWrt (`git am`), `source/files/` — файлы прошивки,
+`source/diffconfig` — конфиг, `source/feeds.lock` — коммиты OpenWrt и фидов.
+Своя сборка подписывает пакеты своим ключом — фид этого репозитория она не примет
+(собирайте и свой фид: `bin/targets/…/packages`).
+
+## Сообщить об ошибке
+
+[Issues](../../issues). Приложите:
+```sh
+cat /etc/openwrt_release; uptime
+be7000-health-check
+be7000-crashlog
+logread > /tmp/log.txt; dmesg > /tmp/dmesg.txt
+```

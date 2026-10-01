@@ -1,0 +1,24 @@
+case "$ACTION" in
+  add) ;;
+  *) exit 0;;
+esac
+case "$DEVNAME" in
+  sd[a-z][0-9]) ;;
+  *) exit 0;;
+esac
+sleep 2
+TYPE=$(blkid -o value -s TYPE /dev/$DEVNAME 2>/dev/null)
+MP=/mnt/$DEVNAME
+mkdir -p $MP
+grep -q " $MP " /proc/mounts && exit 0
+case "$TYPE" in
+  ntfs)
+	if ! mount -t ntfs3 -o rw,uid=0,gid=0,umask=000 /dev/$DEVNAME $MP 2>/dev/null; then
+		[ -x /usr/bin/scanvol ] && /usr/bin/scanvol /dev/$DEVNAME clear >/dev/null 2>&1
+		mount -t ntfs3 -o rw,uid=0,gid=0,umask=000 /dev/$DEVNAME $MP 2>/dev/null ||
+		mount -t ntfs3 -o force,rw,uid=0,gid=0,umask=000 /dev/$DEVNAME $MP 2>/dev/null
+	fi;;
+  vfat|exfat) mount -o rw,uid=0,gid=0,umask=000 /dev/$DEVNAME $MP 2>/dev/null;;
+  ext4) mount -o rw /dev/$DEVNAME $MP 2>/dev/null;;
+esac
+grep -q " $MP " /proc/mounts && logger -t usb-automount "$DEVNAME mounted to $MP"

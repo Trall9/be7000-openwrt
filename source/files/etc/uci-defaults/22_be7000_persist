@@ -1,0 +1,50 @@
+#!/bin/sh
+# Живучесть: персистентный лог, бэкапы, страж RAM, cron-джобы, apk-arch,
+# fstab-маунт диска, гарантии rc.local. Всё идемпотентно.
+[ "$(board_name)" = "xiaomi,be7000" ] || exit 0
+
+# 1. logd ring: 128КБ → 512КБ (RAM-цена копеечная при 900МБ, логов видно в 4 раза больше)
+uci -q set system.@system[0].log_size='512'
+uci -q commit system
+
+# 2. apk-фиды: снапшоты публикуют aarch64_cortex-a73, которого не существует —
+#    рабочий arch = aarch64_generic (файл auto-generated, чиним при каждой прошивке)
+sed -i s/aarch64_cortex-a73/aarch64_generic/g /etc/apk/repositories.d/distfeeds.list 2>/dev/null
+# ...и разрешить apk ставить пакеты этой архитектуры: без строки в /etc/apk/arch
+# любой «apk add» из фида падает с «uninstallable, arch: aarch64_generic» (30.09)
+grep -qx aarch64_generic /etc/apk/arch 2>/dev/null || echo aarch64_generic >> /etc/apk/arch
+# ...официальный target-фид собран под ЧУЖОЕ ядро (другой vermagic) — его kmod
+# не встают. Вместо него — фид этой прошивки: все kmod под наше ядро + свои пакеты
+# (zapret, podkop, amneziawg, byedpi…). Путь привязан к версии прошивки.
+sed -i '\#/targets/qualcommbe/ipq95xx/packages/#d' /etc/apk/repositories.d/distfeeds.list 2>/dev/null
+. /etc/openwrt_release
+cat > /etc/apk/repositories.d/be7000.list <<EOF2
+# Фид прошивки BE7000 ($DISTRIB_RELEASE): драйверы (kmod) и пакеты сборки.
+https://trall9.github.io/be7000-openwrt/$DISTRIB_RELEASE/targets/packages.adb
+https://trall9.github.io/be7000-openwrt/$DISTRIB_RELEASE/be7000/packages.adb
+EOF2
+
+# 3. fstab: автомонтирование любого USB-диска (anon_mount) — первый раздел
+#    первого диска встаёт в /mnt/sda1 (путь, на который завязаны opt-install,
+#    лог-дамп, бэкапы, samba). Существующие записи пользователя не трогаем.
+if [ "$(uci -q get fstab.@global[0].anon_mount)" != "1" ] && ! uci -q show fstab | grep -q "=mount$"; then
+	uci -q set fstab.@global[0].anon_mount='1'
+	uci -q commit fstab
+fi
+# 4. cron: usb-watchdog (каждую минуту), лог-дамп, страж RAM, ночной бэкап
+CR=/etc/crontabs/root
+touch $CR
+grep -qs 'usb-watchdog.sh' $CR    || echo '* * * * * /usr/bin/usb-watchdog.sh' >> $CR
+grep -qs 'be7000-log-dump' $CR    || echo '*/15 * * * * /usr/bin/be7000-log-dump' >> $CR
+grep -qs 'be7000-ram-guard' $CR   || echo '*/5 * * * * /usr/bin/be7000-ram-guard' >> $CR
+grep -qs 'be7000-config-backup' $CR || echo '7 4 * * * /usr/bin/be7000-config-backup' >> $CR
+/etc/init.d/cron restart 2>/dev/null
+
+# 6. usb autosuspend: с этого образа cmdline содержит usbcore.autosuspend=-1 (DTS),
+#    строка ниже — страховка на случай cmdline без неё
+echo -1 > /sys/module/usbcore/parameters/autosuspend 2>/dev/null
+
+# 7. usb-recover включить (init-скрипт в ROM)
+/etc/init.d/usb-recover enable 2>/dev/null
+
+exit 0

@@ -1,0 +1,14 @@
+{
+	"admin/services/opt-install": {
+		"title": "ПО на внешнем диске",
+		"order": 92,
+		"action": {
+			"type": "view",
+			"path": "opt-install"
+		},
+		"depends": {
+			"acl": [ "luci-app-opt-install" ],
+			"fs": { "/usr/bin/opt-install": "executable" }
+		}
+	}
+}

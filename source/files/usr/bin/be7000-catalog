@@ -1,0 +1,262 @@
+#!/usr/bin/ucode
+// Каталог приложений BE7000: установка и удаление избранного софта из LuCI.
+// Три способа установки (поле kind в /usr/share/be7000/catalog.json):
+//   apk     — во флеш роутера из фидов OpenWrt (+ русский перевод LuCI);
+//   disk    — рецепты opt-install на USB-диск (qBittorrent, Xray, Docker…);
+//   entware — пакеты Entware (opkg) на ext4-том /opt USB-диска.
+// Команды: status | install <id> | remove <id> | log
+
+'use strict';
+import * as fs from 'fs';
+
+const CATALOG = '/usr/share/be7000/catalog.json';
+const STATE = '/var/run/be7000-catalog.state';   // "<id> <pid>" или "<id> done <rc>"
+const LOG = '/tmp/be7000-catalog.log';
+const OPT = '/usr/bin/opt-install';
+
+function out(s) { print(s, '\n'); }
+function die(msg) { warn('ERROR: ', msg, '\n'); exit(1); }
+
+function sh(cmd) {
+	let p = fs.popen(cmd, 'r');
+	if (!p) return '';
+	let r = p.read('all');
+	p.close();
+	return r ?? '';
+}
+
+function q(s) { return "'" + replace(s, "'", "'\\''") + "'"; }
+
+function catalog() {
+	let c = json(fs.readfile(CATALOG) ?? 'null');
+	if (!c) die('нет каталога ' + CATALOG);
+	return c;
+}
+
+function find_item(id) {
+	for (let it in catalog().items)
+		if (it.id == id) return it;
+	die('нет такого приложения: ' + id);
+}
+
+// имена пакетов из базы apk (P:имя)
+function apk_db(path) {
+	let set = {};
+	let s = fs.readfile(path) ?? '';
+	for (let l in split(s, '\n'))
+		if (substr(l, 0, 2) == 'P:') set[substr(l, 2)] = true;
+	return set;
+}
+
+function entware_db() {
+	let set = {};
+	let s = fs.readfile('/opt/lib/opkg/status') ?? '';
+	let name = null;
+	for (let l in split(s, '\n')) {
+		if (substr(l, 0, 9) == 'Package: ') name = substr(l, 9);
+		else if (substr(l, 0, 8) == 'Status: ' && name && index(l, ' installed') > 0) set[name] = true;
+	}
+	return set;
+}
+
+function busy() {
+	let s = trim(fs.readfile(STATE) ?? '');
+	let f = split(s, ' ');
+	if (length(f) == 2 && f[1] != 'done' && fs.stat('/proc/' + f[1])) return f[0];
+	return null;
+}
+
+function df_mb(path) {
+	let r = trim(sh('df -m ' + q(path) + ' 2>/dev/null | awk \'NR==2{print $4}\''));
+	return r == '' ? null : +r;
+}
+
+function status() {
+	let c = catalog();
+	let inst = apk_db('/lib/apk/db/installed');
+	let rom = apk_db('/rom/lib/apk/db/installed');
+	let ew = entware_db();
+	let disk = json(sh(OPT + ' status 2>/dev/null') || '{}') ?? {};
+	let lists = length(fs.glob('/var/cache/apk/*.adb') ?? []) + length(fs.glob('/var/cache/apk/APKINDEX*') ?? []) > 0;
+	let res = {
+		busy: busy(),
+		flash_free: df_mb('/overlay'),
+		disk: disk.disk ?? 0,
+		disk_free: disk.disk_free,
+		ext4: disk.ext4 ?? 0,
+		disk_busy: disk.busy,
+		entware: fs.access('/opt/bin/opkg', 'x') ? 1 : 0,
+		lists: lists ? 1 : 0,
+		items: {}
+	};
+	for (let it in c.items) {
+		let st = { installed: 0, builtin: 0 };
+		if (it.kind == 'apk') {
+			let all = true, allrom = true;
+			for (let p in it.pkgs) {
+				if (!inst[p]) all = false;
+				if (!rom[p]) allrom = false;
+			}
+			st.installed = all ? 1 : 0;
+			st.builtin = allrom ? 1 : 0;
+		}
+		else if (it.kind == 'entware') {
+			let all = true;
+			for (let p in it.pkgs) if (!ew[p]) all = false;
+			st.installed = (res.entware && all) ? 1 : 0;
+		}
+		else if (it.kind == 'disk') {
+			let a = disk.apps?.[it.app] ?? {};
+			st.installed = a.installed ?? 0;
+			st.running = a.running ?? 0;
+		}
+		res.items[it.id] = st;
+	}
+	out(sprintf('%J', res));
+}
+
+function log(msg) {
+	let f = fs.open(LOG, 'a');
+	if (!f) return;
+	f.write(sh('date +%H:%M:%S') ? trim(sh('date +%H:%M:%S')) + ' ' + msg + '\n' : msg + '\n');
+	f.close();
+}
+
+function run_logged(cmd) {
+	return system(cmd + ' >>' + LOG + ' 2>&1');
+}
+
+// перевод LuCI на русский: luci-app-X → luci-i18n-X-ru, если такой пакет есть в фиде
+function with_i18n(pkgs) {
+	let r = [ ...pkgs ];
+	for (let p in pkgs) {
+		let m = match(p, /^luci-(app|proto)-(.+)$/);
+		if (!m) continue;
+		let tr = 'luci-i18n-' + m[2] + '-ru';
+		if (trim(sh('apk search -x ' + q(tr) + ' 2>/dev/null')) != '') push(r, tr);
+	}
+	return r;
+}
+
+function install_apk(it) {
+	let have_lists = length(fs.glob('/var/cache/apk/*') ?? []) > 0;
+	if (!have_lists) {
+		log('обновление списков пакетов…');
+		if (run_logged('apk update') != 0) { log('ОШИБКА: не удалось скачать списки пакетов (есть ли интернет?)'); return 1; }
+	}
+	let free = df_mb('/overlay');
+	let need = (it.size ?? 1) + 2;
+	if (free != null && free < need) {
+		log(sprintf('ОШИБКА: во флеше свободно %d МБ, нужно ~%d МБ. Удалите ненужные пакеты или ставьте тяжёлый софт на диск.', free, need));
+		return 1;
+	}
+	let pkgs = with_i18n(it.pkgs);
+	log('apk add ' + join(' ', pkgs));
+	let rc = run_logged('apk add ' + join(' ', map(pkgs, q)));
+	if (rc != 0) {
+		if (it.kmod)
+			log('ОШИБКА: нужны драйверы (kmod) под ядро этой прошивки — проверьте, что подключён репозиторий драйверов BE7000 (/etc/apk/repositories.d/be7000.list) и выполнено «Обновить списки».');
+		else
+			log('ОШИБКА: apk add завершился с кодом ' + rc);
+		return rc;
+	}
+	// службы пакетов ставятся включёнными — запускаем сразу
+	for (let p in it.pkgs) {
+		let files = split(sh('apk info -L ' + q(p) + ' 2>/dev/null'), '\n');
+		for (let f in files)
+			if (match(f, /^etc\/init\.d\/[^\/]+$/))
+				system('/' + f + ' enabled && /' + f + ' start >/dev/null 2>&1');
+	}
+	return 0;
+}
+
+function install_entware(it) {
+	if (!fs.access('/opt/bin/opkg', 'x')) {
+		log('Entware не установлен — устанавливаю (нужен USB-диск)…');
+		let rc = system('OPT_LOG_FILE=' + LOG + ' ' + OPT + ' _worker entware');
+		if (!fs.access('/opt/bin/opkg', 'x')) { log('ОШИБКА: Entware не установился (см. выше)'); return rc || 1; }
+	}
+	log('opkg update…');
+	run_logged('/opt/bin/opkg update');
+	log('opkg install ' + join(' ', it.pkgs));
+	let rc = run_logged('/opt/bin/opkg install ' + join(' ', map(it.pkgs, q)));
+	if (rc != 0) { log('ОШИБКА: opkg install завершился с кодом ' + rc); return rc; }
+	// службы Entware (/opt/etc/init.d/S*) этих пакетов — запустить
+	for (let p in it.pkgs) {
+		let files = split(sh('/opt/bin/opkg files ' + q(p) + ' 2>/dev/null'), '\n');
+		for (let f in files)
+			if (match(f, /^\/opt\/etc\/init\.d\/S[0-9]+/))
+				system(f + ' start >/dev/null 2>&1');
+	}
+	system('/etc/init.d/entware enabled || /etc/init.d/entware enable');
+	return 0;
+}
+
+function install_disk(it) {
+	log('установка на диск через opt-install: ' + it.app);
+	let rc = system('OPT_LOG_FILE=' + LOG + ' ' + OPT + ' _worker ' + q(it.app));
+	return rc;
+}
+
+function worker(id) {
+	let it = find_item(id);
+	let rc;
+	log('===== установка «' + it.title + '» =====');
+	if (it.kind == 'apk') rc = install_apk(it);
+	else if (it.kind == 'entware') rc = install_entware(it);
+	else if (it.kind == 'disk') rc = install_disk(it);
+	fs.writefile(STATE, id + ' done ' + rc + '\n');
+	log('===== ' + (rc == 0 ? 'готово' : 'ошибка (код ' + rc + ')') + ' =====');
+}
+
+function start(id, action) {
+	let it = find_item(id);
+	let b = busy() ?? json(sh(OPT + ' status 2>/dev/null') || '{}')?.busy;
+	if (b) die('уже идёт установка: ' + b + ' — подождите');
+	if ((it.kind == 'disk' || it.kind == 'entware') && !fs.stat('/mnt/sda1/opt') && system('grep -q " /mnt/sda1 " /proc/mounts') != 0)
+		die('USB-диск не подключён: это приложение ставится на диск');
+	fs.writefile(LOG, '');
+	system('setsid /usr/bin/be7000-catalog ' + action + ' ' + q(id) + ' </dev/null >/dev/null 2>&1 & echo "' + id + ' $!" > ' + STATE);
+	out('OK: запущено');
+}
+
+function remove(id) {
+	let it = find_item(id);
+	if (busy()) die('идёт установка — подождите');
+	fs.writefile(LOG, '');
+	log('===== удаление «' + it.title + '» =====');
+	let rc = 0;
+	if (it.kind == 'apk') {
+		let rom = apk_db('/rom/lib/apk/db/installed');
+		let del = filter(it.pkgs, p => !rom[p]);
+		if (!length(del)) die('встроено в прошивку — удалить нельзя (можно выключить службу)');
+		for (let p in del)
+			for (let f in split(sh('apk info -L ' + q(p) + ' 2>/dev/null'), '\n'))
+				if (match(f, /^etc\/init\.d\/[^\/]+$/))
+					system('/' + f + ' stop >/dev/null 2>&1');
+		let tr = filter(map(del, p => replace(p, /^luci-(app|proto)-(.+)$/, 'luci-i18n-$2-ru')), p => index(p, 'luci-i18n-') == 0);
+		rc = run_logged('apk del ' + join(' ', map([ ...del, ...tr ], q)));
+	}
+	else if (it.kind == 'entware') {
+		for (let p in it.pkgs)
+			for (let f in split(sh('/opt/bin/opkg files ' + q(p) + ' 2>/dev/null'), '\n'))
+				if (match(f, /^\/opt\/etc\/init\.d\/S[0-9]+/))
+					system(f + ' stop >/dev/null 2>&1');
+		rc = run_logged('/opt/bin/opkg remove ' + join(' ', map(it.pkgs, q)));
+	}
+	else if (it.kind == 'disk')
+		rc = run_logged(OPT + ' remove ' + q(it.app));
+	log('===== ' + (rc == 0 ? 'удалено' : 'ошибка (код ' + rc + ')') + ' =====');
+	out(rc == 0 ? 'OK: удалено' : 'ERROR: см. лог');
+	exit(rc == 0 ? 0 : 1);
+}
+
+let cmd = ARGV[0], arg = ARGV[1];
+switch (cmd) {
+case 'status':  status(); break;
+case 'install': arg || die('укажите приложение'); start(arg, '_worker'); break;
+case '_worker': worker(arg); break;
+case 'remove':  arg || die('укажите приложение'); remove(arg); break;
+case 'log':     print(fs.readfile(LOG) ?? ''); break;
+default:        out('usage: be7000-catalog {status|install <id>|remove <id>|log}'); exit(2);
+}

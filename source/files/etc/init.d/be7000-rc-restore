@@ -1,0 +1,12 @@
+#!/bin/sh /etc/rc.common
+# После восстановления бэкапа настроек возвращает включённые/выключенные службы
+# (см. /usr/libexec/be7000-rc-state). В остальные загрузки ничего не делает.
+START=99
+
+boot() {
+	/usr/libexec/be7000-rc-state apply
+}
+
+start() {
+	/usr/libexec/be7000-rc-state apply
+}

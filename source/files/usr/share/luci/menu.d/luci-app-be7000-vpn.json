@@ -1,0 +1,16 @@
+{
+	"admin/vpn": {
+		"title": "VPN",
+		"order": 45,
+		"action": { "type": "firstchild" }
+	},
+	"admin/vpn/be7000-vpn": {
+		"title": "Быстрая настройка",
+		"order": 1,
+		"action": { "type": "view", "path": "be7000-vpn" },
+		"depends": {
+			"acl": [ "luci-app-be7000-vpn" ],
+			"fs": { "/usr/bin/be7000-vpn": "executable" }
+		}
+	}
+}

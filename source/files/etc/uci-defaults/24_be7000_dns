@@ -1,0 +1,14 @@
+#!/bin/sh
+# DNS-полировка: кэш больше (1000→4000 записей) + prefetch (продление горячих
+# записей до истечения TTL — сайты открываются мгновенно).
+# DNSSEC СОЗНАТЕЛЬНО не включён: при DNS-подменах/перехвате со стороны провайдера
+# валидация даёт SERVFAIL на «хороших» доменах. Включить осознанно, с тестом:
+#   uci set dhcp.@dnsmasq[0].dnssec='1'; uci commit dhcp; /etc/init.d/dnsmasq restart
+#   (проверить пару сайтов; при SERVFAIL — откатить тем же путём)
+[ "$(board_name)" = "xiaomi,be7000" ] || exit 0
+
+uci -q set dhcp.@dnsmasq[0].cachesize='4000'
+uci -q set dhcp.@dnsmasq[0].prefetch='1'
+uci -q commit dhcp
+
+exit 0

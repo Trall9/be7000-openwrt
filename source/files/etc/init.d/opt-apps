@@ -1,0 +1,14 @@
+#!/bin/sh /etc/rc.common
+# Приложения на USB-диске (opt-install): диск монтируется через 20–60 с после
+# старта init, поэтому их собственные init-скрипты при загрузке тихо выходят.
+# Здесь в фоне ждём /mnt/sda1, подключаем ext4-том /opt и запускаем всё,
+# что установлено и включено (qbittorrent, xray, tailscale, docker, jackett).
+START=99
+
+boot() {
+	( /usr/bin/opt-install autostart ) </dev/null >/dev/null 2>&1 &
+}
+
+start() {
+	/usr/bin/opt-install autostart
+}

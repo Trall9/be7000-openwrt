@@ -1,0 +1,23 @@
+#!/bin/sh /etc/rc.common
+
+# BE7000: route all four RF chains to the single 5 GHz PHY.
+# Without this, 5 GHz RX/TX is degraded (weak signal, low PHY rate).
+# TLMM GPIO base is 512 on this platform: TLMM6 = gpio518, TLMM7 = gpio519.
+# TLMM6 -> low, TLMM7 -> high (matches Quarx2k/timofey-maykov DTS gpio-hogs).
+
+START=10
+STOP=90
+
+USE_PROCD=0
+
+start_service() {
+	echo 518 > /sys/class/gpio/export 2>/dev/null
+	echo 519 > /sys/class/gpio/export 2>/dev/null
+	[ -w /sys/class/gpio/gpio518/direction ] && echo low  > /sys/class/gpio/gpio518/direction
+	[ -w /sys/class/gpio/gpio519/direction ] && echo high > /sys/class/gpio/gpio519/direction
+}
+
+stop_service() {
+	echo 518 > /sys/class/gpio/unexport 2>/dev/null
+	echo 519 > /sys/class/gpio/unexport 2>/dev/null
+}

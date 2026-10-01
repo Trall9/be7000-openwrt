@@ -1,0 +1,87 @@
+From c57b7f971af91a691d22c0321f112648094930fd Mon Sep 17 00:00:00 2001
+From: Trall9 <Trall9@users.noreply.github.com>
+Date: Thu, 1 Oct 2026 21:34:35 +0200
+Subject: [PATCH 5/5] mac80211: port BE7000 patches to backports 7.2 (drop
+ 961/307 merged upstream, 960 without max_tx_ring)
+
+---
+ .../960-wifi-ath11k-add-ipq9574-support.patch |  3 +--
+ ...1k-use-iommu-paging-domain-allocator.patch | 19 -------------------
+ ...2k-avoid-duplicate-soc-debugfs-files.patch | 18 ------------------
+ 3 files changed, 1 insertion(+), 39 deletions(-)
+ delete mode 100644 package/kernel/mac80211/patches/ath11k/961-wifi-ath11k-use-iommu-paging-domain-allocator.patch
+ delete mode 100644 package/kernel/mac80211/patches/ath12k/307-wifi-ath12k-avoid-duplicate-soc-debugfs-files.patch
+
+diff --git a/package/kernel/mac80211/patches/ath11k/960-wifi-ath11k-add-ipq9574-support.patch b/package/kernel/mac80211/patches/ath11k/960-wifi-ath11k-add-ipq9574-support.patch
+index 3e45f58b..9038bfb3 100644
+--- a/package/kernel/mac80211/patches/ath11k/960-wifi-ath11k-add-ipq9574-support.patch
++++ b/package/kernel/mac80211/patches/ath11k/960-wifi-ath11k-add-ipq9574-support.patch
+@@ -32,7 +32,7 @@ Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
+  	case ATH11K_HW_IPQ5018_HW10:
+ --- a/drivers/net/wireless/ath/ath11k/core.c
+ +++ b/drivers/net/wireless/ath/ath11k/core.c
+-@@ -41,6 +41,91 @@ MODULE_PARM_DESC(ftm_mode, "Boots up in
++@@ -41,6 +41,90 @@ MODULE_PARM_DESC(ftm_mode, "Boots up in
+  
+  static struct ath11k_hw_params ath11k_hw_params[] = {
+  	{
+@@ -92,7 +92,6 @@ Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
+ +		.supports_regdb = false,
+ +		.fix_l1ss = true,
+ +		.credit_flow = false,
+-+		.max_tx_ring = DP_TCL_NUM_RING_MAX,
+ +		.hal_params = &ath11k_hw_hal_params_ipq8074,
+ +		.supports_dynamic_smps_6ghz = false,
+ +		.alloc_cacheable_memory = true,
+diff --git a/package/kernel/mac80211/patches/ath11k/961-wifi-ath11k-use-iommu-paging-domain-allocator.patch b/package/kernel/mac80211/patches/ath11k/961-wifi-ath11k-use-iommu-paging-domain-allocator.patch
+deleted file mode 100644
+index 6f55f802..00000000
+--- a/package/kernel/mac80211/patches/ath11k/961-wifi-ath11k-use-iommu-paging-domain-allocator.patch
++++ /dev/null
+@@ -1,19 +0,0 @@
+-Subject: wifi: ath11k: use IOMMU paging domain allocator
+-
+-Linux 6.18 no longer exposes iommu_domain_alloc(). Use the current
+-iommu_paging_domain_alloc() helper when ath11k AHB creates the firmware
+-IOMMU domain.
+-
+-Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
+----
+---- a/drivers/net/wireless/ath/ath11k/ahb.c
+-+++ b/drivers/net/wireless/ath/ath11k/ahb.c
+-@@ -1063,7 +1063,7 @@ static int ath11k_ahb_fw_resources_init(
+- 
+- 	ab_ahb->fw.dev = &pdev->dev;
+- 
+--	iommu_dom = iommu_domain_alloc(&platform_bus_type);
+-+	iommu_dom = iommu_paging_domain_alloc(ab_ahb->fw.dev);
+- 	if (!iommu_dom) {
+- 		ath11k_err(ab, "failed to allocate iommu domain\n");
+- 		ret = -ENOMEM;
+diff --git a/package/kernel/mac80211/patches/ath12k/307-wifi-ath12k-avoid-duplicate-soc-debugfs-files.patch b/package/kernel/mac80211/patches/ath12k/307-wifi-ath12k-avoid-duplicate-soc-debugfs-files.patch
+deleted file mode 100644
+index db683f5d..00000000
+--- a/package/kernel/mac80211/patches/ath12k/307-wifi-ath12k-avoid-duplicate-soc-debugfs-files.patch
++++ /dev/null
+@@ -1,18 +0,0 @@
+-Subject: wifi: ath12k: avoid duplicate SoC debugfs files
+-
+-ath12k_core_start() already creates the SoC-level debugfs files after
+-powering up the device. Do not create the same files again from
+-ath12k_mac_allocate(), otherwise debugfs reports duplicate entries such
+-as "simulate_fw_crash" and "device_dp_stats".
+-
+-Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
+----
+---- a/drivers/net/wireless/ath/ath12k/mac.c
+-+++ b/drivers/net/wireless/ath/ath12k/mac.c
+-@@ -14387,7 +14387,6 @@ static int ath12k_mac_allocate(struct at
+- 			continue;
+- 
+--		ath12k_debugfs_pdev_create(ab);
+- 		ath12k_mac_set_device_defaults(ab);
+- 		total_radio += ab->num_radios;
+- 	}
+-- 
+2.43.0
+

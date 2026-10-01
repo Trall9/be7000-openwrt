@@ -1,0 +1,14 @@
+{
+	"luci-app-be7000-vpn": {
+		"description": "Быстрая настройка VPN (WireGuard / AmneziaWG)",
+		"read": {
+			"file": { "/usr/bin/be7000-vpn": [ "exec" ] }
+		},
+		"write": {
+			"file": {
+				"/usr/bin/be7000-vpn": [ "exec" ],
+				"/tmp/be7000-vpn-import.conf": [ "write" ]
+			}
+		}
+	}
+}

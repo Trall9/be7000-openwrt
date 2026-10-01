@@ -1,0 +1,26 @@
+#!/bin/sh
+# 802.11k/v: radio resource mgmt + BSS transition — клиенты (особенно WiFi7
+# телефоны) быстрее и умнее переезжают 2.4<->5 и восстанавливаются после глюков.
+# wnm_sleep_mode НЕ включаем сознательно: Windows-клиент с подтверждённой
+# чувствительностью к power-save фичам (U-APSD кейс 26.09) — не рискуем.
+#
+# ⚠️ ПРЕДОХРАНИТЕЛЬ (инцидент 27.09): опция bss_transition существует ТОЛЬКО в
+# полных wpad (mbedtls/openssl/wolfssl). На wpad-basic-* hostapd отвечает
+# "unknown configuration item 'bss_transition'" и add_iface FAILED — ОБА AP
+# не поднимаются. Проверяем установленный wpad; basic — выходим не трогая wifi.
+if ! grep -qs "^P:wpad-mbedtls$\|^P:wpad-openssl$\|^P:wpad-wolfssl$" /lib/apk/db/installed 2>/dev/null; then
+	logger -t uci-defaults "23_be7000_roaming: wpad без 802.11v — bss_transition НЕ применён (см. инцидент 27.09)"
+	exit 0
+fi
+
+i=0
+while uci -q get wireless.@wifi-iface[$i] >/dev/null 2>&1; do
+	[ "$(uci -q get wireless.@wifi-iface[$i].mode)" = "ap" ] && {
+		uci -q set wireless.@wifi-iface[$i].bss_transition='1'
+		uci -q set wireless.@wifi-iface[$i].ieee80211k='1'
+	}
+	i=$((i + 1))
+done
+uci -q commit wireless
+
+exit 0

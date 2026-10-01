@@ -1,0 +1,17 @@
+#!/bin/sh
+# Включаем be7000-службы: build-система не создаёт rc.d-симлинки ни для
+# скриптов порта (base-files), ни для files/-оверлея — без этого всё
+# молча не работает после прошивки (кейс be7000_boot_success 22.09).
+# bootconfirm подтверждает слот загрузчику (иначе после ~7 перезагрузок
+# стоковый U-Boot молча переключает слот — behavior v1.2.3 timofey-maykov).
+/etc/init.d/be7000_boot_success enable 2>/dev/null
+/etc/init.d/be7000-bootconfirm enable 2>/dev/null
+/etc/init.d/be7000-rf-hog enable 2>/dev/null
+/etc/init.d/opt-apps enable 2>/dev/null
+/etc/init.d/luci-lang-fix enable 2>/dev/null
+/etc/init.d/be7000-rc-restore enable 2>/dev/null
+# На одноразделной QWRT-раскладке fw_printenv не заработает (нет 0:appsblenv) —
+# bootconfirm сам громко напишет в лог и выйдет, это нормально.
+/etc/init.d/be7000-bootconfirm start 2>/dev/null
+
+exit 0

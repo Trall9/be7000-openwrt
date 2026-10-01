@@ -1,0 +1,792 @@
+#!/bin/sh
+# opt-install — установка/удаление тяжёлого ПО на внешний USB-диск (/mnt/sda1/opt)
+# Управляется из LuCI (luci-app-opt-install) или вручную по SSH.
+#
+# Команды:
+#   status                    — состояние диска и приложений (JSON)
+#   install <app>             — установить (фон), прогресс в log
+#   remove  <app>             — удалить бинарник и сервис (данные остаются)
+#   log                       — последние 120 строк лога установки
+#   start|stop|restart|enable|disable <app> — управление сервисом
+#   mount-ext4                — подключить ext4-том /opt (если уже создан)
+#   autostart                 — (для init opt-apps) дождаться диска, поднять /opt
+#                               и запустить включённые приложения
+#
+# Приложения: qbittorrent xray tailscale — прямо на диске (/mnt/sda1/opt/apps);
+#             docker jackett — на ext4-томе /opt: NTFS/exFAT для них не годятся
+#             (overlay2, права, mmap .NET), поэтому на диске создаётся файл
+#             /mnt/sda1/opt/ext4store.img (sparse, по умолчанию 16 ГБ,
+#             OPT_EXT4_MB=… для другого размера), форматируется в ext4 и
+#             монтируется через loop. Если сам диск уже ext4/f2fs/btrfs —
+#             /opt делается bind-ом на /mnt/sda1/opt/ext без образа.
+#
+# Данные (закачки qbt, конфиги) НЕ удаляются при remove — только бинарь+сервис.
+
+APPS_ALL="qbittorrent xray tailscale docker jackett entware"
+BASE_DIR="/mnt/sda1/opt"
+APPS_DIR="$BASE_DIR/apps"
+LOG_FILE="${OPT_LOG_FILE:-$BASE_DIR/install.log}"
+AUTOSTART_OFF="$BASE_DIR/autostart.off"  # приложения, у которых владелец выключил автозапуск (на диске — переживает перепрошивку)
+STATE_FILE="$BASE_DIR/install.state"   # "<app> <pid>" пока идёт установка; "<app> done <rc>" по завершении
+EXT_IMG="$BASE_DIR/ext4store.img"
+EXT_MP="/opt"
+EXT_MB="${OPT_EXT4_MB:-16384}"
+# пути docker/jackett — литералами (участвуют в rm -rf)
+DOCKER_DIR="/opt/docker"
+DOCKER_ROOT="/opt/docker/root"
+JACKETT_DIR="/opt/apps/Jackett"
+JACKETT_DATA="/opt/apps/jackett-data"
+DOCKER_BINS="dockerd docker containerd containerd-shim-runc-v2 ctr docker-proxy docker-init tini docker-compose"
+
+json_escape() { sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e ':a;N;$!ba;s/\n/\\n/g'; }
+
+log() { echo "$(date '+%H:%M:%S') $*" >> "$LOG_FILE"; }
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+mounted() { grep -q " /mnt/sda1 " /proc/mounts; }
+
+ensure_dirs() {
+	mounted || die "Диск не смонтирован (/mnt/sda1). Вставьте диск, подождите 10 сек (usb-watchdog)."
+	mkdir -p "$APPS_DIR"
+}
+
+# ---------------- ext4-том /opt ----------------
+
+ext_mounted() { grep -q " $EXT_MP " /proc/mounts; }
+
+disk_fstype() { awk '$2=="/mnt/sda1"{t=$3} END{print t}' /proc/mounts; }
+
+disk_writable() {
+	{ echo > /mnt/sda1/.opt-probe.$$ && rm -f /mnt/sda1/.opt-probe.$$; } 2>/dev/null
+}
+
+# mount_ext4 [create] — подключить /opt; с create — создать образ, если его нет.
+# Сериализовано flock: при загрузке opt-apps и usb-watchdog зовут это почти
+# одновременно, и два losetup/mount на один образ ломали друг другу подключение.
+mount_ext4() {
+	ext_mounted && return 0
+	mounted || return 1
+	# грязный NTFS после отключения питания смонтирован, но пишет с EIO —
+	# ext4 поверх него не поднимется (usb-watchdog перемонтирует диск сам)
+	disk_writable || return 1
+	( flock -x 9 || exit 1; mount_ext4_locked "$1" ) 9>/var/lock/opt-ext4.lock
+}
+
+# Пакеты прошивки тоже живут в /opt (zapret → /opt/zapret). Том с диска,
+# смонтированный поверх /opt, спрятал бы их — поэтому до монтирования
+# сохраняем корневой /opt, а после прокидываем его каталоги внутрь тома.
+OPT_ROOTFS=/var/run/opt-rootfs
+opt_rootfs_save() {
+	grep -q " $OPT_ROOTFS " /proc/mounts && return 0
+	[ -n "$(ls -A "$EXT_MP" 2>/dev/null)" ] || return 0
+	mkdir -p "$OPT_ROOTFS" && mount --bind "$EXT_MP" "$OPT_ROOTFS"
+}
+opt_rootfs_restore() {
+	local d n
+	grep -q " $OPT_ROOTFS " /proc/mounts || return 0
+	for d in "$OPT_ROOTFS"/*; do
+		[ -d "$d" ] || continue
+		n=${d##*/}
+		grep -q " $EXT_MP/$n " /proc/mounts && continue
+		mkdir -p "$EXT_MP/$n" && mount --bind "$d" "$EXT_MP/$n" && \
+			logger -t opt-install "/opt/$n: из прошивки (bind поверх тома)"
+	done
+}
+
+mount_ext4_locked() {
+	ext_mounted && return 0
+	mkdir -p "$EXT_MP"
+	opt_rootfs_save
+	case "$(disk_fstype)" in
+	ext4|ext3|f2fs|btrfs|xfs)
+		[ "$1" = create ] && mkdir -p "$BASE_DIR/ext"
+		[ -d "$BASE_DIR/ext" ] || return 1
+		mount --bind "$BASE_DIR/ext" "$EXT_MP" || return 1
+		logger -t opt-install "/opt: bind $BASE_DIR/ext"
+		opt_rootfs_restore
+		return 0
+		;;
+	esac
+	if [ ! -f "$EXT_IMG" ]; then
+		[ "$1" = create ] || return 1
+		local avail
+		avail=$(df -m /mnt/sda1 | awk 'NR==2{print $4}')
+		[ -n "$avail" ] && [ "$avail" -gt $((EXT_MB + 2048)) ] || {
+			log "ext4: мало места на диске (${avail:-?} МБ, нужно > $((EXT_MB + 2048)))"; return 1; }
+		log "ext4: создание тома $EXT_IMG (${EXT_MB} МБ, sparse)…"
+		mkdir -p "$BASE_DIR"
+		dd if=/dev/zero of="$EXT_IMG" bs=1M count=0 seek="$EXT_MB" 2>/dev/null || return 1
+		mkfs.ext4 -q -F -m 0 -L optstore "$EXT_IMG" || { log "ext4: ОШИБКА mkfs.ext4 (образ $EXT_IMG оставлен, удалите вручную)"; return 1; }
+	fi
+	local dev
+	dev=$(losetup -j "$EXT_IMG" 2>/dev/null | cut -d: -f1 | head -n1)
+	[ -n "$dev" ] || dev=$(losetup -f --show "$EXT_IMG" 2>/dev/null) || return 1
+	# после аварийного отключения диска — проверить ФС перед монтированием
+	e2fsck -p "$dev" >/dev/null 2>&1
+	mount -t ext4 -o noatime "$dev" "$EXT_MP" || { losetup -d "$dev" 2>/dev/null; return 1; }
+	logger -t opt-install "/opt: ext4 $EXT_IMG via $dev"
+	opt_rootfs_restore
+	return 0
+}
+
+init_name() { case "$1" in docker) echo dockerd ;; *) echo "$1" ;; esac; }
+
+busy_app() {
+	[ -f "$STATE_FILE" ] || return 1
+	local app pid
+	app=$(awk '{print $1}' "$STATE_FILE" 2>/dev/null)
+	pid=$(awk '{print $2}' "$STATE_FILE" 2>/dev/null)
+	[ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && { echo "$app"; return 0; }
+	return 1
+}
+
+bin_installed() {
+	case "$1" in
+		qbittorrent) [ -x "$APPS_DIR/qbittorrent/qbittorrent-nox" ] ;;
+		xray)        [ -x "$APPS_DIR/xray/xray" ] ;;
+		tailscale)   [ -x "$APPS_DIR/tailscale/tailscale" ] && [ -x "$APPS_DIR/tailscale/tailscaled" ] ;;
+		docker)      [ -x /etc/init.d/dockerd ] && [ -x "$DOCKER_ROOT/usr/bin/dockerd" ] ;;
+		jackett)     [ -x /etc/init.d/jackett ] && [ -x "$JACKETT_DIR/jackett" ] ;;
+		entware)     [ -x /etc/init.d/entware ] && [ -x /opt/bin/opkg ] ;;
+	esac
+}
+
+bin_version() {
+	case "$1" in
+		qbittorrent) "$APPS_DIR/qbittorrent/qbittorrent-nox" --version 2>/dev/null | head -1 ;;
+		xray)        "$APPS_DIR/xray/xray" version 2>/dev/null | head -1 ;;
+		tailscale)   "$APPS_DIR/tailscale/tailscale" --version 2>/dev/null | head -1 ;;
+		docker)      "$DOCKER_ROOT/usr/bin/dockerd" --version 2>/dev/null | head -1 ;;
+		jackett)     cat "$JACKETT_DIR/.version" 2>/dev/null ;;
+		entware)     echo "Entware ($(/opt/bin/opkg list-installed 2>/dev/null | wc -l) пакетов)" ;;
+	esac
+}
+
+svc_running() { pgrep -f "$1" >/dev/null 2>&1; }
+
+# ---------------- установка (фоновый воркер) ----------------
+
+dl() { # dl <url> <file>
+	curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 20 -o "$2.part" "$1" && mv "$2.part" "$2"
+}
+
+# Торренты по умолчанию — только через wan: libtorrent открывает сокеты на ВСЕХ
+# интерфейсах, и при поднятом VPN (AmneziaWG/WireGuard) DHT и пиры уходят в
+# туннель мимо правил pbr (проверено 30.09). Не трогаем, если пользователь уже
+# выбрал интерфейс в настройках qBittorrent.
+qbt_bind_wan() {
+	local conf="$APPS_DIR/qbittorrent/qBittorrent/config/qBittorrent.conf" dev
+	dev=$(ubus call network.interface.wan status 2>/dev/null | jsonfilter -e '@.l3_device' 2>/dev/null)
+	[ -n "$dev" ] || return 0
+	mkdir -p "${conf%/*}"
+	grep -qs '^Session\\Interface=' "$conf" && return 0
+	if grep -qs '^\[BitTorrent\]' "$conf"; then
+		sed -i "/^\[BitTorrent\]/a Session\\\\Interface=$dev\nSession\\\\InterfaceName=$dev" "$conf"
+	else
+		printf '[BitTorrent]\nSession\\Interface=%s\nSession\\InterfaceName=%s\n\n' "$dev" "$dev" >> "$conf"
+	fi
+	log "qBittorrent: сетевой интерфейс для торрентов — $dev (wan; сменить: Настройки → Дополнительно)"
+}
+
+do_install_qbittorrent() {
+	command -v unzip >/dev/null 2>&1 || { log "qBittorrent: ОШИБКА: нет unzip"; return 1; }
+	# qBittorrent Enhanced Edition (c0re100), статическая musl-сборка: в сборке
+	# userdocs нет TLS-бэкенда Qt (не работают https-ссылки на .torrent, RSS,
+	# https-трекеры — проверено 30.09 на 5.2.3 и 5.2.4), в EE HTTPS работает.
+	log "qBittorrent: скачивание qBittorrent Enhanced Edition (статическая сборка aarch64/musl)…"
+	local url="https://github.com/c0re100/qBittorrent-Enhanced-Edition/releases/latest/download/qbittorrent-enhanced-nox_aarch64-linux-musl_static.zip"
+	mkdir -p "$APPS_DIR/qbittorrent"
+	dl "$url" /tmp/qbittorrent-ee.zip || { log "qBittorrent: ОШИБКА скачивания"; return 1; }
+	/etc/init.d/qbittorrent stop 2>/dev/null
+	unzip -o -q /tmp/qbittorrent-ee.zip qbittorrent-nox -d "$APPS_DIR/qbittorrent" \
+		|| { log "qBittorrent: ОШИБКА распаковки"; rm -f /tmp/qbittorrent-ee.zip; return 1; }
+	rm -f /tmp/qbittorrent-ee.zip
+	chmod +x "$APPS_DIR/qbittorrent/qbittorrent-nox" || return 1
+	log "qBittorrent: $(bin_version qbittorrent)"
+	qbt_bind_wan
+	log "qBittorrent: создание procd-сервиса…"
+	cat > /etc/init.d/qbittorrent <<'EOF'
+#!/bin/sh /etc/rc.common
+USE_PROCD=1
+START=99
+STOP=10
+APPDIR=/mnt/sda1/opt/apps/qbittorrent
+start_service() {
+	[ -x "$APPDIR/qbittorrent-nox" ] || { logger -t qbittorrent "нет бинаря (диск не смонтирован?)"; exit 0; }
+	procd_open_instance
+	procd_set_param command "$APPDIR/qbittorrent-nox" --profile="$APPDIR" --webui-port=8080 --confirm-legal-notice
+	procd_set_param respawn 3600 5 0
+	procd_set_param limits core="0 0"
+	procd_set_param stdout 1
+	procd_set_param stderr 1
+	procd_close_instance
+}
+EOF
+	chmod +x /etc/init.d/qbittorrent
+	/etc/init.d/qbittorrent enable
+	/etc/init.d/qbittorrent start
+	log "qBittorrent: установлен и запущен. Веб-морда: http://192.168.1.1:8080 (временный пароль: logread | grep -i qBittorrent)"
+	return 0
+}
+
+do_install_xray() {
+	command -v unzip >/dev/null 2>&1 || { log "xray: ОШИБКА: нет unzip (ставится отдельным пакетом)"; return 1; }
+	log "xray: определение последнего релиза…"
+	local url="https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-arm64-v8a.zip"
+	mkdir -p "$APPS_DIR/xray"
+	log "xray: скачивание…"
+	dl "$url" "/tmp/xray.zip" || { log "xray: ОШИБКА скачивания"; return 1; }
+	log "xray: распаковка…"
+	unzip -o -q /tmp/xray.zip xray geoip.dat geosite.dat -d "$APPS_DIR/xray" 2>/dev/null \
+		|| unzip -o -q /tmp/xray.zip -d "$APPS_DIR/xray" \
+		|| { log "xray: ОШИБКА распаковки"; rm -f /tmp/xray.zip; return 1; }
+	rm -f /tmp/xray.zip
+	chmod +x "$APPS_DIR/xray/xray" || return 1
+	if [ ! -f "$APPS_DIR/xray/config.json" ]; then
+		log "xray: создание примера конфига (socks5 127.0.0.1:10808 → direct; замените на свой VLESS)"
+		cat > "$APPS_DIR/xray/config.json" <<'EOF'
+{
+  "log": { "loglevel": "warning" },
+  "inbounds": [ {
+    "tag": "socks-in", "listen": "127.0.0.1", "port": 10808,
+    "protocol": "socks", "settings": { "udp": true }
+  } ],
+  "outbounds": [ { "protocol": "freedom", "tag": "direct" } ]
+}
+EOF
+	fi
+	log "xray: $(bin_version xray)"
+	cat > /etc/init.d/xray <<'EOF'
+#!/bin/sh /etc/rc.common
+USE_PROCD=1
+START=99
+STOP=10
+APPDIR=/mnt/sda1/opt/apps/xray
+start_service() {
+	[ -x "$APPDIR/xray" ] || { logger -t xray "нет бинаря (диск не смонтирован?)"; exit 0; }
+	procd_open_instance
+	procd_set_param command "$APPDIR/xray" run -c "$APPDIR/config.json"
+	procd_set_param respawn 3600 5 0
+	procd_set_param stdout 1
+	procd_set_param stderr 1
+	procd_close_instance
+}
+EOF
+	chmod +x /etc/init.d/xray
+	/etc/init.d/xray enable
+	/etc/init.d/xray start
+	log "xray: установлен и запущен (пример конфига; отредактируйте $APPS_DIR/xray/config.json)"
+	return 0
+}
+
+do_install_tailscale() {
+	log "tailscale: определение последней стабильной версии…"
+	local ver file url
+	ver=$(curl -fsL --connect-timeout 20 https://pkgs.tailscale.com/stable/ 2>/dev/null | sed -n 's/.*tailscale_\([0-9][0-9.]*\)_arm64\.tgz.*/\1/p' | head -1)
+	[ -n "$ver" ] || { log "tailscale: ОШИБКА: не удалось определить версию"; return 1; }
+	file="tailscale_${ver}_arm64.tgz"
+	url="https://pkgs.tailscale.com/stable/${file}"
+	log "tailscale: скачивание $file…"
+	dl "$url" "/tmp/tailscale.tgz" || { log "tailscale: ОШИБКА скачивания"; return 1; }
+	mkdir -p "$APPS_DIR/tailscale"
+	log "tailscale: распаковка…"
+	tar -xzf /tmp/tailscale.tgz -C /tmp || { log "tailscale: ОШИБКА распаковки"; rm -f /tmp/tailscale.tgz; return 1; }
+	cp -f "/tmp/tailscale_${ver}_arm64/tailscale"  "$APPS_DIR/tailscale/tailscale"
+	cp -f "/tmp/tailscale_${ver}_arm64/tailscaled" "$APPS_DIR/tailscale/tailscaled"
+	rm -rf "/tmp/tailscale_${ver}_arm64" /tmp/tailscale.tgz
+	chmod +x "$APPS_DIR/tailscale/tailscale" "$APPS_DIR/tailscale/tailscaled" || return 1
+	log "tailscale: $(bin_version tailscale)"
+	[ -e /dev/net/tun ] || log "tailscale: /dev/net/tun отсутствует → режим userspace-networking (SOCKS5 :1055)"
+	cat > /etc/init.d/tailscale <<'EOF'
+#!/bin/sh /etc/rc.common
+USE_PROCD=1
+START=99
+STOP=10
+APPDIR=/mnt/sda1/opt/apps/tailscale
+start_service() {
+	[ -x "$APPDIR/tailscaled" ] || { logger -t tailscale "нет бинаря (диск не смонтирован?)"; exit 0; }
+	procd_open_instance
+	procd_set_param command "$APPDIR/tailscaled" --statedir="$APPDIR" --socket=/var/run/tailscaled.sock
+	if [ ! -e /dev/net/tun ]; then
+		procd_append_param command --tun=userspace-networking --socks5-server=127.0.0.1:1055
+	fi
+	procd_set_param respawn 3600 5 0
+	procd_set_param stdout 1
+	procd_set_param stderr 1
+	procd_close_instance
+}
+EOF
+	chmod +x /etc/init.d/tailscale
+	/etc/init.d/tailscale enable
+	/etc/init.d/tailscale start
+	log "tailscale: установлен. Далее по SSH: $APPS_DIR/tailscale/tailscale up  (или --login-server / --authkey)"
+	return 0
+}
+
+# бинари docker — ссылками из /usr/bin на диск (в ROM места под 230 МБ нет).
+# Ссылки живут в overlay и теряются при sysupgrade — autostart их пересоздаёт.
+docker_links() {
+	local b
+	for b in $DOCKER_BINS; do
+		[ -e "$DOCKER_ROOT/usr/bin/$b" ] && ln -sf "$DOCKER_ROOT/usr/bin/$b" "/usr/bin/$b"
+	done
+	ln -sf "$DOCKER_ROOT/usr/sbin/runc" /usr/sbin/runc
+	mkdir -p /usr/lib/docker
+	ln -sfn "$DOCKER_ROOT/usr/lib/docker/cli-plugins" /usr/lib/docker/cli-plugins
+}
+
+do_install_docker() {
+	mount_ext4 create || { log "docker: ОШИБКА: нет ext4-тома /opt"; return 1; }
+	local f b
+	mkdir -p /opt/docker/pkgs /opt/docker/root /opt/docker/data
+	rm -f /opt/docker/pkgs/*.apk
+	log "docker: обновление индекса apk…"
+	apk update >/dev/null 2>&1
+	log "docker: скачивание dockerd, docker, containerd, runc, tini, docker-compose (~80 МБ)…"
+	( cd /opt/docker/pkgs && apk fetch dockerd docker containerd runc tini docker-compose ) >/dev/null 2>&1 \
+		|| { log "docker: ОШИБКА apk fetch (нет интернета или фида)"; return 1; }
+	log "docker: распаковка на ext4…"
+	# apk extract не перезаписывает существующие файлы — при переустановке
+	# (например, после перепрошивки) распаковываем в чистый каталог.
+	# Образы и контейнеры лежат отдельно, в /opt/docker/data, их не трогаем.
+	/etc/init.d/dockerd stop 2>/dev/null
+	rm -rf /opt/docker/root
+	mkdir -p /opt/docker/root
+	for f in /opt/docker/pkgs/*.apk; do
+		apk extract --allow-untrusted --destination /opt/docker/root "$f" >/dev/null 2>&1 \
+			|| { log "docker: ОШИБКА распаковки $f"; return 1; }
+	done
+	rm -f /opt/docker/pkgs/*.apk
+	docker_links
+	# init и конфиг — штатные из пакета dockerd, в overlay
+	[ -f /etc/config/dockerd ] || cp "$DOCKER_ROOT/etc/config/dockerd" /etc/config/dockerd
+	uci -q set dockerd.globals.data_root="$DOCKER_DIR/data/"
+	# штатное правило «wan → docker0 REJECT» без conntrack режет и ОТВЕТЫ на
+	# исходящие соединения контейнеров (нет интернета внутри). Блокируем только новые.
+	uci -q set dockerd.firewall.extra_iptables_args='--match conntrack ! --ctstate RELATED,ESTABLISHED'
+	uci -q commit dockerd
+	# НЕ ставим 12-br-netfilter-ip.conf из пакета dockerd: он включает фильтрацию
+	# iptables на ВСЕХ мостах, включая br-lan, и ломает прозрачный прокси Podkop.
+	# Фильтрация только на docker0 — /etc/hotplug.d/net/40-docker0-brnf (в прошивке).
+	rm -f /etc/sysctl.d/12-br-netfilter-ip.conf
+	sysctl -w net.bridge.bridge-nf-call-iptables=0 net.bridge.bridge-nf-call-ip6tables=0 >/dev/null 2>&1
+	cp "$DOCKER_ROOT/etc/init.d/dockerd" /etc/init.d/dockerd
+	# при старте без диска — тихо выйти, opt-apps запустит позже
+	sed -i 's|^start_service() {|start_service() {\n\t/usr/bin/opt-install mount-ext4 >/dev/null 2>\&1; [ -e "$(readlink -f /usr/bin/dockerd)" ] \|\| return 0|' /etc/init.d/dockerd
+	chmod +x /etc/init.d/dockerd
+	# интерфейс docker0 в зону fw4 «docker» (штатный init делает это только при
+	# загрузке роутера) + выход контейнеров в интернет через wan (NAT зоны wan)
+	/etc/init.d/dockerd uciadd >/dev/null 2>&1
+	if ! uci -q get firewall.docker_wan >/dev/null; then
+		uci -q set firewall.docker_wan=forwarding
+		uci -q set firewall.docker_wan.src='docker'
+		uci -q set firewall.docker_wan.dest='wan'
+		uci -q commit firewall
+	fi
+	/etc/init.d/network reload >/dev/null 2>&1
+	/etc/init.d/firewall reload >/dev/null 2>&1
+	# ежедневная чистка неиспользуемых образов (память и место)
+	grep -qs 'docker system prune' /etc/crontabs/root || {
+		echo '0 5 * * * [ -S /var/run/docker.sock ] && /usr/bin/docker system prune -f >/dev/null 2>&1' >> /etc/crontabs/root
+		/etc/init.d/cron restart 2>/dev/null; }
+	log "docker: $(bin_version docker)"
+	/etc/init.d/dockerd enable
+	/etc/init.d/dockerd start
+	sleep 8
+	if /usr/bin/docker info >/dev/null 2>&1; then
+		if /usr/bin/docker run --rm alpine wget -qO- -T 10 http://detectportal.firefox.com/success.txt 2>/dev/null | grep -q success; then
+			log "docker: проверка контейнера — интернет внутри есть"
+			/usr/bin/docker rmi alpine >/dev/null 2>&1
+		else
+			log "docker: ВНИМАНИЕ: тестовый контейнер не вышел в интернет — см. logread | grep -E 'dockerd|firewall'"
+		fi
+		log "docker: работает. Управление: LuCI → Службы → Docker (обновите страницу). Данные: $DOCKER_DIR/data"
+	else
+		log "docker: сервис запущен, но docker info не отвечает — см. logread | grep dockerd"
+	fi
+	rm -f /tmp/luci-indexcache*
+	/etc/init.d/rpcd reload 2>/dev/null
+	return 0
+}
+
+do_install_jackett() {
+	mount_ext4 create || { log "jackett: ОШИБКА: нет ext4-тома /opt"; return 1; }
+	local url="https://github.com/Jackett/Jackett/releases/latest/download/Jackett.Binaries.LinuxMuslARM64.tar.gz"
+	local ver
+	mkdir -p /opt/apps "$JACKETT_DATA"
+	ver=$(curl -fsI --connect-timeout 20 https://github.com/Jackett/Jackett/releases/latest 2>/dev/null | sed -n 's|^[Ll]ocation: .*/tag/\(v[0-9.]*\).*|\1|p' | tr -d '\r')
+	log "jackett: скачивание ${ver:-последней версии} (MuslARM64, ~50 МБ)…"
+	dl "$url" /opt/apps/jackett.tgz || { log "jackett: ОШИБКА скачивания"; return 1; }
+	log "jackett: распаковка…"
+	/etc/init.d/jackett stop 2>/dev/null
+	rm -rf /opt/apps/Jackett
+	tar -xzf /opt/apps/jackett.tgz -C /opt/apps || { log "jackett: ОШИБКА распаковки"; rm -f /opt/apps/jackett.tgz; return 1; }
+	rm -f /opt/apps/jackett.tgz
+	[ -x "$JACKETT_DIR/jackett" ] || { log "jackett: ОШИБКА: в архиве нет Jackett/jackett"; return 1; }
+	echo "Jackett ${ver:-?}" > "$JACKETT_DIR/.version"
+	# ICU обязательна: Jackett создаёт культуру en-US, в invariant-режиме .NET
+	# падает (CultureNotFoundException). Берём icu из фида на ext4 (~37 МБ), не в overlay.
+	log "jackett: скачивание ICU (библиотеки + данные, ~15 МБ)…"
+	mkdir -p /opt/apps/icu-pkgs /opt/apps/icu
+	rm -f /opt/apps/icu-pkgs/*.apk
+	apk update >/dev/null 2>&1
+	( cd /opt/apps/icu-pkgs && apk fetch $(apk search -q 'icu[0-9]*' 2>/dev/null | grep -E '^icu[0-9]+$' | head -n1) \
+		$(apk search -q 'icu-full-data*' 2>/dev/null | grep -E '^icu-full-data[0-9]+$' | head -n1) ) >/dev/null 2>&1
+	ls /opt/apps/icu-pkgs/*.apk >/dev/null 2>&1 || { log "jackett: ОШИБКА: не скачался пакет icu"; return 1; }
+	# apk extract не перезаписывает файлы — при переустановке распаковываем начисто
+	rm -rf /opt/apps/icu
+	mkdir -p /opt/apps/icu
+	for f in /opt/apps/icu-pkgs/*.apk; do
+		apk extract --allow-untrusted --destination /opt/apps/icu "$f" >/dev/null 2>&1 \
+			|| { log "jackett: ОШИБКА распаковки $f"; return 1; }
+	done
+	rm -f /opt/apps/icu-pkgs/*.apk
+	# запуск через обёртку: жёсткий лимит памяти (cgroup v2; .NET сам берёт
+	# размер кучи из memory.max)
+	cat > "$JACKETT_DIR/run.sh" <<'EOF'
+#!/bin/sh
+CG=/sys/fs/cgroup/jackett
+grep -qw memory /sys/fs/cgroup/cgroup.subtree_control || echo +memory > /sys/fs/cgroup/cgroup.subtree_control 2>/dev/null
+mkdir -p $CG 2>/dev/null && {
+	echo "${JACKETT_MEM:-320M}" > $CG/memory.max 2>/dev/null
+	echo $$ > $CG/cgroup.procs 2>/dev/null
+}
+ICU=/opt/apps/icu
+export LD_LIBRARY_PATH=$ICU/usr/lib
+export ICU_DATA=$(ls -d $ICU/usr/share/icu/* 2>/dev/null | head -n1)
+export HOME=/opt/apps/jackett-data
+exec /opt/apps/Jackett/jackett --NoRestart --NoUpdates --Port 9117 --ListenPublic --DataFolder /opt/apps/jackett-data
+EOF
+	chmod +x "$JACKETT_DIR/run.sh"
+	cat > /etc/init.d/jackett <<'EOF'
+#!/bin/sh /etc/rc.common
+# Jackett — индексатор торрент-трекеров для qBittorrent (порт 9117)
+USE_PROCD=1
+START=99
+STOP=10
+start_service() {
+	/usr/bin/opt-install mount-ext4 >/dev/null 2>&1
+	[ -x /opt/apps/Jackett/run.sh ] || { logger -t jackett "нет /opt (диск не смонтирован?)"; return 0; }
+	procd_open_instance
+	procd_set_param command /opt/apps/Jackett/run.sh
+	procd_set_param respawn 3600 10 5
+	procd_set_param stdout 0
+	procd_set_param stderr 1
+	procd_close_instance
+}
+EOF
+	chmod +x /etc/init.d/jackett
+	/etc/init.d/jackett enable
+	/etc/init.d/jackett start
+	log "jackett: установлен и запущен. Веб-морда: http://192.168.1.1:9117 (первый старт .NET ~1 мин). Лимит памяти 320 МБ."
+	log "jackett: связка с qBittorrent — в Jackett «Add indexer», затем в qBittorrent Поиск → плагин Jackett (API key со страницы Jackett)."
+	return 0
+}
+
+# Entware: ~3000 пакетов (opkg) на ext4-томе /opt — для тяжёлого софта, который
+# не помещается во флеш (AdGuard Home, Syncthing, File Browser, Python…).
+# Свой загрузчик glibc в /opt/lib, системные файлы не трогает.
+ENTWARE_URL="http://bin.entware.net/aarch64-k3.10/installer"
+do_install_entware() {
+	mount_ext4 create || { log "entware: ОШИБКА: нет ext4-тома /opt"; return 1; }
+	if [ ! -x /opt/bin/opkg ]; then
+		log "entware: установка opkg и базы Entware (aarch64)…"
+		mkdir -p /opt/bin /opt/etc /opt/lib/opkg /opt/tmp /opt/var/lock
+		dl "$ENTWARE_URL/opkg" /opt/bin/opkg || { log "entware: ОШИБКА скачивания opkg"; return 1; }
+		chmod 755 /opt/bin/opkg
+		dl "$ENTWARE_URL/opkg.conf" /opt/etc/opkg.conf || { log "entware: ОШИБКА скачивания opkg.conf"; return 1; }
+		/opt/bin/opkg update >/dev/null 2>&1 || { log "entware: ОШИБКА opkg update"; return 1; }
+		/opt/bin/opkg install entware-opt >>"$LOG_FILE" 2>&1 || { log "entware: ОШИБКА установки entware-opt"; return 1; }
+		chmod 777 /opt/tmp
+		for f in passwd group shells shadow gshadow; do
+			[ -f /etc/$f ] && ln -sf /etc/$f /opt/etc/$f
+		done
+		[ -f /etc/localtime ] && ln -sf /etc/localtime /opt/etc/localtime
+	else
+		log "entware: уже развёрнут в /opt, обновление списков…"
+		/opt/bin/opkg update >/dev/null 2>&1
+	fi
+	# PATH для SSH-сессий: системные программы приоритетнее программ Entware
+	cat > /etc/profile.d/entware.sh <<'EOF2'
+[ -x /opt/bin/opkg ] && case ":$PATH:" in *:/opt/bin:*) ;; *) export PATH="$PATH:/opt/bin:/opt/sbin" ;; esac
+EOF2
+	log "entware: создание procd-сервиса (запуск служб Entware /opt/etc/init.d/S*)…"
+	cat > /etc/init.d/entware <<'EOF2'
+#!/bin/sh /etc/rc.common
+START=99
+STOP=10
+start() {
+	[ -x /opt/etc/init.d/rc.unslung ] || { logger -t entware "нет /opt (диск не смонтирован?)"; return 0; }
+	/opt/etc/init.d/rc.unslung start >/dev/null 2>&1
+	touch /var/run/entware.started
+}
+stop() {
+	[ -x /opt/etc/init.d/rc.unslung ] && /opt/etc/init.d/rc.unslung stop >/dev/null 2>&1
+	rm -f /var/run/entware.started
+}
+EOF2
+	chmod +x /etc/init.d/entware
+	grep -qx '/etc/init.d/entware' /etc/sysupgrade.conf 2>/dev/null || echo '/etc/init.d/entware' >> /etc/sysupgrade.conf
+	/etc/init.d/entware enable
+	/etc/init.d/entware start
+	log "entware: готово, $(bin_version entware). Пакеты: Службы → Каталог приложений, или по SSH: opkg install <пакет>"
+	return 0
+}
+
+# ---------------- форматирование USB-диска в ext4 ----------------
+# Диск целиком: новая таблица GPT, один раздел ext4 (метка be7000).
+# Приложения на ext4 работают без файла-образа: /opt — каталог на диске.
+usb_disk() { # первый USB-диск: sda / sdb …
+	local d
+	for d in /sys/block/sd*; do
+		[ -e "$d" ] || continue
+		readlink -f "$d/device" | grep -q '/usb' && { echo "${d##*/}"; return 0; }
+	done
+	return 1
+}
+
+disk_info() {
+	local d fs size model
+	d=$(usb_disk) || { echo '{"present":0}'; return; }
+	fs=$(lsblk -no FSTYPE "/dev/${d}1" 2>/dev/null | head -n1)
+	size=$(lsblk -dno SIZE "/dev/$d" 2>/dev/null | tr -d ' ')
+	model=$(cat "/sys/block/$d/device/model" 2>/dev/null | sed 's/ *$//' | json_escape)
+	printf '{"present":1,"dev":"%s","size":"%s","model":"%s","fstype":"%s","parts":%s}\n' \
+		"$d" "$size" "$model" "${fs:-none}" "$(ls -d /sys/block/$d/${d}[0-9]* 2>/dev/null | wc -l)"
+}
+
+do_format() {
+	local d="$1" svc mp p
+	log "format: остановка приложений и служб на диске…"
+	for app in $APPS_ALL; do
+		svc=$(init_name "$app"); [ -x "/etc/init.d/$svc" ] && /etc/init.d/"$svc" stop 2>/dev/null
+	done
+	for svc in samba4 minidlna transmission aria2 hd-idle; do
+		[ -x "/etc/init.d/$svc" ] && /etc/init.d/"$svc" stop 2>/dev/null
+	done
+	sleep 2
+	log "format: размонтирование /dev/$d…"
+	# сначала всё, что смонтировано в /opt, затем разделы диска (глубокие пути первыми)
+	for mp in $(awk '$2 ~ "^/opt(/|$)" {print $2}' /proc/mounts | sort -r); do umount "$mp" 2>/dev/null || umount -l "$mp"; done
+	for l in $(losetup -a 2>/dev/null | grep -F "$BASE_DIR/" | cut -d: -f1); do losetup -d "$l" 2>/dev/null; done
+	for p in $(awk -v d="/dev/$d" 'index($1, d) == 1 {print $2}' /proc/mounts | sort -r); do umount "$p" 2>/dev/null || umount -l "$p"; done
+	grep -q "^/dev/$d" /proc/mounts && { log "format: ОШИБКА: диск занят, не размонтировался"; return 1; }
+	# своя запись fstab под NTFS (force) больше не нужна — ext4 монтирует автомонтировщик
+	local i=0
+	while uci -q get fstab.@mount[$i] >/dev/null; do
+		case "$(uci -q get fstab.@mount[$i].device)" in
+		/dev/$d*) uci -q delete fstab.@mount[$i]; continue ;;
+		esac
+		i=$((i + 1))
+	done
+	uci -q commit fstab
+	log "format: новая таблица разделов GPT и раздел ext4…"
+	wipefs -a "/dev/$d" >/dev/null 2>&1
+	printf 'label: gpt\n,,L\n' | sfdisk -q "/dev/$d" >>"$LOG_FILE.tmp" 2>&1 || { log "format: ОШИБКА sfdisk"; return 1; }
+	sleep 2
+	[ -b "/dev/${d}1" ] || { log "format: ОШИБКА: раздел /dev/${d}1 не появился"; return 1; }
+	wipefs -a "/dev/${d}1" >/dev/null 2>&1
+	mkfs.ext4 -q -F -m 0 -L be7000 "/dev/${d}1" || { log "format: ОШИБКА mkfs.ext4"; return 1; }
+	log "format: монтирование…"
+	mkdir -p /mnt/${d}1
+	block mount >/dev/null 2>&1
+	sleep 2
+	mounted || { mkdir -p /mnt/sda1; mount -t ext4 -o rw "/dev/${d}1" /mnt/sda1 2>/dev/null; }
+	mounted || { log "format: ОШИБКА: диск отформатирован, но не смонтировался в /mnt/sda1"; return 1; }
+	mkdir -p "$APPS_DIR" "$BASE_DIR/ext"
+	for svc in samba4 minidlna; do [ -x "/etc/init.d/$svc" ] && /etc/init.d/"$svc" enabled && /etc/init.d/"$svc" start; done
+	log "format: готово — диск ext4 ($(df -h /mnt/sda1 | awk 'NR==2{print $2}')). Приложения нужно установить заново."
+	return 0
+}
+
+format_disk() { # format-disk <dev> <подтверждение>
+	local d="$1"
+	[ "$2" = "FORMAT-$1" ] || die "нет подтверждения"
+	[ "$d" = "$(usb_disk)" ] || die "/dev/$d — не USB-диск"
+	command -v sfdisk >/dev/null && command -v wipefs >/dev/null || die "нет sfdisk/wipefs в прошивке"
+	local b
+	b=$(busy_app) && die "идёт установка: $b — подождите"
+	: > /tmp/opt-install-format.log
+	( /usr/bin/opt-install _format "$d" </dev/null >/dev/null 2>&1 & echo "format $!" > /var/run/opt-install.format )
+	echo "OK: форматирование /dev/$d запущено"
+}
+
+worker() { # воркер в фоне: $1 = app
+	local app="$1" rc
+	ensure_dirs || { echo "$app done 1" > "$STATE_FILE"; exit 1; }
+	do_install_"$app"; rc=$?
+	[ "$rc" = 0 ] && [ -f "$AUTOSTART_OFF" ] && sed -i "/^$app\$/d" "$AUTOSTART_OFF"
+	echo "$app done $rc" > "$STATE_FILE"
+	log "===== установка $app завершена (rc=$rc) ====="
+}
+
+start_install() {
+	local app="$1"
+	echo "$APPS_ALL" | grep -qw "$app" || die "нет такого приложения: $app"
+	local b
+	b=$(busy_app) && die "уже идёт установка: $b"
+	ensure_dirs
+	: > "$LOG_FILE"
+	log "===== установка $app начата ====="
+	( /usr/bin/opt-install _worker "$app" >>"$LOG_FILE" 2>&1 & echo "$app $!" > "$STATE_FILE" )
+	echo "OK: установка $app запущена в фоне"
+}
+
+remove_app() {
+	local app="$1"
+	echo "$APPS_ALL" | grep -qw "$app" || die "нет такого приложения: $app"
+	local b
+	b=$(busy_app) && die "идёт установка: $b — подождите"
+	local svc
+	svc=$(init_name "$app")
+	/etc/init.d/"$svc" stop 2>/dev/null
+	/etc/init.d/"$svc" disable 2>/dev/null
+	rm -f "/etc/init.d/$svc"
+	case "$app" in
+		docker)
+			for b in $DOCKER_BINS; do [ -L "/usr/bin/$b" ] && rm -f "/usr/bin/$b"; done
+			[ -L /usr/sbin/runc ] && rm -f /usr/sbin/runc
+			[ -L /usr/lib/docker/cli-plugins ] && rm -f /usr/lib/docker/cli-plugins
+			rm -rf /opt/docker/root
+			sed -i '/docker system prune/d' /etc/crontabs/root 2>/dev/null
+			echo "OK: docker удалён. Образы/контейнеры сохранены: /opt/docker/data (удалить вручную)"
+			return 0 ;;
+		entware)
+			rm -f /etc/profile.d/entware.sh /var/run/entware.started
+			sed -i '\|^/etc/init.d/entware$|d' /etc/sysupgrade.conf 2>/dev/null
+			# только каталоги Entware; docker/, apps/ и каталоги прошивки (zapret) не трогаем
+			for d in bin sbin etc lib libexec include share usr var tmp root home; do
+				grep -q " /opt/$d " /proc/mounts || rm -rf "/opt/$d"
+			done
+			echo "OK: entware удалён вместе с установленными в него пакетами"
+			return 0 ;;
+		jackett)
+			rm -rf /opt/apps/Jackett
+			rm -rf /opt/apps/icu
+			echo "OK: jackett удалён. Настройки сохранены: /opt/apps/jackett-data"
+			return 0 ;;
+		qbittorrent) rm -f "$APPS_DIR/qbittorrent/qbittorrent-nox" ;;
+		xray)        rm -f "$APPS_DIR/xray/xray" ;;
+		tailscale)   rm -f "$APPS_DIR/tailscale/tailscale" "$APPS_DIR/tailscale/tailscaled" ;;
+	esac
+	echo "OK: $app удалён (бинарь+сервис). Данные сохранены: $APPS_DIR/$app"
+}
+
+service_ctl() {
+	local op="$1" app="$2"
+	echo "$APPS_ALL" | grep -qw "$app" || die "нет такого приложения: $app"
+	local svc
+	svc=$(init_name "$app")
+	[ -x "/etc/init.d/$svc" ] || die "сервис $app не установлен"
+	/etc/init.d/"$svc" "$op"
+	case "$op" in
+		disable) mounted && { grep -qxs "$app" "$AUTOSTART_OFF" || echo "$app" >> "$AUTOSTART_OFF"; } ;;
+		enable)  [ -f "$AUTOSTART_OFF" ] && sed -i "/^$app\$/d" "$AUTOSTART_OFF" ;;
+	esac
+	echo "OK: $app $op"
+}
+
+# qBittorrent без заданного пароля WebUI при каждом старте печатает временный
+# пароль в лог, и он быстро вытесняется из кольцевого буфера. Перезапуск → свежий
+# временный пароль (если пароль уже задан пользователем — так и сообщаем).
+qbt_password() {
+	local conf="$APPS_DIR/qbittorrent/qBittorrent/config/qBittorrent.conf" pw i=0
+	[ -x /etc/init.d/qbittorrent ] || die "qBittorrent не установлен"
+	if grep -qs '^WebUI\\Password_PBKDF2=' "$conf"; then
+		echo "SET"
+		return 0
+	fi
+	local old
+	old=$(logread | grep -oE 'temporary password is provided for this session: [A-Za-z0-9]+' | tail -n1 | awk '{print $NF}')
+	/etc/init.d/qbittorrent restart >/dev/null 2>&1
+	while [ $i -lt 20 ]; do
+		sleep 1; i=$((i + 1))
+		pw=$(logread | grep -oE 'temporary password is provided for this session: [A-Za-z0-9]+' | tail -n1 | awk '{print $NF}')
+		[ -n "$pw" ] && [ "$pw" != "$old" ] && { echo "TEMP $pw"; return 0; }
+	done
+	die "не удалось получить временный пароль (см. Состояние → Системный журнал)"
+}
+
+app_running() {
+	case "$1" in
+		qbittorrent) svc_running "qbittorrent-nox" ;;
+		xray)        svc_running "opt/apps/xray/xray" ;;
+		tailscale)   svc_running "tailscaled" ;;
+		docker)      pgrep -x dockerd >/dev/null 2>&1 ;;
+		jackett)     svc_running "Jackett/jackett" ;;
+		entware)     [ -f /var/run/entware.started ] ;;
+		*) return 1 ;;
+	esac
+}
+
+# запуск после загрузки: диск поднимается через 20–60 с после init,
+# поэтому сервисы на диске при boot тихо выходят — поднимаем их здесь
+autostart() {
+	local i=0 app svc
+	while ! mounted; do
+		i=$((i + 1)); [ $i -gt 180 ] && exit 0
+		sleep 2
+	done
+	if [ -f "$EXT_IMG" ] || [ -d "$BASE_DIR/ext" ]; then
+		i=0
+		until mount_ext4; do
+			i=$((i + 1)); [ $i -gt 12 ] && { logger -t opt-install "autostart: /opt не подключился (диск не пишется?)"; break; }
+			sleep 10
+		done
+	fi
+	[ -x /etc/init.d/dockerd ] && [ -x "$DOCKER_ROOT/usr/bin/dockerd" ] && [ ! -e /usr/bin/dockerd ] && docker_links
+	for app in $APPS_ALL; do
+		svc=$(init_name "$app")
+		[ -x "/etc/init.d/$svc" ] || continue
+		bin_installed "$app" || continue
+		grep -qxs "$app" "$AUTOSTART_OFF" && continue
+		# sysupgrade -b/-r не сохраняет ссылки /etc/rc.d → после восстановления бэкапа
+		# или перепрошивки установленные приложения «выключены». Решение о выключении
+		# хранится на диске (AUTOSTART_OFF), остальное включаем обратно.
+		/etc/init.d/"$svc" enabled || { logger -t opt-install "autostart: $svc enable (rc.d потеряна)"; /etc/init.d/"$svc" enable; }
+		app_running "$app" && continue
+		logger -t opt-install "autostart: $svc"
+		/etc/init.d/"$svc" start
+	done
+}
+
+show_status() {
+	local b disk free json_first=1
+	disk=0; mounted && disk=1
+	free=$(df -h /mnt/sda1 2>/dev/null | awk 'NR==2{print $4}')
+	local ext=0; ext_mounted && ext=1
+	printf '{"disk":%s,"disk_free":"%s","ext4":%s,' "$disk" "$free" "$ext"
+	b=$(busy_app)
+	if [ -n "$b" ]; then printf '"busy":"%s",' "$b"; else printf '"busy":null,'; fi
+	printf '"apps":{'
+	for app in $APPS_ALL; do
+		[ $json_first -eq 0 ] && printf ','
+		json_first=0
+		local inst=0 run=0 en=0 ver=""
+		bin_installed "$app" && inst=1
+		[ $inst -eq 1 ] && { ver=$(bin_version "$app" | json_escape); }
+		app_running "$app" && run=1
+		[ -x "/etc/init.d/$(init_name "$app")" ] && /etc/init.d/"$(init_name "$app")" enabled && en=1
+		printf '"%s":{"installed":%s,"running":%s,"enabled":%s,"version":"%s"}' \
+			"$app" "$inst" "$run" "$en" "$ver"
+	done
+	printf '}}\n'
+}
+
+case "$1" in
+	status)      show_status ;;
+	install)     [ -n "$2" ] || die "укажите приложение"; start_install "$2" ;;
+	remove)      [ -n "$2" ] || die "укажите приложение"; remove_app "$2" ;;
+	start|stop|restart|enable|disable) [ -n "$2" ] || die "укажите приложение"; service_ctl "$1" "$2" ;;
+	qbt-password) qbt_password ;;
+	mount-ext4)  mount_ext4 ;;
+	autostart)   autostart ;;
+	log)         tail -120 "$LOG_FILE" 2>/dev/null || echo "(лог пуст)" ;;
+	_worker)     worker "$2" ;;
+	disk-info)   disk_info ;;
+	format-disk) format_disk "$2" "$3" ;;
+	_format)     LOG_FILE=/tmp/opt-install-format.log; do_format "$2"; echo "format done $?" > /var/run/opt-install.format ;;
+	format-log)  cat /tmp/opt-install-format.log 2>/dev/null; cat /var/run/opt-install.format 2>/dev/null ;;
+	*)           echo "usage: opt-install {status|install|remove|start|stop|restart|enable|disable|log|mount-ext4|autostart} [app]"; exit 2 ;;
+esac

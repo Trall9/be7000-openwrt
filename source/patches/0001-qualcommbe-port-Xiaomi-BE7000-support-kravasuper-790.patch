@@ -1,0 +1,5138 @@
+From f29e41cd4fbb1cdb36769d80534e4a6567448e0a Mon Sep 17 00:00:00 2001
+From: Trall9 <Trall9@users.noreply.github.com>
+Date: Thu, 1 Oct 2026 15:36:14 +0200
+Subject: [PATCH 1/5] qualcommbe: port Xiaomi BE7000 support (kravasuper
+ 790d036) to main
+
+---
+ include/target.mk                             |   1 +
+ package/be7000-nfc-i2ctransfer/Makefile       |  41 +
+ .../src/be7000-nfc-i2ctransfer.c              | 186 ++++
+ .../uboot-envtools/files/fw_defaults          |   4 +-
+ .../uboot-envtools/files/qualcommbe_ipq95xx   |  22 +-
+ package/firmware/ath11k-firmware/Makefile     |  37 +-
+ package/firmware/ipq-wifi/Makefile            |  12 +-
+ package/kernel/linux/modules/netsupport.mk    |   2 +-
+ package/kernel/mac80211/ath.mk                |   2 +-
+ .../950-wifi-ath11k-add-ipq9574-support.patch | 213 ++++
+ ...1k-use-iommu-paging-domain-allocator.patch |  19 +
+ ...drop-pcie-pme-capability-for-ipq9574.patch |  19 +
+ ...fi-ath12k-allow-dt-board-id-override.patch |  45 +
+ ...-ath12k-allow-dt-num-radios-override.patch |  88 ++
+ ...re-unsupported-direct-buffer-modules.patch |  61 ++
+ ...k-force-unique-qcn9274-qrtr-instance.patch |  50 +
+ .../305-wifi-ath12k-use-dt-mac-address.patch  |  44 +
+ ...h12k-use-fixed-memory-region-for-pci.patch | 135 +++
+ ...2k-avoid-duplicate-soc-debugfs-files.patch |  18 +
+ package/luci-app-be7000-nfc/Makefile          |  17 +
+ .../luci-static/resources/view/nfc/nfc.js     | 130 +++
+ .../luci/menu.d/luci-app-be7000-nfc.json      |  14 +
+ .../share/rpcd/acl.d/luci-app-be7000-nfc.json |  14 +
+ target/linux/qualcommbe/Makefile              |   7 +-
+ target/linux/qualcommbe/config-6.18           |   3 +
+ .../linux/qualcommbe/dts/ipq9574-be7000.dts   | 982 ++++++++++++++++++
+ target/linux/qualcommbe/image/ipq95xx.mk      |  62 ++
+ .../ipq95xx/base-files/etc/board.d/01_leds    |  23 +
+ .../ipq95xx/base-files/etc/board.d/02_network |   3 +
+ .../ipq95xx/base-files/etc/config/nfc         |   4 +
+ .../etc/hotplug.d/firmware/11-ath11k-caldata  |  20 +
+ .../etc/hotplug.d/firmware/11-ath12k-caldata  |  22 +
+ .../base-files/etc/init.d/be7000_boot_success |  54 +
+ .../base-files/etc/init.d/be7000_wireless     |   9 +
+ .../ipq95xx/base-files/etc/init.d/nfc         |  29 +
+ .../base-files/etc/init.d/smp_affinity        |  76 ++
+ .../etc/uci-defaults/05_packet_steering       |  13 +
+ .../etc/uci-defaults/15_smp_affinity          |  20 +
+ .../etc/uci-defaults/16_be7000_wireless       |   9 +
+ .../base-files/etc/uci-defaults/17_be7000_nfc |  17 +
+ .../etc/uci-defaults/99_be7000_boot_success   |  10 +
+ .../base-files/lib/upgrade/platform.sh        |  48 +
+ .../base-files/sbin/be7000-wireless-defaults  | 119 +++
+ .../qualcommbe/ipq95xx/base-files/sbin/nfc    | 375 +++++++
+ ...lcomm-Add-module-parameters-for-driv.patch |   6 +-
+ ...t-qualcomm-Update-IPQ9574-PPE-driver.patch |   5 +-
+ ...scc-qca8k-keep-QCA8084-AHB-clocks-on.patch |  42 +
+ ...-net-phy-qca808x-enable-qca8084-leds.patch | 275 +++++
+ ...-clk-qcom-ipq9574-add-wcss-q6-clocks.patch |  80 ++
+ ...-qcom-gcc-ipq9574-add-wcss-q6-clocks.patch | 490 +++++++++
+ ...c-qcom-q6v5-wcss-add-ipq9574-support.patch | 538 ++++++++++
+ ...ca808x-disable-EEE-on-QCA8084-QXGMII.patch |  35 +
+ 52 files changed, 4529 insertions(+), 21 deletions(-)
+ create mode 100644 package/be7000-nfc-i2ctransfer/Makefile
+ create mode 100644 package/be7000-nfc-i2ctransfer/src/be7000-nfc-i2ctransfer.c
+ create mode 100644 package/kernel/mac80211/patches/ath11k/950-wifi-ath11k-add-ipq9574-support.patch
+ create mode 100644 package/kernel/mac80211/patches/ath11k/951-wifi-ath11k-use-iommu-paging-domain-allocator.patch
+ create mode 100644 package/kernel/mac80211/patches/ath11k/952-wifi-ath11k-drop-pcie-pme-capability-for-ipq9574.patch
+ create mode 100644 package/kernel/mac80211/patches/ath12k/301-wifi-ath12k-allow-dt-board-id-override.patch
+ create mode 100644 package/kernel/mac80211/patches/ath12k/302-wifi-ath12k-allow-dt-num-radios-override.patch
+ create mode 100644 package/kernel/mac80211/patches/ath12k/303-wifi-ath12k-ignore-unsupported-direct-buffer-modules.patch
+ create mode 100644 package/kernel/mac80211/patches/ath12k/304-wifi-ath12k-force-unique-qcn9274-qrtr-instance.patch
+ create mode 100644 package/kernel/mac80211/patches/ath12k/305-wifi-ath12k-use-dt-mac-address.patch
+ create mode 100644 package/kernel/mac80211/patches/ath12k/306-wifi-ath12k-use-fixed-memory-region-for-pci.patch
+ create mode 100644 package/kernel/mac80211/patches/ath12k/307-wifi-ath12k-avoid-duplicate-soc-debugfs-files.patch
+ create mode 100644 package/luci-app-be7000-nfc/Makefile
+ create mode 100644 package/luci-app-be7000-nfc/htdocs/luci-static/resources/view/nfc/nfc.js
+ create mode 100644 package/luci-app-be7000-nfc/root/usr/share/luci/menu.d/luci-app-be7000-nfc.json
+ create mode 100644 package/luci-app-be7000-nfc/root/usr/share/rpcd/acl.d/luci-app-be7000-nfc.json
+ create mode 100644 target/linux/qualcommbe/dts/ipq9574-be7000.dts
+ create mode 100644 target/linux/qualcommbe/ipq95xx/base-files/etc/board.d/01_leds
+ create mode 100644 target/linux/qualcommbe/ipq95xx/base-files/etc/config/nfc
+ create mode 100755 target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
+ mode change 100644 => 100755 target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath12k-caldata
+ create mode 100755 target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success
+ create mode 100755 target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_wireless
+ create mode 100755 target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/nfc
+ create mode 100755 target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/smp_affinity
+ create mode 100755 target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/05_packet_steering
+ create mode 100755 target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/15_smp_affinity
+ create mode 100755 target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/16_be7000_wireless
+ create mode 100755 target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/17_be7000_nfc
+ create mode 100755 target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/99_be7000_boot_success
+ create mode 100755 target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wireless-defaults
+ create mode 100755 target/linux/qualcommbe/ipq95xx/base-files/sbin/nfc
+ create mode 100644 target/linux/qualcommbe/patches-6.18/0356-clk-qcom-nsscc-qca8k-keep-QCA8084-AHB-clocks-on.patch
+ create mode 100644 target/linux/qualcommbe/patches-6.18/0701-net-phy-qca808x-enable-qca8084-leds.patch
+ create mode 100644 target/linux/qualcommbe/patches-6.18/0702-dt-bindings-clk-qcom-ipq9574-add-wcss-q6-clocks.patch
+ create mode 100644 target/linux/qualcommbe/patches-6.18/0703-clk-qcom-gcc-ipq9574-add-wcss-q6-clocks.patch
+ create mode 100644 target/linux/qualcommbe/patches-6.18/0704-remoteproc-qcom-q6v5-wcss-add-ipq9574-support.patch
+ create mode 100644 target/linux/qualcommbe/patches-6.18/0707-net-phy-qca808x-disable-EEE-on-QCA8084-QXGMII.patch
+
+diff --git a/include/target.mk b/include/target.mk
+index 0f6258ee..9bbca879 100644
+--- a/include/target.mk
++++ b/include/target.mk
+@@ -265,6 +265,7 @@ ifeq ($(DUMP),1)
+     CPU_TYPE ?= generic
+     CPU_CFLAGS_generic = -mcpu=generic
+     CPU_CFLAGS_cortex-a53 = -mcpu=cortex-a53
++    CPU_CFLAGS_cortex-a73 = -mcpu=cortex-a73
+   endif
+   ifeq ($(ARCH),riscv64)
+     CPU_TYPE ?= generic
+diff --git a/package/be7000-nfc-i2ctransfer/Makefile b/package/be7000-nfc-i2ctransfer/Makefile
+new file mode 100644
+index 00000000..1692e4a6
+--- /dev/null
++++ b/package/be7000-nfc-i2ctransfer/Makefile
+@@ -0,0 +1,41 @@
++# SPDX-License-Identifier: GPL-2.0-only
++
++include $(TOPDIR)/rules.mk
++
++PKG_NAME:=be7000-nfc-i2ctransfer
++PKG_RELEASE:=1
++
++PKG_LICENSE:=GPL-2.0-only
++
++include $(INCLUDE_DIR)/package.mk
++
++define Package/be7000-nfc-i2ctransfer
++  SECTION:=utils
++  CATEGORY:=Utilities
++  TITLE:=Xiaomi BE7000 NFC I2C transfer helper
++  DEPENDS:=+kmod-i2c-core
++endef
++
++define Package/be7000-nfc-i2ctransfer/description
++ Small i2ctransfer-compatible helper used by the Xiaomi BE7000 NFC scripts.
++endef
++
++define Build/Prepare
++	mkdir -p $(PKG_BUILD_DIR)
++	$(CP) ./src/* $(PKG_BUILD_DIR)/
++endef
++
++define Build/Compile
++	$(TARGET_CC) $(TARGET_CPPFLAGS) $(TARGET_CFLAGS) \
++		-o $(PKG_BUILD_DIR)/be7000-nfc-i2ctransfer \
++		$(PKG_BUILD_DIR)/be7000-nfc-i2ctransfer.c \
++		$(TARGET_LDFLAGS)
++endef
++
++define Package/be7000-nfc-i2ctransfer/install
++	$(INSTALL_DIR) $(1)/usr/sbin
++	$(INSTALL_BIN) $(PKG_BUILD_DIR)/be7000-nfc-i2ctransfer \
++		$(1)/usr/sbin/be7000-nfc-i2ctransfer
++endef
++
++$(eval $(call BuildPackage,be7000-nfc-i2ctransfer))
+diff --git a/package/be7000-nfc-i2ctransfer/src/be7000-nfc-i2ctransfer.c b/package/be7000-nfc-i2ctransfer/src/be7000-nfc-i2ctransfer.c
+new file mode 100644
+index 00000000..a2e0693a
+--- /dev/null
++++ b/package/be7000-nfc-i2ctransfer/src/be7000-nfc-i2ctransfer.c
+@@ -0,0 +1,186 @@
++#include <errno.h>
++#include <fcntl.h>
++#include <linux/i2c-dev.h>
++#include <linux/i2c.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/ioctl.h>
++#include <unistd.h>
++
++#define MAX_MSGS 16
++#define MAX_LEN 512
++#define I2C_RDWR_RETRIES 50
++#define I2C_RDWR_RETRY_US 10000
++
++struct msg_buf {
++	struct i2c_msg msg;
++	uint8_t data[MAX_LEN];
++};
++
++static void usage(const char *prog)
++{
++	fprintf(stderr, "usage: %s -y <bus> <wN[@addr]|rN[@addr]> [bytes...]\n", prog);
++	exit(1);
++}
++
++static unsigned long parse_ulong(const char *s, const char *what)
++{
++	char *end;
++	unsigned long val;
++
++	errno = 0;
++	val = strtoul(s, &end, 0);
++	if (errno || *end) {
++		fprintf(stderr, "invalid %s: %s\n", what, s);
++		exit(1);
++	}
++
++	return val;
++}
++
++static int parse_desc(char *desc, uint16_t *addr, int *has_addr, uint16_t *len)
++{
++	char *at = strchr(desc, '@');
++	char *num = desc + 1;
++	unsigned long val;
++
++	if (desc[0] != 'w' && desc[0] != 'r')
++		return -1;
++
++	if (at) {
++		*at = '\0';
++		*addr = parse_ulong(at + 1, "address");
++		*has_addr = 1;
++	} else {
++		*has_addr = 0;
++	}
++
++	val = parse_ulong(num, "length");
++	if (!val || val > MAX_LEN)
++		return -1;
++
++	*len = val;
++	return desc[0];
++}
++
++static int i2c_rdwr_retry(int fd, struct i2c_rdwr_ioctl_data *rdwr)
++{
++	int ret;
++
++	for (int i = 0; i < I2C_RDWR_RETRIES; i++) {
++		ret = ioctl(fd, I2C_RDWR, rdwr);
++		if (!ret)
++			return 0;
++
++		if (errno != ENXIO && errno != EREMOTEIO && errno != EIO &&
++		    errno != ETIMEDOUT)
++			return ret;
++
++		usleep(I2C_RDWR_RETRY_US);
++	}
++
++	return ret;
++}
++
++int main(int argc, char **argv)
++{
++	struct msg_buf bufs[MAX_MSGS];
++	struct i2c_msg msgs[MAX_MSGS];
++	struct i2c_rdwr_ioctl_data rdwr;
++	uint16_t current_addr = 0;
++	int current_addr_valid = 0;
++	int msg_count = 0;
++	int arg = 1;
++	int bus;
++	char dev[32];
++	int fd;
++
++	if (argc < 4)
++		usage(argv[0]);
++
++	if (!strcmp(argv[arg], "-y"))
++		arg++;
++
++	if (arg >= argc)
++		usage(argv[0]);
++
++	bus = parse_ulong(argv[arg++], "bus");
++
++	while (arg < argc) {
++		uint16_t addr = 0;
++		uint16_t len = 0;
++		int has_addr = 0;
++		int dir;
++		int i;
++
++		if (msg_count >= MAX_MSGS)
++			usage(argv[0]);
++
++		dir = parse_desc(argv[arg++], &addr, &has_addr, &len);
++		if (dir < 0)
++			usage(argv[0]);
++
++		if (has_addr) {
++			current_addr = addr;
++			current_addr_valid = 1;
++		}
++
++		if (!current_addr_valid) {
++			fprintf(stderr, "missing i2c address\n");
++			return 1;
++		}
++
++		memset(&bufs[msg_count], 0, sizeof(bufs[msg_count]));
++		bufs[msg_count].msg.addr = current_addr;
++		bufs[msg_count].msg.len = len;
++		bufs[msg_count].msg.buf = bufs[msg_count].data;
++
++		if (dir == 'r') {
++			bufs[msg_count].msg.flags = I2C_M_RD;
++		} else {
++			if (arg + len > argc) {
++				fprintf(stderr, "not enough write bytes\n");
++				return 1;
++			}
++
++			for (i = 0; i < len; i++)
++				bufs[msg_count].data[i] = parse_ulong(argv[arg++], "byte");
++		}
++
++		msgs[msg_count] = bufs[msg_count].msg;
++		msg_count++;
++	}
++
++	snprintf(dev, sizeof(dev), "/dev/i2c-%d", bus);
++	fd = open(dev, O_RDWR);
++	if (fd < 0) {
++		perror(dev);
++		return 1;
++	}
++
++	rdwr.msgs = msgs;
++	rdwr.nmsgs = msg_count;
++
++	if (i2c_rdwr_retry(fd, &rdwr) < 0) {
++		perror("I2C_RDWR");
++		close(fd);
++		return 1;
++	}
++
++	for (int m = 0; m < msg_count; m++) {
++		if (!(msgs[m].flags & I2C_M_RD))
++			continue;
++
++		for (int i = 0; i < msgs[m].len; i++) {
++			if (i)
++				putchar(' ');
++			printf("0x%02x", bufs[m].data[i]);
++		}
++		putchar('\n');
++	}
++
++	close(fd);
++	return 0;
++}
+diff --git a/package/boot/uboot-tools/uboot-envtools/files/fw_defaults b/package/boot/uboot-tools/uboot-envtools/files/fw_defaults
+index 42558aaa..6fc59da5 100644
+--- a/package/boot/uboot-tools/uboot-envtools/files/fw_defaults
++++ b/package/boot/uboot-tools/uboot-envtools/files/fw_defaults
+@@ -1,6 +1,8 @@
+ . /lib/functions/uci-defaults.sh
+ 
+-fw_loadenv
++if [ -e /etc/fw_env.config ] || grep -qsx "u-boot,env" /sys/bus/nvmem/devices/*/of_node/compatible; then
++	fw_loadenv
++fi
+ 
+ board_config_update
+ 
+diff --git a/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx b/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx
+index cf89850f..1eefa40d 100644
+--- a/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx
++++ b/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx
+@@ -1,16 +1,30 @@
+-[ -e /etc/config/ubootenv ] && exit 0
+-
+-touch /etc/config/ubootenv
++[ -e /etc/config/ubootenv ] || touch /etc/config/ubootenv
+ 
+ . /lib/uboot-envtools.sh
+ . /lib/functions.sh
+ 
+ board=$(board_name)
+ 
++case "$board" in
++xiaomi,be7000)
++	[ -e /etc/config/ubootenv ] && [ -e /etc/fw_env.config ] && \
++		[ -e /etc/fw_sys.config ] && exit 0
++	;;
++*)
++	[ -e /etc/config/ubootenv ] && [ -e /etc/fw_env.config ] && exit 0
++	;;
++esac
++
+ case "$board" in
+ 8devices,kiwi-dvk|\
+ askey,sbe1v1k)
+-	ubootenv_add_mmc "0:APPSBLENV" "" "0x0" "0x40000" "0x40000"
++	[ -s /etc/config/ubootenv ] || \
++		ubootenv_add_mmc "0:APPSBLENV" "" "0x0" "0x40000" "0x40000"
++	;;
++xiaomi,be7000)
++	[ -s /etc/config/ubootenv ] || \
++		ubootenv_add_mtd "0:appsblenv" "0x0" "0x10000" "0x20000"
++	ubootenv_add_sys_mtd "bdata" "0x0" "0x10000" "0x20000"
+ 	;;
+ linksys,ln6001)
+ 	ubootenv_add_mmc "u_env" "" "0x0" "0x40000" "0x40000"
+diff --git a/package/firmware/ath11k-firmware/Makefile b/package/firmware/ath11k-firmware/Makefile
+index 18d7bac0..3edd7c9e 100644
+--- a/package/firmware/ath11k-firmware/Makefile
++++ b/package/firmware/ath11k-firmware/Makefile
+@@ -31,6 +31,12 @@ ATH11K_LEGACY_FW_RELEASE:=795809c7
+ ATH11K_LEGACY_FW_SUBDIR:=$(ATH11K_LEGACY_FW_NAME)-$(ATH11K_LEGACY_FW_DATE)~$(ATH11K_LEGACY_FW_RELEASE)
+ ATH11K_LEGACY_FW_SOURCE=$(ATH11K_LEGACY_FW_SUBDIR).tar.zst
+ 
++ATH11K_IPQ9574_FW_NAME:=ath11k-firmware-ipq9574-board
++ATH11K_IPQ9574_FW_DATE:=2026.03.24
++ATH11K_IPQ9574_FW_RELEASE:=2044a5b7
++ATH11K_IPQ9574_FW_SUBDIR:=$(PKG_NAME)-$(ATH11K_IPQ9574_FW_DATE)~$(ATH11K_IPQ9574_FW_RELEASE)
++ATH11K_IPQ9574_FW_SOURCE:=$(ATH11K_IPQ9574_FW_SUBDIR).tar.zst
++
+ define Download/$(ATH11K_LEGACY_FW_NAME)
+ 	FILE:=$(ATH11K_LEGACY_FW_SOURCE)
+ 	PROTO:=git
+@@ -41,6 +47,16 @@ define Download/$(ATH11K_LEGACY_FW_NAME)
+ endef
+ $(eval $(call Download,$(ATH11K_LEGACY_FW_NAME)))
+ 
++define Download/$(ATH11K_IPQ9574_FW_NAME)
++	FILE:=$(ATH11K_IPQ9574_FW_SOURCE)
++	PROTO:=git
++	URL:=$(PKG_SOURCE_URL)
++	SOURCE_VERSION:=2044a5b7e0da88a34c728a62e7f262b67c141739
++	MIRROR_HASH:=281e3361ab20d3bcff78498dafaa3db9abce5440ea6bb20c83042812afd453e5
++	SUBDIR:=$(ATH11K_IPQ9574_FW_SUBDIR)
++endef
++$(eval $(call Download,$(ATH11K_IPQ9574_FW_NAME)))
++
+ define Package/ath11k-firmware-default
+   SECTION:=firmware
+   CATEGORY:=Firmware
+@@ -58,17 +74,25 @@ $(Package/ath11k-firmware-default)
+   TITLE:=IPQ6018 ath11k firmware
+ endef
+ 
++define Package/ath11k-firmware-ipq9574
++$(Package/ath11k-firmware-default)
++  TITLE:=IPQ9574 ath11k firmware
++  VERSION:=$(ATH11K_IPQ9574_FW_DATE)~$(ATH11K_IPQ9574_FW_RELEASE)-r$(PKG_RELEASE)
++endef
++
+ define Build/Clean
+ 	$(call Build/Clean/Default,)
+ 
+ 	rm -rf \
+-		$(BUILD_DIR)/$(ATH11K_LEGACY_FW_SUBDIR)
++		$(BUILD_DIR)/$(ATH11K_LEGACY_FW_SUBDIR) \
++		$(BUILD_DIR)/$(ATH11K_IPQ9574_FW_SUBDIR)
+ endef
+ 
+ define Build/Prepare
+ 	$(call Build/Prepare/Default,)
+ 
+ 	$(TAR) -C $(BUILD_DIR) -xf $(DL_DIR)/$(ATH11K_LEGACY_FW_SOURCE)
++	$(TAR) -C $(BUILD_DIR) -xf $(DL_DIR)/$(ATH11K_IPQ9574_FW_SOURCE)
+ endef
+ 
+ define Build/Compile
+@@ -93,5 +117,16 @@ define Package/ath11k-firmware-ipq6018/install
+ 		$(1)/lib/firmware/IPQ6018/
+ endef
+ 
++define Package/ath11k-firmware-ipq9574/install
++	$(INSTALL_DIR) $(1)/lib/firmware/ath11k/IPQ9574/hw1.0
++	$(INSTALL_DATA) \
++		$(BUILD_DIR)/$(ATH11K_LEGACY_FW_SUBDIR)/ath11k-firmware/IPQ9574/hw1.0/2.11.0.1/WLAN.HK.2.11.0.1-01491-QCAHKSWPL_SILICONZ-1/*.* \
++		$(1)/lib/firmware/ath11k/IPQ9574/hw1.0/
++	$(INSTALL_DATA) \
++		$(BUILD_DIR)/$(ATH11K_IPQ9574_FW_SUBDIR)/IPQ9574/hw1.0/board-2.bin \
++		$(1)/lib/firmware/ath11k/IPQ9574/hw1.0/
++endef
++
+ $(eval $(call BuildPackage,ath11k-firmware-ipq5018-qcn6122))
+ $(eval $(call BuildPackage,ath11k-firmware-ipq6018))
++$(eval $(call BuildPackage,ath11k-firmware-ipq9574))
+diff --git a/package/firmware/ipq-wifi/Makefile b/package/firmware/ipq-wifi/Makefile
+index de25103d..074bc09d 100644
+--- a/package/firmware/ipq-wifi/Makefile
++++ b/package/firmware/ipq-wifi/Makefile
+@@ -5,10 +5,10 @@ PKG_NAME:=ipq-wifi
+ PKG_RELEASE:=1
+ 
+ PKG_SOURCE_PROTO:=git
+-PKG_SOURCE_URL=$(PROJECT_GIT)/project/firmware/qca-wireless.git
+-PKG_SOURCE_DATE:=2026-09-27
+-PKG_SOURCE_VERSION:=3eba07d9b5c9b78f2533eea2ce10727140ae16d9
+-PKG_MIRROR_HASH:=1c1a2940c005b0d4547f1f436d57beb951417d251359e3d03c507939791a9e2e
++PKG_SOURCE_URL=https://github.com/kravasuper/firmware_qca-wireless.git
++PKG_SOURCE_DATE:=2026-06-13
++PKG_SOURCE_VERSION:=f6128066e7496aa0fb4beb32355c26b95d2d2381
++PKG_MIRROR_HASH:=5054fcd1847d33607ea831d20adc3871e803a0c59b8c73b861f29cab0c1579ac
+ PKG_FLAGS:=nonshared
+ 
+ include $(INCLUDE_DIR)/package.mk
+@@ -114,6 +114,7 @@ ALLWIFIBOARDS:= \
+ 	xiaomi_ax3600 \
+ 	xiaomi_ax6000 \
+ 	xiaomi_ax9000 \
++	xiaomi_be7000 \
+ 	xiaomi_redmi-ax5400 \
+ 	yuncore_ax830 \
+ 	yuncore_ax850 \
+@@ -230,7 +231,7 @@ endef
+ # 2. Add $(eval $(call generate-ipq-wifi-package,<devicename>,<display name>))
+ #
+ # Board files should follow this name structure:
+-#   board-<devicename>.<qca4019|qca9888|qca9889|qca9984|qca99x0|ipq6018|ipq8074>
++#   board-<devicename>.<qca4019|qca9888|qca9889|qca9984|qca99x0|ipq6018|ipq8074|qcn9274>
+ 
+ $(eval $(call generate-ipq-wifi-package,8devices_kiwi,8devices Kiwi))
+ $(eval $(call generate-ipq-wifi-package,8devices_mango,8devices Mango))
+@@ -319,6 +320,7 @@ $(eval $(call generate-ipq-wifi-package,xiaomi_aiot-ac2350,Xiaomi AIoT AC2350))
+ $(eval $(call generate-ipq-wifi-package,xiaomi_ax3600,Xiaomi AX3600))
+ $(eval $(call generate-ipq-wifi-package,xiaomi_ax6000,Xiaomi AX6000))
+ $(eval $(call generate-ipq-wifi-package,xiaomi_ax9000,Xiaomi AX9000))
++$(eval $(call generate-ipq-wifi-package,xiaomi_be7000,Xiaomi BE7000))
+ $(eval $(call generate-ipq-wifi-package,xiaomi_redmi-ax5400,Xiaomi Redmi AX5400))
+ $(eval $(call generate-ipq-wifi-package,yuncore_ax830,Yuncore AX830))
+ $(eval $(call generate-ipq-wifi-package,yuncore_ax850,Yuncore AX850))
+diff --git a/package/kernel/linux/modules/netsupport.mk b/package/kernel/linux/modules/netsupport.mk
+index 7f68f333..b3bd8e3b 100644
+--- a/package/kernel/linux/modules/netsupport.mk
++++ b/package/kernel/linux/modules/netsupport.mk
+@@ -1585,7 +1585,7 @@ $(eval $(call KernelPackage,qrtr-tun))
+ define KernelPackage/qrtr-smd
+   SUBMENU:=$(NETWORK_SUPPORT_MENU)
+   TITLE:=SMD IPC Router channels
+-  DEPENDS:=+kmod-qrtr @TARGET_qualcommax
++  DEPENDS:=+kmod-qrtr @(TARGET_qualcommax||TARGET_qualcommbe)
+   KCONFIG:=CONFIG_QRTR_SMD
+   FILES:= $(LINUX_DIR)/net/qrtr/qrtr-smd.ko
+   AUTOLOAD:=$(call AutoProbe,qrtr-smd)
+diff --git a/package/kernel/mac80211/ath.mk b/package/kernel/mac80211/ath.mk
+index f1c041e7..9b50c6a8 100644
+--- a/package/kernel/mac80211/ath.mk
++++ b/package/kernel/mac80211/ath.mk
+@@ -340,7 +340,7 @@ define KernelPackage/ath11k-ahb
+   $(call KernelPackage/mac80211/Default)
+   TITLE:=Qualcomm 802.11ax AHB wireless chipset support
+   URL:=https://wireless.wiki.kernel.org/en/users/drivers/ath11k
+-  DEPENDS+= @TARGET_qualcommax +kmod-ath11k +kmod-qrtr-smd
++  DEPENDS+= @(TARGET_qualcommax||TARGET_qualcommbe) +kmod-ath11k +kmod-qrtr-smd
+   FILES:=$(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath11k/ath11k_ahb.ko
+   AUTOLOAD:=$(call AutoProbe,ath11k_ahb)
+ endef
+diff --git a/package/kernel/mac80211/patches/ath11k/950-wifi-ath11k-add-ipq9574-support.patch b/package/kernel/mac80211/patches/ath11k/950-wifi-ath11k-add-ipq9574-support.patch
+new file mode 100644
+index 00000000..3e45f58b
+--- /dev/null
++++ b/package/kernel/mac80211/patches/ath11k/950-wifi-ath11k-add-ipq9574-support.patch
+@@ -0,0 +1,213 @@
++Subject: wifi: ath11k: support IPQ9574
++
++The IPQ9574 can expose its integrated Wi-Fi device over AHB. Add the
++hardware description needed by ath11k and match the IPQ9574 DT compatible.
++
++Reuse the IPQ8074 CE configuration and IPQ6018 service mapping as described
++by the upstream IPQ9574 ath11k series and the downstream cnss2/qca-wifi-host-cmn
++mapping.
++
++Adapt the change to the OpenWrt backports-6.18 ath11k hardware parameter
++layout.
++
++Signed-off-by: Alexandru Gagniuc <mr.nuke.me@gmail.com>
++Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
++---
++--- a/drivers/net/wireless/ath/ath11k/ahb.c
+++++ b/drivers/net/wireless/ath/ath11k/ahb.c
++@@ -25,3 +25,6 @@ static const struct of_device_id ath11k_
+++	{ .compatible = "qcom,ipq9574-wifi",
+++	  .data = (void *)ATH11K_HW_IPQ9574,
+++	},
++ 	{ .compatible = "qcom,ipq8074-wifi",
++ 	  .data = (void *)ATH11K_HW_IPQ8074,
++ 	},
++@@ -1178,6 +1181,7 @@ static int ath11k_ahb_probe(struct platf
++ 	hw_rev = (uintptr_t)device_get_match_data(&pdev->dev);
++ 
++ 	switch (hw_rev) {
+++	case ATH11K_HW_IPQ9574:
++ 	case ATH11K_HW_IPQ8074:
++ 	case ATH11K_HW_IPQ6018_HW10:
++ 	case ATH11K_HW_IPQ5018_HW10:
++--- a/drivers/net/wireless/ath/ath11k/core.c
+++++ b/drivers/net/wireless/ath/ath11k/core.c
++@@ -41,6 +41,91 @@ MODULE_PARM_DESC(ftm_mode, "Boots up in
++ 
++ static struct ath11k_hw_params ath11k_hw_params[] = {
++ 	{
+++		.hw_rev = ATH11K_HW_IPQ9574,
+++		.name = "ipq9574 hw1.0",
+++		.fw = {
+++			.dir = "IPQ9574/hw1.0",
+++			.board_size = 256 * 1024,
+++			.cal_offset = 128 * 1024,
+++		},
+++		.max_radios = 1,
+++		.bdf_addr = 0x4B700000,
+++		.hw_ops = &ipq9574_ops,
+++		.ring_mask = &ath11k_hw_ring_mask_ipq8074,
+++		.internal_sleep_clock = false,
+++		.regs = &ipq8074_regs,
+++		.qmi_service_ins_id = ATH11K_QMI_WLFW_SERVICE_INS_ID_V01_IPQ8074,
+++		.host_ce_config = ath11k_host_ce_config_ipq8074,
+++		.ce_count = 12,
+++		.target_ce_config = ath11k_target_ce_config_wlan_ipq8074,
+++		.target_ce_count = 11,
+++		.svc_to_ce_map = ath11k_target_service_to_ce_map_wlan_ipq6018,
+++		.svc_to_ce_map_len = 19,
+++		.ce_ie_addr = &ath11k_ce_ie_addr_ipq8074,
+++		.single_pdev_only = false,
+++		.rxdma1_enable = true,
+++		.num_rxdma_per_pdev = 1,
+++		.rx_mac_buf_ring = false,
+++		.vdev_start_delay = false,
+++		.htt_peer_map_v2 = true,
+++
+++		.spectral = {
+++			.fft_sz = 2,
+++			.fft_pad_sz = 2,
+++			.summary_pad_sz = 0,
+++			.fft_hdr_len = 16,
+++			.max_fft_bins = 512,
+++			.fragment_160mhz = true,
+++		},
+++
+++		.interface_modes = BIT(NL80211_IFTYPE_STATION) |
+++					BIT(NL80211_IFTYPE_AP) |
+++					BIT(NL80211_IFTYPE_MESH_POINT),
+++		.supports_monitor = true,
+++		.full_monitor_mode = false,
+++		.supports_shadow_regs = false,
+++		.idle_ps = false,
+++		.supports_sta_ps = false,
+++		.coldboot_cal_mm = false,
+++		.coldboot_cal_ftm = false,
+++		.cbcal_restart_fw = true,
+++		.fw_mem_mode = 0,
+++		.num_vdevs = 16 + 1,
+++		.num_peers = 512,
+++		.supports_suspend = false,
+++		.hal_desc_sz = sizeof(struct hal_rx_desc_ipq8074),
+++		.supports_regdb = false,
+++		.fix_l1ss = true,
+++		.credit_flow = false,
+++		.max_tx_ring = DP_TCL_NUM_RING_MAX,
+++		.hal_params = &ath11k_hw_hal_params_ipq8074,
+++		.supports_dynamic_smps_6ghz = false,
+++		.alloc_cacheable_memory = true,
+++		.supports_rssi_stats = false,
+++		.fw_wmi_diag_event = false,
+++		.current_cc_support = false,
+++		.dbr_debug_support = true,
+++		.global_reset = false,
+++		.bios_sar_capa = NULL,
+++		.m3_fw_support = false,
+++		.fixed_bdf_addr = true,
+++		.fixed_mem_region = true,
+++		.static_window_map = false,
+++		.hybrid_bus_type = false,
+++		.fixed_fw_mem = false,
+++		.support_off_channel_tx = false,
+++		.supports_multi_bssid = false,
+++
+++		.sram_dump = {},
+++
+++		.tcl_ring_retry = true,
+++		.tx_ring_size = DP_TCL_DATA_RING_SIZE,
+++		.smp2p_wow_exit = false,
+++		.support_fw_mac_sequence = false,
+++		.support_dual_stations = false,
+++		.pdev_suspend = false,
+++	},
+++	{
++ 		.hw_rev = ATH11K_HW_IPQ8074,
++ 		.name = "ipq8074 hw2.0",
++ 		.fw = {
++--- a/drivers/net/wireless/ath/ath11k/core.h
+++++ b/drivers/net/wireless/ath/ath11k/core.h
++@@ -145,6 +145,7 @@ struct ath11k_skb_rxcb {
++ };
++ 
++ enum ath11k_hw_rev {
+++	ATH11K_HW_IPQ9574,
++ 	ATH11K_HW_IPQ8074,
++ 	ATH11K_HW_QCA6390_HW20,
++ 	ATH11K_HW_IPQ6018_HW10,
++--- a/drivers/net/wireless/ath/ath11k/hw.c
+++++ b/drivers/net/wireless/ath/ath11k/hw.c
++@@ -34,6 +34,17 @@ static u8 ath11k_hw_ipq6018_mac_from_pde
++ 	return pdev_idx;
++ }
++ 
+++static u8 ath11k_hw_ipq9574_mac_from_pdev_id(int pdev_idx)
+++{
+++	/* IPQ9574 is a single PHY radio which maps to PHY B/MAC3. */
+++	switch (pdev_idx) {
+++	case 0:
+++		return 2;
+++	default:
+++		return ATH11K_INVALID_HW_MAC_ID;
+++	}
+++}
+++
++ static void ath11k_hw_ipq8074_tx_mesh_enable(struct ath11k_base *ab,
++ 					     struct hal_tcl_data_cmd *tcl_cmd)
++ {
++@@ -980,6 +991,46 @@ const struct ath11k_hw_ops ipq6018_ops =
++ 	.get_ring_selector = ath11k_hw_ipq8074_get_tcl_ring_selector,
++ };
++ 
+++const struct ath11k_hw_ops ipq9574_ops = {
+++	.get_hw_mac_from_pdev_id = ath11k_hw_ipq9574_mac_from_pdev_id,
+++	.wmi_init_config = ath11k_init_wmi_config_ipq8074,
+++	.mac_id_to_pdev_id = ath11k_hw_mac_id_to_pdev_id_ipq8074,
+++	.mac_id_to_srng_id = ath11k_hw_mac_id_to_srng_id_ipq8074,
+++	.tx_mesh_enable = ath11k_hw_ipq8074_tx_mesh_enable,
+++	.rx_desc_get_first_msdu = ath11k_hw_ipq8074_rx_desc_get_first_msdu,
+++	.rx_desc_get_last_msdu = ath11k_hw_ipq8074_rx_desc_get_last_msdu,
+++	.rx_desc_get_l3_pad_bytes = ath11k_hw_ipq8074_rx_desc_get_l3_pad_bytes,
+++	.rx_desc_get_hdr_status = ath11k_hw_ipq8074_rx_desc_get_hdr_status,
+++	.rx_desc_encrypt_valid = ath11k_hw_ipq8074_rx_desc_encrypt_valid,
+++	.rx_desc_get_encrypt_type = ath11k_hw_ipq8074_rx_desc_get_encrypt_type,
+++	.rx_desc_get_decap_type = ath11k_hw_ipq8074_rx_desc_get_decap_type,
+++	.rx_desc_get_mesh_ctl = ath11k_hw_ipq8074_rx_desc_get_mesh_ctl,
+++	.rx_desc_get_ldpc_support = ath11k_hw_ipq8074_rx_desc_get_ldpc_support,
+++	.rx_desc_get_mpdu_seq_ctl_vld = ath11k_hw_ipq8074_rx_desc_get_mpdu_seq_ctl_vld,
+++	.rx_desc_get_mpdu_fc_valid = ath11k_hw_ipq8074_rx_desc_get_mpdu_fc_valid,
+++	.rx_desc_get_mpdu_start_seq_no = ath11k_hw_ipq8074_rx_desc_get_mpdu_start_seq_no,
+++	.rx_desc_get_msdu_len = ath11k_hw_ipq8074_rx_desc_get_msdu_len,
+++	.rx_desc_get_msdu_sgi = ath11k_hw_ipq8074_rx_desc_get_msdu_sgi,
+++	.rx_desc_get_msdu_rate_mcs = ath11k_hw_ipq8074_rx_desc_get_msdu_rate_mcs,
+++	.rx_desc_get_msdu_rx_bw = ath11k_hw_ipq8074_rx_desc_get_msdu_rx_bw,
+++	.rx_desc_get_msdu_freq = ath11k_hw_ipq8074_rx_desc_get_msdu_freq,
+++	.rx_desc_get_msdu_pkt_type = ath11k_hw_ipq8074_rx_desc_get_msdu_pkt_type,
+++	.rx_desc_get_msdu_nss = ath11k_hw_ipq8074_rx_desc_get_msdu_nss,
+++	.rx_desc_get_mpdu_tid = ath11k_hw_ipq8074_rx_desc_get_mpdu_tid,
+++	.rx_desc_get_mpdu_peer_id = ath11k_hw_ipq8074_rx_desc_get_mpdu_peer_id,
+++	.rx_desc_copy_attn_end_tlv = ath11k_hw_ipq8074_rx_desc_copy_attn_end,
+++	.rx_desc_get_mpdu_start_tag = ath11k_hw_ipq8074_rx_desc_get_mpdu_start_tag,
+++	.rx_desc_get_mpdu_ppdu_id = ath11k_hw_ipq8074_rx_desc_get_mpdu_ppdu_id,
+++	.rx_desc_set_msdu_len = ath11k_hw_ipq8074_rx_desc_set_msdu_len,
+++	.rx_desc_get_attention = ath11k_hw_ipq8074_rx_desc_get_attention,
+++	.rx_desc_get_msdu_payload = ath11k_hw_ipq8074_rx_desc_get_msdu_payload,
+++	.reo_setup = ath11k_hw_ipq8074_reo_setup,
+++	.mpdu_info_get_peerid = ath11k_hw_ipq8074_mpdu_info_get_peerid,
+++	.rx_desc_mac_addr2_valid = ath11k_hw_ipq8074_rx_desc_mac_addr2_valid,
+++	.rx_desc_mpdu_start_addr2 = ath11k_hw_ipq8074_rx_desc_mpdu_start_addr2,
+++	.get_ring_selector = ath11k_hw_ipq8074_get_tcl_ring_selector,
+++};
+++
++ const struct ath11k_hw_ops qca6390_ops = {
++ 	.get_hw_mac_from_pdev_id = ath11k_hw_ipq8074_mac_from_pdev_id,
++ 	.wmi_init_config = ath11k_init_wmi_config_qca6390,
++--- a/drivers/net/wireless/ath/ath11k/hw.h
+++++ b/drivers/net/wireless/ath/ath11k/hw.h
++@@ -278,6 +278,7 @@ struct ath11k_hw_ops {
++ 	u32 (*get_ring_selector)(struct sk_buff *skb);
++ };
++ 
+++extern const struct ath11k_hw_ops ipq9574_ops;
++ extern const struct ath11k_hw_ops ipq8074_ops;
++ extern const struct ath11k_hw_ops ipq6018_ops;
++ extern const struct ath11k_hw_ops qca6390_ops;
+diff --git a/package/kernel/mac80211/patches/ath11k/951-wifi-ath11k-use-iommu-paging-domain-allocator.patch b/package/kernel/mac80211/patches/ath11k/951-wifi-ath11k-use-iommu-paging-domain-allocator.patch
+new file mode 100644
+index 00000000..6f55f802
+--- /dev/null
++++ b/package/kernel/mac80211/patches/ath11k/951-wifi-ath11k-use-iommu-paging-domain-allocator.patch
+@@ -0,0 +1,19 @@
++Subject: wifi: ath11k: use IOMMU paging domain allocator
++
++Linux 6.18 no longer exposes iommu_domain_alloc(). Use the current
++iommu_paging_domain_alloc() helper when ath11k AHB creates the firmware
++IOMMU domain.
++
++Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
++---
++--- a/drivers/net/wireless/ath/ath11k/ahb.c
+++++ b/drivers/net/wireless/ath/ath11k/ahb.c
++@@ -1063,7 +1063,7 @@ static int ath11k_ahb_fw_resources_init(
++ 
++ 	ab_ahb->fw.dev = &pdev->dev;
++ 
++-	iommu_dom = iommu_domain_alloc(&platform_bus_type);
+++	iommu_dom = iommu_paging_domain_alloc(ab_ahb->fw.dev);
++ 	if (!iommu_dom) {
++ 		ath11k_err(ab, "failed to allocate iommu domain\n");
++ 		ret = -ENOMEM;
+diff --git a/package/kernel/mac80211/patches/ath11k/952-wifi-ath11k-drop-pcie-pme-capability-for-ipq9574.patch b/package/kernel/mac80211/patches/ath11k/952-wifi-ath11k-drop-pcie-pme-capability-for-ipq9574.patch
+new file mode 100644
+index 00000000..73c932ab
+--- /dev/null
++++ b/package/kernel/mac80211/patches/ath11k/952-wifi-ath11k-drop-pcie-pme-capability-for-ipq9574.patch
+@@ -0,0 +1,19 @@
++Subject: wifi: ath11k: drop PCIe PME capability for IPQ9574 AHB
++
++IPQ9574 uses the integrated AHB Wi-Fi path. Do not advertise the PCIe
++PME D3cold host capability to its WLFW service.
++
++Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
++---
++--- a/drivers/net/wireless/ath/ath11k/qmi.c
+++++ b/drivers/net/wireless/ath/ath11k/qmi.c
++@@ -1757,7 +1757,8 @@ int ath11k_qmi_host_cap_send(struct ath1
++ 	if (ab->hw_params.global_reset)
++ 		req.nm_modem |= PLATFORM_CAP_PCIE_GLOBAL_RESET;
++ 
++-	req.nm_modem |= PLATFORM_CAP_PCIE_PME_D3COLD;
+++	if (ab->hw_rev != ATH11K_HW_IPQ9574)
+++		req.nm_modem |= PLATFORM_CAP_PCIE_PME_D3COLD;
++ 
++ 	ath11k_dbg(ab, ATH11K_DBG_QMI, "host cap request\n");
++ 
+diff --git a/package/kernel/mac80211/patches/ath12k/301-wifi-ath12k-allow-dt-board-id-override.patch b/package/kernel/mac80211/patches/ath12k/301-wifi-ath12k-allow-dt-board-id-override.patch
+new file mode 100644
+index 00000000..c6877bb6
+--- /dev/null
++++ b/package/kernel/mac80211/patches/ath12k/301-wifi-ath12k-allow-dt-board-id-override.patch
+@@ -0,0 +1,45 @@
++Subject: wifi: ath12k: allow DT board-id override
++
++Some QCN9274 cards report an invalid board id over QMI. Allow the board
++id to be overridden from the PCI device node so board-2.bin lookup can
++use the device-specific BDF entry.
++
++Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
++---
++ drivers/net/wireless/ath/ath12k/qmi.c | 18 ++++++++++++++++++
++ 1 file changed, 18 insertions(+)
++
++--- a/drivers/net/wireless/ath/ath12k/qmi.c
+++++ b/drivers/net/wireless/ath/ath12k/qmi.c
++@@ -1090,6 +1090,22 @@ static const struct qmi_elem_info qmi_wl
++ 	},
++ };
++ 
+++static void ath12k_qmi_apply_dt_board_id(struct ath12k_base *ab)
+++{
+++	u32 board_id;
+++
+++	if (!ab->dev->of_node)
+++		return;
+++
+++	if (of_property_read_u32(ab->dev->of_node, "qcom,board_id", &board_id) &&
+++	    of_property_read_u32(ab->dev->of_node, "qcom,board-id", &board_id))
+++		return;
+++
+++	ath12k_info(ab, "overriding QMI board_id 0x%x with DT board_id 0x%x\n",
+++		    ab->qmi.target.board_id, board_id);
+++	ab->qmi.target.board_id = board_id;
+++}
+++
++ static const struct qmi_elem_info qmi_wlanfw_rf_board_info_s_v01_ei[] = {
++ 	{
++ 		.data_type	= QMI_UNSIGNED_4_BYTE,
++@@ -2858,6 +2874,8 @@ int ath12k_qmi_request_target_cap(struct
++ 	else
++ 		ab->qmi.target.board_id = board_id;
++ 
+++	ath12k_qmi_apply_dt_board_id(ab);
+++
++ 	if (resp.soc_info_valid)
++ 		ab->qmi.target.soc_id = resp.soc_info.soc_id;
++ 
+diff --git a/package/kernel/mac80211/patches/ath12k/302-wifi-ath12k-allow-dt-num-radios-override.patch b/package/kernel/mac80211/patches/ath12k/302-wifi-ath12k-allow-dt-num-radios-override.patch
+new file mode 100644
+index 00000000..35a34d49
+--- /dev/null
++++ b/package/kernel/mac80211/patches/ath12k/302-wifi-ath12k-allow-dt-num-radios-override.patch
+@@ -0,0 +1,88 @@
++Subject: wifi: ath12k: allow DT num-radios override
++
++Some embedded QCN9274 designs advertise more WMI endpoints than the
++firmware accepts in the current mode. Allow board DTS to cap the radio
++count while bringing up the PCI device.
++
++Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
++---
++ drivers/net/wireless/ath/ath12k/htc.c | 15 +++++++++++++++
++ drivers/net/wireless/ath/ath12k/qmi.c | 17 +++++++++++++++++
++ 2 files changed, 32 insertions(+)
++
++--- a/drivers/net/wireless/ath/ath12k/htc.c
+++++ b/drivers/net/wireless/ath/ath12k/htc.c
++@@ -746,6 +746,19 @@ int ath12k_htc_start(struct ath12k_htc *
++ 
++ 	return 0;
++ }
+++static void ath12k_htc_apply_dt_num_radios(struct ath12k_base *ab)
+++{
+++	u32 num_radios;
+++
+++	if (!ab->dev->of_node)
+++		return;
+++
+++	if (of_property_read_u32(ab->dev->of_node, "qcom,num-radios", &num_radios))
+++		return;
+++
+++	if (num_radios && num_radios < ab->htc.wmi_ep_count)
+++		ab->htc.wmi_ep_count = num_radios;
+++}
++ 
++ int ath12k_htc_init(struct ath12k_base *ab)
++ {
++@@ -776,6 +789,8 @@ int ath12k_htc_init(struct ath12k_base *
++ 		break;
++ 	}
++ 
+++	ath12k_htc_apply_dt_num_radios(ab);
+++
++ 	/* setup our pseudo HTC control endpoint connection */
++ 	conn_req.ep_ops.ep_tx_complete = ath12k_htc_control_tx_complete;
++ 	conn_req.ep_ops.ep_rx_complete = ath12k_htc_control_rx_complete;
++--- a/drivers/net/wireless/ath/ath12k/qmi.c
+++++ b/drivers/net/wireless/ath/ath12k/qmi.c
++@@ -2253,6 +2253,25 @@ out:
++ 	return ret;
++ }
++ 
+++static void ath12k_qmi_apply_dt_num_radios(struct ath12k_base *ab)
+++{
+++	u32 num_radios;
+++
+++	if (!ab->dev->of_node)
+++		return;
+++
+++	if (of_property_read_u32(ab->dev->of_node, "qcom,num-radios", &num_radios))
+++		return;
+++
+++	if (num_radios &&
+++	    (!ab->qmi.num_radios || ab->qmi.num_radios == U8_MAX ||
+++	     num_radios < ab->qmi.num_radios)) {
+++		ath12k_info(ab, "overriding QMI num_radios %u with DT num_radios %u\n",
+++			    ab->qmi.num_radios, num_radios);
+++		ab->qmi.num_radios = num_radios;
+++	}
+++}
+++
++ static void ath12k_qmi_phy_cap_send(struct ath12k_base *ab)
++ {
++ 	struct qmi_wlanfw_phy_cap_req_msg_v01 req = {};
++@@ -2300,6 +2319,8 @@ static void ath12k_qmi_phy_cap_send(stru
++ 		   resp.num_phy_valid, resp.num_phy,
++ 		   resp.board_id_valid, resp.board_id);
++ 
+++	ath12k_qmi_apply_dt_num_radios(ab);
+++
++ 	return;
++ 
++ out:
++@@ -2875,6 +2896,7 @@ int ath12k_qmi_request_target_cap(struct
++ 		ab->qmi.target.board_id = board_id;
++ 
++ 	ath12k_qmi_apply_dt_board_id(ab);
+++	ath12k_qmi_apply_dt_num_radios(ab);
++ 
++ 	if (resp.soc_info_valid)
++ 		ab->qmi.target.soc_id = resp.soc_info.soc_id;
+diff --git a/package/kernel/mac80211/patches/ath12k/303-wifi-ath12k-ignore-unsupported-direct-buffer-modules.patch b/package/kernel/mac80211/patches/ath12k/303-wifi-ath12k-ignore-unsupported-direct-buffer-modules.patch
+new file mode 100644
+index 00000000..27daf3af
+--- /dev/null
++++ b/package/kernel/mac80211/patches/ath12k/303-wifi-ath12k-ignore-unsupported-direct-buffer-modules.patch
+@@ -0,0 +1,61 @@
++Subject: wifi: ath12k: ignore unsupported direct buffer modules
++
++QCN9274 firmware can report direct buffer module identifiers that are not
++implemented by the upstream ath12k direct buffer table. Treat those entries
++as unsupported capabilities and skip them instead of failing WMI service
++ready parsing.
++
++This keeps the supported direct buffer capabilities available while allowing
++the radio to finish initialization on firmware that advertises newer module
++IDs.
++
++Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
++---
++--- a/drivers/net/wireless/ath/ath12k/wmi.c
+++++ b/drivers/net/wireless/ath/ath12k/wmi.c
++@@ -4691,7 +4691,7 @@ static int ath12k_wmi_dma_ring_caps(stru
++ 	struct ath12k_wmi_dma_ring_caps_params *dma_caps;
++ 	struct ath12k_dbring_cap *dir_buff_caps;
++ 	int ret;
++-	u32 i;
+++	u32 i, valid_caps = 0;
++ 
++ 	dma_caps_parse->n_dma_ring_caps = 0;
++ 	dma_caps = (struct ath12k_wmi_dma_ring_caps_params *)ptr;
++@@ -4718,25 +4718,24 @@ static int ath12k_wmi_dma_ring_caps(stru
++ 	dir_buff_caps = ab->db_caps;
++ 	for (i = 0; i < dma_caps_parse->n_dma_ring_caps; i++) {
++ 		if (le32_to_cpu(dma_caps[i].module_id) >= WMI_DIRECT_BUF_MAX) {
++-			ath12k_warn(ab, "Invalid module id %d\n",
+++			ath12k_warn(ab, "ignoring unsupported direct buffer module id %d\n",
++ 				    le32_to_cpu(dma_caps[i].module_id));
++-			ret = -EINVAL;
++-			goto free_dir_buff;
+++			continue;
++ 		}
++ 
++-		dir_buff_caps[i].id = le32_to_cpu(dma_caps[i].module_id);
++-		dir_buff_caps[i].pdev_id =
+++		dir_buff_caps[valid_caps].id = le32_to_cpu(dma_caps[i].module_id);
+++		dir_buff_caps[valid_caps].pdev_id =
++ 			DP_HW2SW_MACID(le32_to_cpu(dma_caps[i].pdev_id));
++-		dir_buff_caps[i].min_elem = le32_to_cpu(dma_caps[i].min_elem);
++-		dir_buff_caps[i].min_buf_sz = le32_to_cpu(dma_caps[i].min_buf_sz);
++-		dir_buff_caps[i].min_buf_align = le32_to_cpu(dma_caps[i].min_buf_align);
+++		dir_buff_caps[valid_caps].min_elem = le32_to_cpu(dma_caps[i].min_elem);
+++		dir_buff_caps[valid_caps].min_buf_sz = le32_to_cpu(dma_caps[i].min_buf_sz);
+++		dir_buff_caps[valid_caps].min_buf_align =
+++			le32_to_cpu(dma_caps[i].min_buf_align);
+++		valid_caps++;
++ 	}
++ 
++-	return 0;
+++	ab->num_db_cap = valid_caps;
++ 
++-free_dir_buff:
++-	ath12k_wmi_free_dbring_caps(ab);
++-	return ret;
+++	return 0;
++ }
++ 
++ static void
+diff --git a/package/kernel/mac80211/patches/ath12k/304-wifi-ath12k-force-unique-qcn9274-qrtr-instance.patch b/package/kernel/mac80211/patches/ath12k/304-wifi-ath12k-force-unique-qcn9274-qrtr-instance.patch
+new file mode 100644
+index 00000000..fe5d9624
+--- /dev/null
++++ b/package/kernel/mac80211/patches/ath12k/304-wifi-ath12k-force-unique-qcn9274-qrtr-instance.patch
+@@ -0,0 +1,50 @@
++Subject: wifi: ath12k: force unique QCN9274 QRTR instance
++
++QCN9274 firmware on Xiaomi BE7000 can expose a WLFW QRTR service that
++collides with the integrated IPQ9574 ath11k service unless the PCIe QRTR
++node id is programmed before MHI starts. Generate and write the unique
++PCIe-derived QRTR instance for QCN9274 even when the firmware feature
++advertisement does not request it.
++
++Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
++---
++--- a/drivers/net/wireless/ath/ath12k/pci.c
+++++ b/drivers/net/wireless/ath/ath12k/pci.c
++@@ -726,6 +726,13 @@ static int ath12k_pci_config_irq(struct
++ 	return 0;
++ }
++ 
+++static bool ath12k_pci_needs_unique_qrtr_node(struct ath12k_base *ab)
+++{
+++	return ath12k_fw_feature_supported(ab, ATH12K_FW_FEATURE_MULTI_QRTR_ID) ||
+++	       ab->hw_rev == ATH12K_HW_QCN9274_HW10 ||
+++	       ab->hw_rev == ATH12K_HW_QCN9274_HW20;
+++}
+++
++ static void ath12k_pci_init_qmi_ce_config(struct ath12k_base *ab)
++ {
++ 	struct ath12k_qmi_ce_cfg *cfg = &ab->qmi.ce_cfg;
++@@ -740,11 +747,13 @@ static void ath12k_pci_init_qmi_ce_confi
++ 	cfg->svc_to_ce_map_len = ab->hw_params->svc_to_ce_map_len;
++ 	ab->qmi.service_ins_id = ab->hw_params->qmi_service_ins_id;
++ 
++-	if (ath12k_fw_feature_supported(ab, ATH12K_FW_FEATURE_MULTI_QRTR_ID)) {
+++	if (ath12k_pci_needs_unique_qrtr_node(ab)) {
++ 		ab_pci->qmi_instance =
++ 			u32_encode_bits(pci_domain_nr(bus), DOMAIN_NUMBER_MASK) |
++ 			u32_encode_bits(bus->number, BUS_NUMBER_MASK);
++ 		ab->qmi.service_ins_id += ab_pci->qmi_instance;
+++		ath12k_info(ab, "pci qmi instance 0x%x service 0x%x\n",
+++			    ab_pci->qmi_instance, ab->qmi.service_ins_id);
++ 	}
++ }
++ 
++@@ -1490,7 +1499,7 @@ int ath12k_pci_power_up(struct ath12k_ba
++ 
++ 	ath12k_pci_msi_enable(ab_pci);
++ 
++-	if (ath12k_fw_feature_supported(ab, ATH12K_FW_FEATURE_MULTI_QRTR_ID))
+++	if (ath12k_pci_needs_unique_qrtr_node(ab))
++ 		ath12k_pci_update_qrtr_node_id(ab);
++ 
++ 	ret = ath12k_mhi_start(ab_pci);
+diff --git a/package/kernel/mac80211/patches/ath12k/305-wifi-ath12k-use-dt-mac-address.patch b/package/kernel/mac80211/patches/ath12k/305-wifi-ath12k-use-dt-mac-address.patch
+new file mode 100644
+index 00000000..62923e3f
+--- /dev/null
++++ b/package/kernel/mac80211/patches/ath12k/305-wifi-ath12k-use-dt-mac-address.patch
+@@ -0,0 +1,44 @@
++Subject: wifi: ath12k: use DT MAC address
++
++Some ath12k PCI radios are paired with board specific NVMEM layouts where the
++device MAC address is described in the device tree. Match ath11k behaviour and
++prefer a valid firmware node MAC address over the target supplied base address.
++
++Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
++---
++ drivers/net/wireless/ath/ath12k/mac.c | 10 +++++++++-
++ 1 file changed, 9 insertions(+), 1 deletion(-)
++
++--- a/drivers/net/wireless/ath/ath12k/mac.c
+++++ b/drivers/net/wireless/ath/ath12k/mac.c
++@@ -8,6 +8,7 @@
++ #include <net/mac80211.h>
++ #include <net/cfg80211.h>
++ #include <linux/etherdevice.h>
+++#include <linux/property.h>
++ 
++ #include "mac.h"
++ #include "core.h"
++@@ -13743,6 +13744,7 @@ static int ath12k_mac_hw_register(struct
++ 	u32 ht_cap = U32_MAX, antennas_rx = 0, antennas_tx = 0;
++ 	bool is_6ghz = false, is_raw_mode = false, is_monitor_disable = false;
++ 	u8 *mac_addr = NULL;
+++	u8 dt_mac_addr[ETH_ALEN] = {};
++ 	u8 mbssid_max_interfaces = 0;
++ 
++ 	wiphy->max_ap_assoc_sta = 0;
++@@ -13755,7 +13757,13 @@ static int ath12k_mac_hw_register(struct
++ 		if (ar->ab->pdevs_macaddr_valid) {
++ 			ether_addr_copy(ar->mac_addr, pdev->mac_addr);
++ 		} else {
++-			ether_addr_copy(ar->mac_addr, ar->ab->mac_addr);
+++			if (i == 0)
+++				device_get_mac_address(ar->ab->dev, dt_mac_addr);
+++
+++			if (is_valid_ether_addr(dt_mac_addr))
+++				ether_addr_copy(ar->mac_addr, dt_mac_addr);
+++			else
+++				ether_addr_copy(ar->mac_addr, ar->ab->mac_addr);
++ 			ar->mac_addr[4] += ar->pdev_idx;
++ 		}
++ 
+diff --git a/package/kernel/mac80211/patches/ath12k/306-wifi-ath12k-use-fixed-memory-region-for-pci.patch b/package/kernel/mac80211/patches/ath12k/306-wifi-ath12k-use-fixed-memory-region-for-pci.patch
+new file mode 100644
+index 00000000..c061d010
+--- /dev/null
++++ b/package/kernel/mac80211/patches/ath12k/306-wifi-ath12k-use-fixed-memory-region-for-pci.patch
+@@ -0,0 +1,135 @@
++Subject: wifi: ath12k: use fixed memory region for PCI devices
++
++ath12k already has a fixed-memory QMI path for platforms that describe
++firmware memory through the memory-region property, but only the AHB bus
++enables it.  Some IPQ9574 boards describe their external QCN9224/QCN9274
++PCIe radios with stock firmware memory reservations as well.
++
++Enable the fixed-memory path for PCI devices when the DT node contains a
++memory-region property.  For PCI radios, split the single reserved block
++using the QCN9224 stock firmware layout so HOST DDR, M3, CALDB and
++pageable requests are all satisfied from deterministic physical addresses
++instead of relying on large dynamic coherent DMA allocations during QMI
++memory negotiation.
++
++Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
++---
++ drivers/net/wireless/ath/ath12k/pci.c |  7 +++++
++ drivers/net/wireless/ath/ath12k/qmi.c | 68 ++++++++++++++++++++++++++++++++++
++ 2 files changed, 75 insertions(+)
++
++--- a/drivers/net/wireless/ath/ath12k/pci.c
+++++ b/drivers/net/wireless/ath/ath12k/pci.c
++@@ -1573,6 +1573,7 @@ static int ath12k_pci_probe(struct pci_d
++ 	struct ath12k_pci *ab_pci;
++ 	u32 soc_hw_version_major, soc_hw_version_minor;
++ 	int ret;
+++	u32 addr;
++ 
++ 	ab = ath12k_core_alloc(&pdev->dev, sizeof(*ab_pci), ATH12K_BUS_PCI);
++ 	if (!ab) {
++@@ -1592,6 +1593,12 @@ static int ath12k_pci_probe(struct pci_d
++ 	pci_set_drvdata(pdev, ab);
++ 	spin_lock_init(&ab_pci->window_lock);
++ 
+++	/* If firmware memory is reserved in DT, avoid the large dynamic
+++	 * coherent DMA allocation used by the default QMI memory path.
+++	 */
+++	if (!of_property_read_u32(ab->dev->of_node, "memory-region", &addr))
+++		set_bit(ATH12K_FLAG_FIXED_MEM_REGION, &ab->dev_flags);
+++
++ 	ret = ath12k_pci_claim(ab_pci, pdev);
++ 	if (ret) {
++ 		ath12k_err(ab, "failed to claim device: %d\n", ret);
++--- a/drivers/net/wireless/ath/ath12k/qmi.c
+++++ b/drivers/net/wireless/ath/ath12k/qmi.c
++@@ -19,6 +19,10 @@
++ #define PLATFORM_CAP_PCIE_GLOBAL_RESET	0x08
++ #define ATH12K_QMI_MAX_CHUNK_SIZE	2097152
++ 
+++#define ATH12K_QMI_QCN9224_M3_OFFSET		0x1c00000
+++#define ATH12K_QMI_QCN9224_CALDB_OFFSET		0x1e00000
+++#define ATH12K_QMI_QCN9224_PAGEABLE_OFFSET	0x2600000
+++
++ static const struct qmi_elem_info wlfw_host_mlo_chip_info_s_v01_ei[] = {
++ 	{
++ 		.data_type      = QMI_UNSIGNED_1_BYTE,
++@@ -2723,6 +2727,39 @@ err:
++ 	return ret;
++ }
++ 
+++static int ath12k_qmi_assign_pci_fixed_mem_chunk(struct ath12k_base *ab,
+++						 int idx, int i, u32 offset)
+++{
+++	struct reserved_mem *rmem;
+++	size_t avail_rmem_size;
+++
+++	rmem = ath12k_core_get_reserved_mem(ab, 0);
+++	if (!rmem)
+++		return -ENODEV;
+++
+++	if (offset > rmem->size)
+++		return -EINVAL;
+++
+++	avail_rmem_size = rmem->size - offset;
+++	if (avail_rmem_size < ab->qmi.target_mem[i].size) {
+++		ath12k_dbg(ab, ATH12K_DBG_QMI,
+++			   "failed to assign mem type %u req size %u offset %u avail size %zu\n",
+++			   ab->qmi.target_mem[i].type,
+++			   ab->qmi.target_mem[i].size,
+++			   offset, avail_rmem_size);
+++		return -EINVAL;
+++	}
+++
+++	ab->qmi.target_mem[idx].paddr = rmem->base + offset;
+++	ab->qmi.target_mem[idx].v.ioaddr =
+++		ioremap(ab->qmi.target_mem[idx].paddr,
+++			ab->qmi.target_mem[i].size);
+++	if (!ab->qmi.target_mem[idx].v.ioaddr)
+++		return -EIO;
+++
+++	return 0;
+++}
+++
++ static int ath12k_qmi_assign_target_mem_chunk(struct ath12k_base *ab)
++ {
++ 	struct reserved_mem *rmem;
++@@ -2730,6 +2766,38 @@ static int ath12k_qmi_assign_target_mem_
++ 	int i, idx, ret;
++ 
++ 	for (i = 0, idx = 0; i < ab->qmi.mem_seg_count; i++) {
+++		if (ab->hif.bus == ATH12K_BUS_PCI) {
+++			switch (ab->qmi.target_mem[i].type) {
+++			case HOST_DDR_REGION_TYPE:
+++				ret = ath12k_qmi_assign_pci_fixed_mem_chunk(ab, idx, i, 0);
+++				break;
+++			case M3_DUMP_REGION_TYPE:
+++				ret = ath12k_qmi_assign_pci_fixed_mem_chunk(ab, idx, i,
+++									    ATH12K_QMI_QCN9224_M3_OFFSET);
+++				break;
+++			case CALDB_MEM_REGION_TYPE:
+++				ret = ath12k_qmi_assign_pci_fixed_mem_chunk(ab, idx, i,
+++									    ATH12K_QMI_QCN9224_CALDB_OFFSET);
+++				break;
+++			case PAGEABLE_MEM_REGION_TYPE:
+++				ret = ath12k_qmi_assign_pci_fixed_mem_chunk(ab, idx, i,
+++									    ATH12K_QMI_QCN9224_PAGEABLE_OFFSET);
+++				break;
+++			default:
+++				ath12k_dbg(ab, ATH12K_DBG_QMI,
+++					   "qmi ignore unsupported mem req type %u size %u index %d\n",
+++					   ab->qmi.target_mem[i].type,
+++					   ab->qmi.target_mem[i].size, i);
+++				continue;
+++			}
+++			if (ret)
+++				goto out;
+++			ab->qmi.target_mem[idx].size = ab->qmi.target_mem[i].size;
+++			ab->qmi.target_mem[idx].type = ab->qmi.target_mem[i].type;
+++			idx++;
+++			continue;
+++		}
+++
++ 		switch (ab->qmi.target_mem[i].type) {
++ 		case HOST_DDR_REGION_TYPE:
++ 			rmem = ath12k_core_get_reserved_mem(ab, 0);
+diff --git a/package/kernel/mac80211/patches/ath12k/307-wifi-ath12k-avoid-duplicate-soc-debugfs-files.patch b/package/kernel/mac80211/patches/ath12k/307-wifi-ath12k-avoid-duplicate-soc-debugfs-files.patch
+new file mode 100644
+index 00000000..db683f5d
+--- /dev/null
++++ b/package/kernel/mac80211/patches/ath12k/307-wifi-ath12k-avoid-duplicate-soc-debugfs-files.patch
+@@ -0,0 +1,18 @@
++Subject: wifi: ath12k: avoid duplicate SoC debugfs files
++
++ath12k_core_start() already creates the SoC-level debugfs files after
++powering up the device. Do not create the same files again from
++ath12k_mac_allocate(), otherwise debugfs reports duplicate entries such
++as "simulate_fw_crash" and "device_dp_stats".
++
++Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
++---
++--- a/drivers/net/wireless/ath/ath12k/mac.c
+++++ b/drivers/net/wireless/ath/ath12k/mac.c
++@@ -14387,7 +14387,6 @@ static int ath12k_mac_allocate(struct at
++ 			continue;
++ 
++-		ath12k_debugfs_pdev_create(ab);
++ 		ath12k_mac_set_device_defaults(ab);
++ 		total_radio += ab->num_radios;
++ 	}
+diff --git a/package/luci-app-be7000-nfc/Makefile b/package/luci-app-be7000-nfc/Makefile
+new file mode 100644
+index 00000000..a4bba098
+--- /dev/null
++++ b/package/luci-app-be7000-nfc/Makefile
+@@ -0,0 +1,17 @@
++#
++# Copyright (C) 2026 OpenWrt.org
++#
++# This is free software, licensed under the Apache License, Version 2.0 .
++#
++
++include $(TOPDIR)/rules.mk
++
++PKG_NAME:=luci-app-be7000-nfc
++PKG_LICENSE:=Apache-2.0
++
++LUCI_TITLE:=LuCI support for Xiaomi BE7000 NFC tags
++LUCI_DEPENDS:=+luci-base +be7000-nfc-i2ctransfer
++
++include $(TOPDIR)/feeds/luci/luci.mk
++
++# call BuildPackage - OpenWrt buildroot signature
+diff --git a/package/luci-app-be7000-nfc/htdocs/luci-static/resources/view/nfc/nfc.js b/package/luci-app-be7000-nfc/htdocs/luci-static/resources/view/nfc/nfc.js
+new file mode 100644
+index 00000000..84bd6641
+--- /dev/null
++++ b/package/luci-app-be7000-nfc/htdocs/luci-static/resources/view/nfc/nfc.js
+@@ -0,0 +1,130 @@
++'use strict';
++'require dom';
++'require form';
++'require fs';
++'require ui';
++'require view';
++
++var nfcMap;
++var nfcEnable;
++var nfcMode;
++var nfcUrl;
++
++function normalizeNfcUrl(url) {
++	url = (url || '').trim();
++
++	return url || 'auto';
++}
++
++function readNfcForm() {
++	var enabled = nfcEnable.formvalue('nfc');
++	var mode = nfcMode.formvalue('nfc') || 'url';
++	var url = normalizeNfcUrl(nfcUrl.formvalue('nfc'));
++
++	return {
++		enabled: enabled == '1',
++		mode: mode,
++		url: url
++	};
++}
++
++function writeNfcTag(values) {
++	if (!values.enabled || values.mode == 'disable')
++		return fs.exec('/sbin/nfc', [ 'disable' ]);
++
++	if (values.mode == 'wifi')
++		return fs.exec('/sbin/nfc', [ 'update-wifi' ]);
++
++	return fs.exec('/sbin/nfc', [ 'update-url', values.url ]);
++}
++
++function saveAndWriteTag() {
++	var values = readNfcForm();
++
++	return nfcMap.save().then(function() {
++		return writeNfcTag(values);
++	}).then(function() {
++		ui.addNotification(null, E('p', _('NFC tag updated.')), 'info');
++	}).catch(function(e) {
++		ui.addNotification(null, E('p', _('Failed to update NFC tag: %s').format(e.message)), 'error');
++	});
++}
++
++return view.extend({
++	render: function() {
++		var m, s, o;
++
++		m = new form.Map('nfc', _('NFC'), _('Configure the router NFC tag payload.'));
++		nfcMap = m;
++
++		s = m.section(form.NamedSection, 'nfc', 'nfc', _('Settings'));
++		s.anonymous = true;
++
++		o = s.option(form.Flag, 'nfc_enable', _('Enable'));
++		o.rmempty = false;
++		o.default = '1';
++		nfcEnable = o;
++
++		o = s.option(form.ListValue, 'mode', _('Payload'));
++		o.value('url', _('Router URL'));
++		o.value('wifi', _('Wi-Fi credentials'));
++		o.value('disable', _('Disabled tag'));
++		o.default = 'url';
++		o.rmempty = false;
++		nfcMode = o;
++
++		o = s.option(form.Value, 'url', _('URL'));
++		o.placeholder = 'https://192.168.1.1/';
++		o.default = '';
++		o.rmempty = true;
++		o.depends('mode', 'url');
++		o.load = function(section_id) {
++			var value = this.map.data.get(this.map.config, section_id, this.option);
++
++			return value == 'auto' ? '' : value;
++		};
++		o.write = function(section_id, value) {
++			value = normalizeNfcUrl(value);
++
++			return this.map.data.set(this.map.config, section_id, this.option, value);
++		};
++		o.remove = function(section_id) {
++			return this.map.data.set(this.map.config, section_id, this.option, 'auto');
++		};
++		o.validate = function(section_id, value) {
++			value = (value || '').trim();
++
++			if (value == '')
++				return true;
++
++			if (!value.match(/^https?:\/\/[^\/\s?#]+(?:[\/?#][^\s]*)?$/i))
++				return _('Enter a valid http:// or https:// URL.');
++
++			return true;
++		};
++		nfcUrl = o;
++
++		o = s.option(form.Button, '_write', _('Write tag'));
++		o.inputtitle = _('Write now');
++		o.inputstyle = 'apply';
++		o.onclick = saveAndWriteTag;
++
++		return m.render();
++	},
++
++	handleSave: function() {
++		return saveAndWriteTag();
++	},
++
++	handleSaveApply: function(ev, mode) {
++		return this.handleSave(ev).then(function() {
++			ui.changes.apply(mode == '0');
++		});
++	},
++
++	handleReset: function() {
++		var map = document.querySelector('.cbi-map');
++
++		return dom.callClassMethod(map, 'reset');
++	}
++});
+diff --git a/package/luci-app-be7000-nfc/root/usr/share/luci/menu.d/luci-app-be7000-nfc.json b/package/luci-app-be7000-nfc/root/usr/share/luci/menu.d/luci-app-be7000-nfc.json
+new file mode 100644
+index 00000000..8b3ffec3
+--- /dev/null
++++ b/package/luci-app-be7000-nfc/root/usr/share/luci/menu.d/luci-app-be7000-nfc.json
+@@ -0,0 +1,14 @@
++{
++	"admin/services/nfc": {
++		"title": "NFC",
++		"order": 65,
++		"action": {
++			"type": "view",
++			"path": "nfc/nfc"
++		},
++		"depends": {
++			"acl": [ "luci-app-be7000-nfc" ],
++			"uci": { "nfc": true }
++		}
++	}
++}
+diff --git a/package/luci-app-be7000-nfc/root/usr/share/rpcd/acl.d/luci-app-be7000-nfc.json b/package/luci-app-be7000-nfc/root/usr/share/rpcd/acl.d/luci-app-be7000-nfc.json
+new file mode 100644
+index 00000000..9a4fe82a
+--- /dev/null
++++ b/package/luci-app-be7000-nfc/root/usr/share/rpcd/acl.d/luci-app-be7000-nfc.json
+@@ -0,0 +1,14 @@
++{
++	"luci-app-be7000-nfc": {
++		"description": "Grant access to LuCI app BE7000 NFC",
++		"read": {
++			"uci": [ "nfc", "network", "wireless" ]
++		},
++		"write": {
++			"file": {
++				"/sbin/nfc": [ "exec" ]
++			},
++			"uci": [ "nfc" ]
++		}
++	}
++}
+diff --git a/target/linux/qualcommbe/Makefile b/target/linux/qualcommbe/Makefile
+index cb6fbada..385ed9fc 100644
+--- a/target/linux/qualcommbe/Makefile
++++ b/target/linux/qualcommbe/Makefile
+@@ -5,7 +5,7 @@ BOARD:=qualcommbe
+ BOARDNAME:=Qualcomm Atheros 802.11be WiSoC-s
+ FEATURES:=squashfs ramdisk fpu nand rtc emmc
+ KERNELNAME:=Image
+-CPU_TYPE:=cortex-a53
++CPU_TYPE:=cortex-a73
+ SUBTARGETS:=ipq95xx
+ 
+ KERNEL_PATCHVER:=6.18
+@@ -15,7 +15,8 @@ DEFAULT_PACKAGES += \
+ 	kmod-usb3 kmod-usb-dwc3 kmod-usb-dwc3-qcom \
+ 	kmod-leds-gpio kmod-gpio-button-hotplug \
+ 	kmod-qcom-ppe \
+-	wpad-basic-mbedtls uboot-envtools \
+-	e2fsprogs kmod-fs-ext4 losetup
++	wpad-basic-mbedtls \
++	e2fsprogs kmod-fs-ext4 losetup \
++	uboot-envtools
+ 
+ $(eval $(call BuildTarget))
+diff --git a/target/linux/qualcommbe/config-6.18 b/target/linux/qualcommbe/config-6.18
+index a2b34848..855e32e8 100644
+--- a/target/linux/qualcommbe/config-6.18
++++ b/target/linux/qualcommbe/config-6.18
+@@ -435,6 +435,7 @@ CONFIG_QCOM_PIL_INFO=y
+ # CONFIG_QCOM_PPE is not set
+ # CONFIG_QCOM_Q6V5_ADSP is not set
+ CONFIG_QCOM_Q6V5_COMMON=y
++CONFIG_QCOM_Q6V5_MPD=y
+ # CONFIG_QCOM_Q6V5_MSS is not set
+ # CONFIG_QCOM_Q6V5_PAS is not set
+ CONFIG_QCOM_Q6V5_WCSS=y
+@@ -461,6 +462,8 @@ CONFIG_QCOM_TZMEM_MODE_GENERIC=y
+ # CONFIG_QCOM_WCNSS_CTRL is not set
+ # CONFIG_QCOM_WCNSS_PIL is not set
+ CONFIG_QCOM_WDT=y
++# CONFIG_QRTR_TUN is not set
++CONFIG_QRTR_SMD=m
+ # CONFIG_QCS_CAMCC_615 is not set
+ # CONFIG_QCS_DISPCC_615 is not set
+ # CONFIG_QCS_GCC_404 is not set
+diff --git a/target/linux/qualcommbe/dts/ipq9574-be7000.dts b/target/linux/qualcommbe/dts/ipq9574-be7000.dts
+new file mode 100644
+index 00000000..872e3d35
+--- /dev/null
++++ b/target/linux/qualcommbe/dts/ipq9574-be7000.dts
+@@ -0,0 +1,982 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
++
++/dts-v1/;
++
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++#include <dt-bindings/leds/common.h>
++#include "ipq9574.dtsi"
++
++#include <dt-bindings/clock/qcom,qca8k-nsscc.h>
++#include <dt-bindings/net/qcom,qca808x.h>
++#include <dt-bindings/reset/qcom,qca8k-nsscc.h>
++
++/ {
++	model = "Xiaomi BE7000";
++	compatible = "xiaomi,be7000", "qcom,ipq9574";
++
++	aliases {
++		label-mac-device = &ppe_port1;
++
++		led-boot = &led_system_white;
++		led-failsafe = &led_system_amber;
++		led-running = &led_system_white;
++		led-upgrade = &led_system_amber;
++
++		serial0 = &blsp1_uart2;
++	};
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++		/*
++		 * The stock bootloader forces:
++		 * ubi.mtd=rootfs_1 root=mtd:ubi_rootfs rootfstype=squashfs
++		 * Create a UBI block device for the stock root volume name and
++		 * make the later root= override win.
++		 */
++		bootargs-append = " ubi.block=0,ubi_rootfs root=/dev/ubiblock0_1";
++	};
++
++	regulator_fixed_3p3: s3300 {
++		compatible = "regulator-fixed";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		regulator-boot-on;
++		regulator-always-on;
++		regulator-name = "fixed_3p3";
++	};
++
++	regulator_fixed_0p925: s0925 {
++		compatible = "regulator-fixed";
++		regulator-min-microvolt = <925000>;
++		regulator-max-microvolt = <925000>;
++		regulator-boot-on;
++		regulator-always-on;
++		regulator-name = "fixed_0p925";
++	};
++
++	gpio-keys {
++		compatible = "gpio-keys";
++		pinctrl-0 = <&gpio_keys_default>;
++		pinctrl-names = "default";
++
++		reset {
++			label = "reset";
++			linux,code = <KEY_RESTART>;
++			gpios = <&tlmm 44 GPIO_ACTIVE_LOW>;
++			linux,input-type = <EV_KEY>;
++			debounce-interval = <60>;
++		};
++	};
++
++	leds {
++		compatible = "gpio-leds";
++		pinctrl-0 = <&gpio_leds_default>;
++		pinctrl-names = "default";
++
++		aiot-white {
++			label = "white:aiot";
++			color = <LED_COLOR_ID_WHITE>;
++			gpios = <&tlmm 8 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++
++		led_system_white: system-white {
++			label = "white:system";
++			color = <LED_COLOR_ID_WHITE>;
++			gpios = <&tlmm 40 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++
++		led_system_amber: system-amber {
++			label = "amber:system";
++			color = <LED_COLOR_ID_AMBER>;
++			gpios = <&tlmm 41 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++
++		network-white {
++			label = "white:network";
++			color = <LED_COLOR_ID_WHITE>;
++			gpios = <&tlmm 42 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++
++		network-amber {
++			label = "amber:network";
++			color = <LED_COLOR_ID_AMBER>;
++			gpios = <&tlmm 43 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++	};
++
++	clocks {
++		qca8k_uniphy1_rx312p5m: qca8k-uniphy1-rx312p5m {
++			compatible = "fixed-clock";
++			clock-frequency = <312500000>;
++			#clock-cells = <0>;
++		};
++
++		qca8k_uniphy1_tx312p5m: qca8k-uniphy1-tx312p5m {
++			compatible = "fixed-clock";
++			clock-frequency = <312500000>;
++			#clock-cells = <0>;
++		};
++	};
++
++	reserved-memory {
++		q6_region: wcnss@4ab00000 {
++			no-map;
++			reg = <0x0 0x4ab00000 0x0 0x2b00000>;
++		};
++
++		m3_dump: m3-dump@4d600000 {
++			no-map;
++			reg = <0x0 0x4d600000 0x0 0x100000>;
++		};
++
++		q6_etr_dump: q6-etr-dump@4d700000 {
++			no-map;
++			reg = <0x0 0x4d700000 0x0 0x100000>;
++		};
++
++		q6_caldb_region: q6-caldb@4d800000 {
++			no-map;
++			reg = <0x0 0x4d800000 0x0 0x500000>;
++		};
++
++		qcn9224_pcie2_region: qcn9224-pcie2@54100000 {
++			no-map;
++			reg = <0x0 0x54100000 0x0 0x3200000>;
++		};
++	};
++};
++
++/ {
++	wcss_smp2p: smp2p-wcss {
++		compatible = "qcom,smp2p";
++		qcom,smem = <435>, <428>;
++		interrupt-parent = <&intc>;
++		interrupts = <GIC_SPI 322 IRQ_TYPE_EDGE_RISING>;
++		mboxes = <&apcs_glb 9>;
++		qcom,local-pid = <0>;
++		qcom,remote-pid = <1>;
++
++		wcss_smp2p_out: master-kernel {
++			qcom,entry-name = "master-kernel";
++			qcom,smp2p-feature-ssr-ack;
++			#qcom,smem-state-cells = <1>;
++		};
++
++		wcss_smp2p_in: slave-kernel {
++			qcom,entry-name = "slave-kernel";
++			interrupt-controller;
++			#interrupt-cells = <2>;
++		};
++	};
++};
++
++&blsp1_i2c1 {
++	clock-frequency = <400000>;
++	pinctrl-0 = <&i2c1_pins>;
++	pinctrl-names = "default";
++	status = "okay";
++
++	nfc: nfc@54 {
++		compatible = "miwifi,nfc";
++		reg = <0x54>;
++	};
++};
++
++&blsp1_uart2 {
++	pinctrl-0 = <&uart2_pins>;
++	pinctrl-names = "default";
++	status = "okay";
++};
++
++&qcom_ppe {
++	ethernet-ports {
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		ppe_port1: port@1 {
++			reg = <1>;
++			phy-mode = "10g-qxgmii";
++			label = "wan";
++			phy-handle = <&phy0>;
++			pcs-handle = <&pcs0_ch0>;
++			nvmem-cells = <&macaddr_art_0 0>;
++			nvmem-cell-names = "mac-address";
++			clocks = <&nsscc NSS_CC_PORT1_MAC_CLK>,
++				 <&nsscc NSS_CC_PORT1_RX_CLK>,
++				 <&nsscc NSS_CC_PORT1_TX_CLK>;
++			clock-names = "mac",
++				      "rx",
++				      "tx";
++			resets = <&nsscc PORT1_MAC_ARES>,
++				 <&nsscc PORT1_RX_ARES>,
++				 <&nsscc PORT1_TX_ARES>;
++			reset-names = "mac",
++				      "rx",
++				      "tx";
++		};
++
++		ppe_port2: port@2 {
++			reg = <2>;
++			phy-mode = "10g-qxgmii";
++			label = "lan1";
++			phy-handle = <&phy1>;
++			pcs-handle = <&pcs0_ch1>;
++			nvmem-cells = <&macaddr_art_0 1>;
++			nvmem-cell-names = "mac-address";
++			clocks = <&nsscc NSS_CC_PORT2_MAC_CLK>,
++				 <&nsscc NSS_CC_PORT2_RX_CLK>,
++				 <&nsscc NSS_CC_PORT2_TX_CLK>;
++			clock-names = "mac",
++				      "rx",
++				      "tx";
++			resets = <&nsscc PORT2_MAC_ARES>,
++				 <&nsscc PORT2_RX_ARES>,
++				 <&nsscc PORT2_TX_ARES>;
++			reset-names = "mac",
++				      "rx",
++				      "tx";
++		};
++
++		ppe_port3: port@3 {
++			reg = <3>;
++			phy-mode = "10g-qxgmii";
++			label = "lan2";
++			phy-handle = <&phy2>;
++			pcs-handle = <&pcs0_ch2>;
++			nvmem-cells = <&macaddr_art_0 2>;
++			nvmem-cell-names = "mac-address";
++			clocks = <&nsscc NSS_CC_PORT3_MAC_CLK>,
++				 <&nsscc NSS_CC_PORT3_RX_CLK>,
++				 <&nsscc NSS_CC_PORT3_TX_CLK>;
++			clock-names = "mac",
++				      "rx",
++				      "tx";
++			resets = <&nsscc PORT3_MAC_ARES>,
++				 <&nsscc PORT3_RX_ARES>,
++				 <&nsscc PORT3_TX_ARES>;
++			reset-names = "mac",
++				      "rx",
++				      "tx";
++		};
++
++		ppe_port4: port@4 {
++			reg = <4>;
++			phy-mode = "10g-qxgmii";
++			label = "lan3";
++			phy-handle = <&phy3>;
++			pcs-handle = <&pcs0_ch3>;
++			nvmem-cells = <&macaddr_art_0 3>;
++			nvmem-cell-names = "mac-address";
++			clocks = <&nsscc NSS_CC_PORT4_MAC_CLK>,
++				 <&nsscc NSS_CC_PORT4_RX_CLK>,
++				 <&nsscc NSS_CC_PORT4_TX_CLK>;
++			clock-names = "mac",
++				      "rx",
++				      "tx";
++			resets = <&nsscc PORT4_MAC_ARES>,
++				 <&nsscc PORT4_RX_ARES>,
++				 <&nsscc PORT4_TX_ARES>;
++			reset-names = "mac",
++				      "rx",
++				      "tx";
++		};
++	};
++};
++
++&rpm_requests {
++	regulators {
++		compatible = "qcom,rpm-mp5496-regulators";
++
++		ipq9574_s1: s1 {
++			/*
++			 * During kernel bootup, the SoC runs at 800MHz with 875mV set by the bootloaders.
++			 * During regulator registration, kernel not knowing the initial voltage,
++			 * considers it as zero and brings up the regulators with minimum supported voltage.
++			 * Update the regulator-min-microvolt with SVS voltage of 725mV so that
++			 * the regulators are brought up with 725mV which is sufficient for all the
++			 * corner parts to operate at 800MHz
++			 */
++			regulator-min-microvolt = <725000>;
++			regulator-max-microvolt = <1075000>;
++		};
++
++		mp5496_l2: l2 {
++			regulator-min-microvolt = <1800000>;
++			regulator-max-microvolt = <1800000>;
++			regulator-always-on;
++			regulator-boot-on;
++		};
++	};
++};
++
++	&sleep_clk {
++		clock-frequency = <32000>;
++	};
++
++&pcie2_phy {
++	status = "okay";
++};
++
++&pcie2 {
++	pinctrl-0 = <&pcie2_default>;
++	pinctrl-names = "default";
++
++	perst-gpios = <&tlmm 29 GPIO_ACTIVE_LOW>;
++	wake-gpios = <&tlmm 30 GPIO_ACTIVE_LOW>;
++	status = "okay";
++
++	pcie@0,0 {
++		#address-cells = <3>;
++		#size-cells = <2>;
++		reg = <0 0 0 0 0>;
++
++		wifi6: pcie@0 {
++			compatible = "pci17cb,1109";
++			reg = <0 0 0 0 0>;
++			qcom,board_id = <0x02>;
++			qcom,num-radios = <1>;
++			nvmem-cells = <&macaddr_art_0 5>;
++			nvmem-cell-names = "mac-address";
++			memory-region = <&qcn9224_pcie2_region>;
++		};
++	};
++};
++
++&soc {
++	q6v5_wcss: remoteproc@cd00000 {
++		compatible = "qcom,ipq9574-wcss-pil";
++		reg = <0x0cd00000 0x4040>,
++		      <0x004ab000 0x20>,
++		      <0x0cb50000 0x8>;
++		reg-names = "qdsp6", "rmb", "wcmn";
++		interrupts-extended = <&intc GIC_SPI 325 IRQ_TYPE_EDGE_RISING>,
++				      <&wcss_smp2p_in 0 IRQ_TYPE_NONE>,
++				      <&wcss_smp2p_in 1 IRQ_TYPE_NONE>,
++				      <&wcss_smp2p_in 2 IRQ_TYPE_NONE>,
++				      <&wcss_smp2p_in 3 IRQ_TYPE_NONE>;
++		interrupt-names = "wdog",
++				  "fatal",
++				  "ready",
++				  "handover",
++				  "stop-ack";
++		resets = <&gcc GCC_WCSSAON_RESET>,
++			 <&gcc GCC_WCSS_BCR>,
++			 <&gcc GCC_WCSS_Q6_BCR>,
++			 <&gcc GCC_WCSS_Q6_TBU_BCR>;
++		reset-names = "wcss_aon_reset",
++			      "wcss_reset",
++			      "wcss_q6_reset",
++			      "wcss_q6_bcr_reset";
++		clocks = <&gcc GCC_ANOC_WCSS_AXI_M_CLK>,
++			 <&gcc GCC_Q6_AHB_CLK>,
++			 <&gcc GCC_Q6_AHB_S_CLK>,
++			 <&gcc GCC_Q6_AXIM_CLK>,
++			 <&gcc GCC_Q6SS_BOOT_CLK>,
++			 <&gcc GCC_MEM_NOC_Q6_AXI_CLK>,
++			 <&gcc GCC_SYS_NOC_WCSS_AHB_CLK>,
++			 <&gcc GCC_WCSS_ACMT_CLK>,
++			 <&gcc GCC_WCSS_ECAHB_CLK>,
++			 <&gcc GCC_WCSS_Q6_TBU_CLK>,
++			 <&gcc GCC_Q6_AXIM2_CLK>,
++			 <&gcc GCC_WCSS_AHB_S_CLK>,
++			 <&gcc GCC_WCSS_AXI_M_CLK>;
++		clock-names = "anoc_wcss_axi_m",
++			      "q6_ahb",
++			      "q6_ahb_s",
++			      "q6_axim",
++			      "q6ss_boot",
++			      "mem_noc_q6_axi",
++			      "sys_noc_wcss_ahb",
++			      "wcss_acmt",
++			      "wcss_ecahb",
++			      "wcss_q6_tbu",
++			      "q6_axim2",
++			      "wcss_ahb_s",
++			      "wcss_axi_m";
++		qcom,halt-regs = <&tcsr 0x18000 0x1b000 0xe000>;
++		qcom,smem-states = <&wcss_smp2p_out 0>,
++				   <&wcss_smp2p_out 1>;
++		qcom,smem-state-names = "shutdown",
++					  "stop";
++		memory-region = <&q6_region>, <&m3_dump>,
++				<&q6_etr_dump>, <&q6_caldb_region>;
++		status = "okay";
++
++		glink-edge {
++			interrupts = <GIC_SPI 321 IRQ_TYPE_EDGE_RISING>;
++			qcom,remote-pid = <1>;
++			mboxes = <&apcs_glb 8>;
++
++			qrtr_requests {
++				qcom,glink-channels = "IPCRTR";
++			};
++		};
++	};
++
++	wifi0: wifi@c000000 {
++		compatible = "qcom,ipq9574-wifi";
++		reg = <0x0c000000 0x1000000>;
++		qcom,rproc = <&q6v5_wcss>;
++		qcom,ath11k-calibration-variant = "Xiaomi-BE7000";
++		qcom,ath11k-fw-memory-mode = <0>;
++		qcom,bdf-addr = <0x4b700000>;
++		qcom,caldb-addr = <0x4d800000>;
++		nvmem-cells = <&macaddr_art_0 4>;
++		nvmem-cell-names = "mac-address";
++		memory-region = <&q6_region>, <&m3_dump>;
++		clocks = <&xo_board_clk>;
++		clock-names = "xo";
++		interrupts = <GIC_SPI 320 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 319 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 318 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 316 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 315 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 314 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 311 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 310 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 411 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 410 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 40 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 39 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 302 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 301 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 37 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 36 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 296 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 295 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 294 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 293 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 292 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 291 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 290 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 289 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 288 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 239 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 236 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 235 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 234 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 233 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 232 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 231 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 230 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 229 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 228 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 224 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 223 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 203 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 183 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 180 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 179 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 178 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 177 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 176 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 163 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 162 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 160 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 414 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 159 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 158 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 157 IRQ_TYPE_EDGE_RISING>,
++			     <GIC_SPI 156 IRQ_TYPE_EDGE_RISING>;
++		interrupt-names = "misc-pulse1",
++				  "misc-latch",
++				  "sw-exception",
++				  "ce0",
++				  "ce1",
++				  "ce2",
++				  "ce3",
++				  "ce4",
++				  "ce5",
++				  "ce6",
++				  "ce7",
++				  "ce8",
++				  "ce9",
++				  "ce10",
++				  "ce11",
++				  "host2wbm-desc-feed",
++				  "host2reo-re-injection",
++				  "host2reo-command",
++				  "host2rxdma-monitor-ring3",
++				  "host2rxdma-monitor-ring2",
++				  "host2rxdma-monitor-ring1",
++				  "reo2ost-exception",
++				  "wbm2host-rx-release",
++				  "reo2host-status",
++				  "reo2host-destination-ring4",
++				  "reo2host-destination-ring3",
++				  "reo2host-destination-ring2",
++				  "reo2host-destination-ring1",
++				  "rxdma2host-monitor-destination-mac3",
++				  "rxdma2host-monitor-destination-mac2",
++				  "rxdma2host-monitor-destination-mac1",
++				  "ppdu-end-interrupts-mac3",
++				  "ppdu-end-interrupts-mac2",
++				  "ppdu-end-interrupts-mac1",
++				  "rxdma2host-monitor-status-ring-mac3",
++				  "rxdma2host-monitor-status-ring-mac2",
++				  "rxdma2host-monitor-status-ring-mac1",
++				  "host2rxdma-host-buf-ring-mac3",
++				  "host2rxdma-host-buf-ring-mac2",
++				  "host2rxdma-host-buf-ring-mac1",
++				  "rxdma2host-destination-ring-mac3",
++				  "rxdma2host-destination-ring-mac2",
++				  "rxdma2host-destination-ring-mac1",
++				  "host2tcl-input-ring4",
++				  "host2tcl-input-ring3",
++				  "host2tcl-input-ring2",
++				  "host2tcl-input-ring1",
++				  "wbm2host-tx-completions-ring4",
++				  "wbm2host-tx-completions-ring3",
++				  "wbm2host-tx-completions-ring2",
++				  "wbm2host-tx-completions-ring1",
++				  "tcl2host-status-ring";
++		status = "okay";
++	};
++};
++
++&tlmm {
++	i2c1_pins: i2c1-state {
++		pins = "gpio36", "gpio37";
++		function = "blsp1_i2c";
++		drive-strength = <8>;
++		bias-disable;
++	};
++
++	gpio_keys_default: gpio-keys-default-state {
++		pins = "gpio44";
++		function = "gpio";
++		drive-strength = <8>;
++		bias-pull-up;
++	};
++
++	gpio_leds_default: gpio-leds-default-state {
++		pins = "gpio8", "gpio40", "gpio41", "gpio42", "gpio43";
++		function = "gpio";
++		drive-strength = <8>;
++		bias-pull-up;
++	};
++
++	qpic_snand_default_state: qpic-snand-default-state {
++		clock-pins {
++			pins = "gpio5";
++			function = "qspi_clk";
++			drive-strength = <8>;
++			bias-disable;
++		};
++
++		cs-pins {
++			pins = "gpio4";
++			function = "qspi_cs";
++			drive-strength = <8>;
++			bias-disable;
++		};
++
++		data-pins {
++			pins = "gpio0", "gpio1", "gpio2", "gpio3";
++			function = "qspi_data";
++			drive-strength = <8>;
++			bias-disable;
++		};
++	};
++
++	pcie2_default: pcie2-default-state {
++		clkreq-n-pins {
++			pins = "gpio28";
++			function = "pcie2_clk";
++			drive-strength = <6>;
++			bias-pull-up;
++		};
++
++		perst-n-pins {
++			pins = "gpio29";
++			function = "gpio";
++			drive-strength = <8>;
++			bias-pull-down;
++			output-low;
++		};
++
++		wake-n-pins {
++			pins = "gpio30";
++			function = "pcie2_wake";
++			drive-strength = <6>;
++			bias-pull-up;
++		};
++	};
++
++};
++
++&mdio {
++	status = "okay";
++	clock-frequency = <6250000>;
++	reset-gpios = <&tlmm 60 GPIO_ACTIVE_LOW>;
++
++	qca8k_nsscc: clock-controller@18 {
++		compatible = "qcom,qca8084-nsscc";
++		reg = <0x18>;
++		clocks = <&cmn_pll ETH0_50MHZ_CLK>,
++			 <0>,
++			 <0>,
++			 <0>,
++			 <0>,
++			 <&qca8k_uniphy1_rx312p5m>,
++			 <&qca8k_uniphy1_tx312p5m>;
++		#clock-cells = <1>;
++		#reset-cells = <1>;
++	};
++
++	ethernet-phy-package@1 {
++		#address-cells = <1>;
++		#size-cells = <0>;
++		compatible = "qcom,qca8084-package";
++		reg = <1>;
++		clocks = <&qca8k_nsscc NSS_CC_APB_BRIDGE_CLK>,
++			 <&qca8k_nsscc NSS_CC_AHB_CLK>,
++			 <&qca8k_nsscc NSS_CC_SEC_CTRL_AHB_CLK>,
++			 <&qca8k_nsscc NSS_CC_TLMM_CLK>,
++			 <&qca8k_nsscc NSS_CC_TLMM_AHB_CLK>,
++			 <&qca8k_nsscc NSS_CC_CNOC_AHB_CLK>,
++			 <&qca8k_nsscc NSS_CC_MDIO_AHB_CLK>;
++		clock-names = "apb_bridge",
++			      "ahb",
++			      "sec_ctrl_ahb",
++			      "tlmm",
++			      "tlmm_ahb",
++			      "cnoc_ahb",
++			      "mdio_ahb";
++		resets = <&qca8k_nsscc NSS_CC_GEPHY_FULL_ARES>;
++		qcom,phy-addr-fixup = <1 2 3 4 5 6 7>;
++		qcom,package-mode = <QCA808X_PCS1_10G_QXGMII_PCS0_UNUNSED>;
++
++		phy0: ethernet-phy@1 {
++			compatible = "ethernet-phy-id004d.d180";
++			reg = <1>;
++			clocks = <&qca8k_nsscc NSS_CC_GEPHY0_SYS_CLK>;
++			resets = <&qca8k_nsscc NSS_CC_GEPHY0_SYS_ARES>;
++			qcom,xpcs-channel = <0>;
++
++			leds {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				led@2 {
++					reg = <2>;
++					color = <LED_COLOR_ID_GREEN>;
++					function = LED_FUNCTION_WAN;
++					default-state = "off";
++				};
++			};
++		};
++
++		phy1: ethernet-phy@2 {
++			compatible = "ethernet-phy-id004d.d180";
++			reg = <2>;
++			clocks = <&qca8k_nsscc NSS_CC_GEPHY1_SYS_CLK>;
++			resets = <&qca8k_nsscc NSS_CC_GEPHY1_SYS_ARES>;
++			qcom,xpcs-channel = <1>;
++
++			leds {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				led@0 {
++					reg = <0>;
++					color = <LED_COLOR_ID_GREEN>;
++					function = LED_FUNCTION_LAN;
++					function-enumerator = <1>;
++					default-state = "off";
++				};
++			};
++		};
++
++		phy2: ethernet-phy@3 {
++			compatible = "ethernet-phy-id004d.d180";
++			reg = <3>;
++			clocks = <&qca8k_nsscc NSS_CC_GEPHY2_SYS_CLK>;
++			resets = <&qca8k_nsscc NSS_CC_GEPHY2_SYS_ARES>;
++			qcom,xpcs-channel = <2>;
++
++			leds {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				led@0 {
++					reg = <0>;
++					color = <LED_COLOR_ID_GREEN>;
++					function = LED_FUNCTION_LAN;
++					function-enumerator = <2>;
++					default-state = "off";
++				};
++			};
++		};
++
++		phy3: ethernet-phy@4 {
++			compatible = "ethernet-phy-id004d.d180";
++			reg = <4>;
++			clocks = <&qca8k_nsscc NSS_CC_GEPHY3_SYS_CLK>;
++			resets = <&qca8k_nsscc NSS_CC_GEPHY3_SYS_ARES>;
++			qcom,xpcs-channel = <3>;
++
++			leds {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				led@0 {
++					reg = <0>;
++					color = <LED_COLOR_ID_GREEN>;
++					function = LED_FUNCTION_LAN;
++					function-enumerator = <3>;
++					default-state = "off";
++				};
++			};
++		};
++
++		pcs-phy@6 {
++			compatible = "qcom,qca8k-pcs-phy";
++			reg = <6>;
++			clocks = <&qca8k_nsscc NSS_CC_SRDS1_SYS_CLK>,
++				 <&qca8k_uniphy1_tx312p5m>,
++				 <&qca8k_uniphy1_rx312p5m>;
++			clock-names = "pcs", "pcs_rx_root", "pcs_tx_root";
++			resets = <&qca8k_nsscc NSS_CC_SRDS1_SYS_ARES>;
++		};
++
++		xpcs-phy@7 {
++			compatible = "qcom,qca8k-xpcs-phy";
++			reg = <7>;
++			#address-cells = <1>;
++			#size-cells = <0>;
++			resets = <&qca8k_nsscc NSS_CC_XPCS_ARES>;
++
++			channel@0 {
++				reg = <0>;
++				clocks = <&qca8k_nsscc NSS_CC_MAC1_SRDS1_CH0_XGMII_TX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC1_SRDS1_CH0_XGMII_RX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC1_SRDS1_CH0_TX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC1_SRDS1_CH0_RX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC1_GEPHY0_RX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC1_GEPHY0_TX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC1_RX_CLK_SRC>,
++					 <&qca8k_nsscc NSS_CC_MAC1_TX_CLK_SRC>;
++				clock-names = "xgmii_rx",
++					      "xgmii_tx",
++					      "xpcs_rx",
++					      "xpcs_tx",
++					      "port_rx",
++					      "port_tx",
++					      "rx_src",
++					      "tx_src";
++				resets = <&qca8k_nsscc NSS_CC_MAC1_SRDS1_CH0_XGMII_TX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC1_SRDS1_CH0_XGMII_RX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC1_SRDS1_CH0_TX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC1_SRDS1_CH0_RX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC1_GEPHY0_RX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC1_GEPHY0_TX_ARES>;
++				reset-names = "xgmii_rx",
++					      "xgmii_tx",
++					      "xpcs_rx",
++					      "xpcs_tx",
++					      "port_rx",
++					      "port_tx";
++			};
++
++			channel@1 {
++				reg = <1>;
++				clocks = <&qca8k_nsscc NSS_CC_MAC2_SRDS1_CH1_XGMII_TX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC2_SRDS1_CH1_XGMII_RX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC2_SRDS1_CH1_TX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC2_SRDS1_CH1_RX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC2_GEPHY1_RX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC2_GEPHY1_TX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC2_RX_CLK_SRC>,
++					 <&qca8k_nsscc NSS_CC_MAC2_TX_CLK_SRC>;
++				clock-names = "xgmii_rx",
++					      "xgmii_tx",
++					      "xpcs_rx",
++					      "xpcs_tx",
++					      "port_rx",
++					      "port_tx",
++					      "rx_src",
++					      "tx_src";
++				resets = <&qca8k_nsscc NSS_CC_MAC2_SRDS1_CH1_XGMII_TX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC2_SRDS1_CH1_XGMII_RX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC2_SRDS1_CH1_TX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC2_SRDS1_CH1_RX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC2_GEPHY1_RX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC2_GEPHY1_TX_ARES>;
++				reset-names = "xgmii_rx",
++					      "xgmii_tx",
++					      "xpcs_rx",
++					      "xpcs_tx",
++					      "port_rx",
++					      "port_tx";
++			};
++
++			channel@2 {
++				reg = <2>;
++				clocks = <&qca8k_nsscc NSS_CC_MAC3_SRDS1_CH2_XGMII_TX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC3_SRDS1_CH2_XGMII_RX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC3_SRDS1_CH2_TX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC3_SRDS1_CH2_RX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC3_GEPHY2_RX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC3_GEPHY2_TX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC3_RX_CLK_SRC>,
++					 <&qca8k_nsscc NSS_CC_MAC3_TX_CLK_SRC>;
++				clock-names = "xgmii_rx",
++					      "xgmii_tx",
++					      "xpcs_rx",
++					      "xpcs_tx",
++					      "port_rx",
++					      "port_tx",
++					      "rx_src",
++					      "tx_src";
++				resets = <&qca8k_nsscc NSS_CC_MAC3_SRDS1_CH2_XGMII_TX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC3_SRDS1_CH2_XGMII_RX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC3_SRDS1_CH2_TX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC3_SRDS1_CH2_RX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC3_GEPHY2_RX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC3_GEPHY2_TX_ARES>;
++				reset-names = "xgmii_rx",
++					      "xgmii_tx",
++					      "xpcs_rx",
++					      "xpcs_tx",
++					      "port_rx",
++					      "port_tx";
++			};
++
++			channel@3 {
++				reg = <3>;
++				clocks = <&qca8k_nsscc NSS_CC_MAC4_SRDS1_CH3_XGMII_TX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC4_SRDS1_CH3_XGMII_RX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC4_SRDS1_CH3_TX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC4_SRDS1_CH3_RX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC4_GEPHY3_RX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC4_GEPHY3_TX_CLK>,
++					 <&qca8k_nsscc NSS_CC_MAC4_RX_CLK_SRC>,
++					 <&qca8k_nsscc NSS_CC_MAC4_TX_CLK_SRC>;
++				clock-names = "xgmii_rx",
++					      "xgmii_tx",
++					      "xpcs_rx",
++					      "xpcs_tx",
++					      "port_rx",
++					      "port_tx",
++					      "rx_src",
++					      "tx_src";
++				resets = <&qca8k_nsscc NSS_CC_MAC4_SRDS1_CH3_XGMII_TX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC4_SRDS1_CH3_XGMII_RX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC4_SRDS1_CH3_TX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC4_SRDS1_CH3_RX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC4_GEPHY3_RX_ARES>,
++					 <&qca8k_nsscc NSS_CC_MAC4_GEPHY3_TX_ARES>;
++				reset-names = "xgmii_rx",
++					      "xgmii_tx",
++					      "xpcs_rx",
++					      "xpcs_tx",
++					      "port_rx",
++					      "port_tx";
++			};
++		};
++	};
++};
++
++&qpic_bam {
++	status = "okay";
++};
++
++&qpic_nand {
++	pinctrl-0 = <&qpic_snand_default_state>;
++	pinctrl-names = "default";
++	status = "okay";
++
++	flash@0 {
++		reg = <0>;
++		compatible = "spi-nand";
++		#address-cells = <1>;
++		#size-cells = <1>;
++		nand-ecc-strength = <8>;
++		nand-ecc-step-size = <512>;
++		nand-bus-width = <0x08>;
++		nand-ecc-engine = <&qpic_nand>;
++		partitions {
++			compatible = "qcom,smem-part";
++
++			partition-0-art {
++				label = "0:art";
++				read-only;
++
++				nvmem-layout {
++					compatible = "fixed-layout";
++					#address-cells = <1>;
++					#size-cells = <1>;
++
++					macaddr_art_0: macaddr@0 {
++						compatible = "mac-base";
++						reg = <0x0 0x6>;
++						#nvmem-cell-cells = <1>;
++					};
++				};
++			};
++		};
++	};
++};
++
++&usb_0_dwc3 {
++	dr_mode = "host";
++};
++
++&usb_0_qmpphy {
++	vdda-pll-supply = <&mp5496_l2>;
++	vdda-phy-supply = <&regulator_fixed_0p925>;
++
++	status = "okay";
++};
++
++&usb_0_qusbphy {
++	vdd-supply = <&regulator_fixed_0p925>;
++	vdda-pll-supply = <&mp5496_l2>;
++	vdda-phy-dpdm-supply = <&regulator_fixed_3p3>;
++
++	status = "okay";
++};
++
++&usb3 {
++	status = "okay";
++};
++
++/*
++ * The bootstrap pins for the board select the XO clock frequency
++ * (48 MHZ or 96 MHZ used for different RDP type board). This setting
++ * automatically enables the right dividers, to ensure the reference
++ * clock output from WiFi to the CMN PLL is 48 MHZ.
++ */
++&ref_48mhz_clk {
++	clock-div = <1>;
++	clock-mult = <1>;
++};
++
++/*
++ * The frequency of xo_board_clk is fixed to 24 MHZ, which is routed
++ * from WiFi output clock 48 MHZ divided by 2.
++ */
++&xo_board_clk {
++	clock-div = <2>;
++	clock-mult = <1>;
++};
++
++&xo_clk {
++	clock-frequency = <48000000>;
++};
++
++&pcs1 {
++	status = "disabled";
++};
++
++&pcs2 {
++	status = "disabled";
++};
+diff --git a/target/linux/qualcommbe/image/ipq95xx.mk b/target/linux/qualcommbe/image/ipq95xx.mk
+index 3adaeaad..80b2eb63 100644
+--- a/target/linux/qualcommbe/image/ipq95xx.mk
++++ b/target/linux/qualcommbe/image/ipq95xx.mk
+@@ -1,5 +1,45 @@
+ DTS_DIR := $(DTS_DIR)/qcom
+ 
++define Build/be7000-append-ubi
++	rm -f $@.tmp $@.ubinize.cfg
++	{ \
++		rootsize="$$(stat -c%s "$(IMAGE_ROOTFS)")"; \
++		rootsize="$$(( (($$rootsize + 1023) / 1024) * 1024 ))"; \
++		echo "[kernel]"; \
++		echo "mode=ubi"; \
++		echo "vol_id=0"; \
++		echo "vol_type=dynamic"; \
++		echo "vol_name=kernel"; \
++		echo "image=$(IMAGE_KERNEL)"; \
++		echo "[ubi_rootfs]"; \
++		echo "mode=ubi"; \
++		echo "vol_id=1"; \
++		echo "vol_type=dynamic"; \
++		echo "vol_name=ubi_rootfs"; \
++		echo "image=$(IMAGE_ROOTFS)"; \
++		echo "vol_size=$$rootsize"; \
++		echo "[rootfs_data]"; \
++		echo "mode=ubi"; \
++		echo "vol_id=2"; \
++		echo "vol_type=dynamic"; \
++		echo "vol_name=rootfs_data"; \
++		echo "vol_size=1MiB"; \
++		echo "vol_flags=autoresize"; \
++	} > $@.ubinize.cfg
++	$(STAGING_DIR_HOST)/bin/ubinize \
++		$(if $(SOURCE_DATE_EPOCH),-Q $(SOURCE_DATE_EPOCH)) \
++		-o $@.tmp \
++		-p $(BLOCKSIZE:%k=%KiB) -m $(PAGESIZE) \
++		$(if $(SUBPAGESIZE),-s $(SUBPAGESIZE)) \
++		$(if $(VID_HDR_OFFSET),-O $(VID_HDR_OFFSET)) \
++		$(UBINIZE_OPTS) \
++		$@.ubinize.cfg
++	cat $@.tmp >> $@
++	rm -f $@.tmp $@.ubinize.cfg
++	$(if $(and $(IMAGE_SIZE),$(NAND_SIZE)),\
++		$(call Build/check-size,$(UBI_NAND_SIZE_LIMIT)))
++endef
++
+ define Device/8devices_kiwi-dvk
+ 	$(call Device/FitImage)
+ 	$(call Device/EmmcImage)
+@@ -43,6 +83,28 @@ define Device/linksys_ln6001
+ endef
+ TARGET_DEVICES += linksys_ln6001
+ 
++define Device/xiaomi_be7000
++	$(call Device/FitImage)
++	$(call Device/UbiFit)
++	DEVICE_VENDOR := Xiaomi
++	DEVICE_MODEL := BE7000
++	DEVICE_DTS_CONFIG := config@al02-c6
++	BLOCKSIZE := 128k
++	PAGESIZE := 2048
++	SOC := ipq9574
++	KERNEL_SIZE := 6096k
++	IMAGE_SIZE := 32116k
++	DEVICE_PACKAGES := ath11k-firmware-ipq9574 \
++					kmod-ath12k ath12k-firmware-qcn9274 \
++					kmod-qrtr-smd \
++					kmod-usb-storage be7000-nfc-i2ctransfer \
++					luci luci-app-be7000-nfc luci-proto-wireguard \
++					iperf3 ethtool-full mdio-tools qrencode uboot-envtools \
++					kmod-wireguard wireguard-tools
++	IMAGE/factory.ubi := be7000-append-ubi
++endef
++TARGET_DEVICES += xiaomi_be7000
++
+ define Device/qcom_rdp433
+ 	$(call Device/FitImageLzma)
+ 	DEVICE_VENDOR := Qualcomm Technologies, Inc.
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/board.d/01_leds b/target/linux/qualcommbe/ipq95xx/base-files/etc/board.d/01_leds
+new file mode 100644
+index 00000000..eb2d328c
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/board.d/01_leds
+@@ -0,0 +1,23 @@
++#
++# Copyright (C) 2015 OpenWrt.org
++#
++
++. /lib/functions/uci-defaults.sh
++
++board_config_update
++
++board=$(board_name)
++
++case "$board" in
++xiaomi,be7000)
++	ucidef_set_led_netdev "wlan5g" "WIFI 5GHz" "white:network" "phy1-ap0" "tx rx"
++	ucidef_set_led_netdev "wan_port" "WAN port" "90000.mdio-1:01:green:wan" "wan"
++	ucidef_set_led_netdev "lan1_port" "LAN1 port" "90000.mdio-1:02:green:lan-1" "lan1"
++	ucidef_set_led_netdev "lan2_port" "LAN2 port" "90000.mdio-1:03:green:lan-2" "lan2"
++	ucidef_set_led_netdev "lan3_port" "LAN3 port" "90000.mdio-1:04:green:lan-3" "lan3"
++	;;
++esac
++
++board_config_flush
++
++exit 0
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/board.d/02_network b/target/linux/qualcommbe/ipq95xx/base-files/etc/board.d/02_network
+index 1ab91adc..07d3d4e5 100644
+--- a/target/linux/qualcommbe/ipq95xx/base-files/etc/board.d/02_network
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/board.d/02_network
+@@ -23,6 +23,9 @@ ipq95xx_setup_interfaces()
+ 	qcom,ipq9574-ap-al02-c7)
+ 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4 lan5" "wan"
+ 		;;
++	xiaomi,be7000)
++		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3" "wan"
++		;;
+ 	*)
+ 		echo "Unsupported hardware. Network interfaces not initialized"
+ 		;;
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/config/nfc b/target/linux/qualcommbe/ipq95xx/base-files/etc/config/nfc
+new file mode 100644
+index 00000000..da75676e
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/config/nfc
+@@ -0,0 +1,4 @@
++config nfc 'nfc'
++	option nfc_enable '1'
++	option mode 'url'
++	option url 'auto'
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath11k-caldata b/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
+new file mode 100755
+index 00000000..a396cdb2
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
+@@ -0,0 +1,20 @@
++#!/bin/sh
++
++[ -e /lib/firmware/$FIRMWARE ] && exit 0
++
++. /lib/functions/caldata.sh
++
++board=$(board_name)
++
++case "$FIRMWARE" in
++"ath11k/IPQ9574/hw1.0/cal-ahb-c000000.wifi.bin")
++	case "$board" in
++	xiaomi,be7000)
++		caldata_extract "0:art" 0x1000 0x20000
++		;;
++	esac
++	;;
++*)
++	exit 1
++	;;
++esac
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath12k-caldata b/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath12k-caldata
+old mode 100644
+new mode 100755
+index 3bdb743a..73b8c2a3
+--- a/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath12k-caldata
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath12k-caldata
+@@ -6,6 +6,21 @@
+ 
+ board=$(board_name)
+ 
++be7000_caldata_extract() {
++	local offset="$1"
++	local count="$2"
++	local target="/lib/firmware/$FIRMWARE"
++	local bytes=""
++	local head=""
++
++	echo "be7000-caldata: request=$FIRMWARE board=$board offset=$offset count=$count" > /dev/kmsg
++	caldata_extract "0:art" "$offset" "$count"
++
++	[ -f "$target" ] && bytes=$(wc -c < "$target")
++	[ -f "$target" ] && head=$(hexdump -v -n 32 -e '1/1 "%02x"' "$target")
++	echo "be7000-caldata: done file=$target bytes=$bytes head32=$head" > /dev/kmsg
++}
++
+ case "$FIRMWARE" in
+ "ath12k/QCN9274/hw2.0/cal-pci-0001:01:00.0.bin")
+ 	case "$board" in
+@@ -19,6 +34,13 @@ case "$FIRMWARE" in
+ 	askey,sbe1v1k)
+ 		caldata_extract_mmc "0:ART" 0x8a800 0x2d000
+ 		;;
++	xiaomi,be7000)
++		# Stock BE7000 is detected by QSDK as ap-al02-c6 and keeps
++		# the single-phy QCN9224 calibration in qcn9224/caldata_3.bin
++		# at ART offset 0x65000. Split 5 GHz mode uses 0x33000 instead,
++		# but OpenWrt currently enables the stock single-phy layout.
++		be7000_caldata_extract 0x65000 0x2d000
++		;;
+ 	esac
+ 	;;
+ "ath12k/QCN9274/hw2.0/cal-pci-0003:01:00.0.bin")
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success
+new file mode 100755
+index 00000000..f08db9b7
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success
+@@ -0,0 +1,54 @@
++#!/bin/sh /etc/rc.common
++
++START=99
++
++. /lib/functions.sh
++
++boot() {
++	[ "$(board_name)" = "xiaomi,be7000" ] || return 0
++
++	if command -v devmem >/dev/null 2>&1; then
++		for bm_port in 8 9 10 11 12 13; do
++			devmem $((0x3a000000 + 0x600100 + bm_port * 4)) 32 0 >/dev/null
++		done
++		(
++			for retry in 1 2 3 4 5 6 7 8 9 10; do
++				sleep 3
++				for bm_port in 8 9 10 11 12 13; do
++					devmem $((0x3a000000 + 0x600100 + bm_port * 4)) 32 0 >/dev/null
++				done
++			done
++			devmem $((0x3a000000 + 0x600100 + 2 * 4)) 32 0 >/dev/null
++		) &
++	fi
++
++	[ -x /usr/sbin/fw_setenv ] || return 0
++
++	if [ ! -e /etc/fw_env.config ]; then
++		local mtdnum
++
++		mtdnum="$(find_mtd_index "0:appsblenv")"
++		[ -n "$mtdnum" ] || return 0
++
++		echo "/dev/mtd$mtdnum 0x0 0x10000 0x20000" > /etc/fw_env.config
++	fi
++
++	case "$(sed -n 's/.*ubi.mtd=\([^ ]*\).*/\1/p' /proc/cmdline)" in
++	rootfs_1)
++		slot=1
++		;;
++	rootfs)
++		slot=0
++		;;
++	*)
++		return 0
++		;;
++	esac
++
++	fw_setenv flag_boot_rootfs "$slot" || return 0
++	fw_setenv flag_last_success "$slot" || return 0
++	fw_setenv flag_boot_success 1 || return 0
++	fw_setenv flag_try_sys1_failed 0 || return 0
++	fw_setenv flag_try_sys2_failed 0 || return 0
++	fw_setenv flag_ota_reboot 0 || return 0
++}
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_wireless b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_wireless
+new file mode 100755
+index 00000000..11d64a15
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_wireless
+@@ -0,0 +1,9 @@
++#!/bin/sh /etc/rc.common
++
++START=98
++
++boot()
++{
++	/sbin/be7000-wireless-defaults --wait 30 >/dev/null 2>&1 || return 0
++	wifi reload >/dev/null 2>&1 || true
++}
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/nfc b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/nfc
+new file mode 100755
+index 00000000..984ef607
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/nfc
+@@ -0,0 +1,29 @@
++#!/bin/sh /etc/rc.common
++
++START=95
++USE_PROCD=1
++
++boot()
++{
++	start
++}
++
++start()
++{
++	. /lib/functions.sh
++
++	[ "$(board_name)" = "xiaomi,be7000" ] || return 0
++	[ "$(uci -q get nfc.nfc.nfc_enable)" = "1" ] || return 0
++
++	/sbin/nfc update-auto
++}
++
++service_triggers()
++{
++	procd_add_reload_trigger wireless nfc
++}
++
++reload_service()
++{
++	start
++}
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/smp_affinity b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/smp_affinity
+new file mode 100755
+index 00000000..0f283228
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/smp_affinity
+@@ -0,0 +1,76 @@
++#!/bin/sh /etc/rc.common
++
++START=93
++
++PROG=smp_affinity
++
++cpus_to_bitmask()
++{
++	local bitmask=0 range start end
++
++	for range in $(printf '%s\n' "$*" | tr ',' ' '); do
++		start="${range%-*}"
++		end="${range#*-}"
++
++		if [ "$start" = "$end" ]; then
++			bitmask=$((bitmask | 1 << start))
++		else
++			bitmask=$((bitmask | ((1 << (end - start + 1)) - 1) << start))
++		fi
++	done
++
++	printf '%x' "$bitmask"
++}
++
++set_affinity()
++{
++	local irq_name="$1"
++	local cpu="$2"
++	local bitmask irq
++
++	bitmask="$(cpus_to_bitmask "$cpu")"
++
++	awk -v irq_name="$irq_name" '$0 ~ irq_name { print substr($1, 1, length($1)-1) }' /proc/interrupts |
++	while read -r irq; do
++		[ -n "$irq" ] || continue
++		echo "$bitmask" > "/proc/irq/$irq/smp_affinity" 2>/dev/null || continue
++		$enable_log && logger -t "$PROG" "Pinning IRQ($irq) $irq_name to CPU $cpu"
++	done
++}
++
++enable_affinity_ipq95xx()
++{
++	local ring cpu
++
++	# IPQ9574 EDMA RX descriptor rings.
++	set_affinity 'rxdesc_20$' 0
++	set_affinity 'rxdesc_21$' 1
++	set_affinity 'rxdesc_22$' 2
++	set_affinity 'rxdesc_23$' 3
++
++	# IPQ9574 EDMA TX completion rings are exposed as txcmpl_8..31.
++	for ring in $(seq 8 31); do
++		cpu=$(( (ring - 8) % 4 ))
++		set_affinity "txcmpl_${ring}$" "$cpu"
++	done
++
++	set_affinity 'misc$' 0-3
++}
++
++start()
++{
++	config_load smp_affinity
++
++	config_get_bool enable "general" enable 1
++	config_get_bool enable_log "general" enable_log 1
++
++	[ "$enable" -eq 1 ] || return 0
++	[ "$enable_log" -eq 1 ] && enable_log=true || enable_log=false
++
++	enable_affinity_ipq95xx
++}
++
++boot()
++{
++	start
++}
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/05_packet_steering b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/05_packet_steering
+new file mode 100755
+index 00000000..d44c7c2b
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/05_packet_steering
+@@ -0,0 +1,13 @@
++#!/bin/sh
++
++. /lib/functions.sh
++
++[ "$(board_name)" = "xiaomi,be7000" ] || exit 0
++
++uci -q get network.globals.packet_steering >/dev/null || {
++	uci set network.globals="globals"
++	uci set network.globals.packet_steering="2"
++	uci commit network
++}
++
++exit 0
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/15_smp_affinity b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/15_smp_affinity
+new file mode 100755
+index 00000000..71057b0d
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/15_smp_affinity
+@@ -0,0 +1,20 @@
++#!/bin/sh
++
++. /lib/functions.sh
++
++[ "$(board_name)" = "xiaomi,be7000" ] || exit 0
++
++uci -q get smp_affinity >/dev/null || {
++	touch /etc/config/smp_affinity
++
++	uci -q batch <<-EOF
++		set smp_affinity.general='smp_affinity'
++		set smp_affinity.general.enable='1'
++		set smp_affinity.general.enable_log='1'
++		commit smp_affinity
++	EOF
++}
++
++/etc/init.d/smp_affinity enable
++
++exit 0
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/16_be7000_wireless b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/16_be7000_wireless
+new file mode 100755
+index 00000000..ca2c7841
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/16_be7000_wireless
+@@ -0,0 +1,9 @@
++#!/bin/sh
++
++. /lib/functions.sh
++
++[ "$(board_name)" = "xiaomi,be7000" ] || exit 0
++
++/sbin/be7000-wireless-defaults >/dev/null 2>&1 || true
++
++exit 0
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/17_be7000_nfc b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/17_be7000_nfc
+new file mode 100755
+index 00000000..c078dde5
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/17_be7000_nfc
+@@ -0,0 +1,17 @@
++#!/bin/sh
++
++. /lib/functions.sh
++
++[ "$(board_name)" = "xiaomi,be7000" ] || exit 0
++
++uci -q batch <<-EOF
++	set nfc.nfc='nfc'
++	set nfc.nfc.nfc_enable='1'
++	set nfc.nfc.mode='url'
++	set nfc.nfc.url='auto'
++	commit nfc
++EOF
++
++/etc/init.d/nfc enable
++
++exit 0
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/99_be7000_boot_success b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/99_be7000_boot_success
+new file mode 100755
+index 00000000..a966ae3f
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/99_be7000_boot_success
+@@ -0,0 +1,10 @@
++#!/bin/sh
++
++. /lib/functions.sh
++
++[ "$(board_name)" = "xiaomi,be7000" ] || exit 0
++
++/etc/init.d/be7000_boot_success enable
++/etc/init.d/be7000_boot_success boot
++
++exit 0
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh b/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
+index 5c1a014f..d0dc66fb 100644
+--- a/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
++++ b/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
+@@ -4,6 +4,44 @@ REQUIRE_IMAGE_METADATA=1
+ RAMFS_COPY_BIN='fw_printenv fw_setenv head cmp sha256sum tr mktemp'
+ RAMFS_COPY_DATA='/etc/fw_env.config /var/lock/fw_printenv.lock'
+ 
++be7000_do_upgrade() {
++	local image="$1"
++	local mtdnum
++	local target_slot=1
++	local target_part="rootfs_1"
++
++	mtdnum="$(find_mtd_index "$target_part")"
++	if [ -z "$mtdnum" ]; then
++		echo "Unable to find target partition $target_part"
++		return 1
++	fi
++
++	if ! command -v fw_setenv >/dev/null; then
++		echo "fw_setenv is required to switch BE7000 boot slot"
++		return 1
++	fi
++
++	echo "Writing OpenWrt image to Xiaomi OpenWrt UBI slot $target_part"
++	CI_UBIPART="$target_part"
++	CI_ROOTPART="ubi_rootfs"
++	nand_detach_ubi "$target_part" || return 1
++	ubiformat "/dev/mtd$mtdnum" -y || return 1
++	nand_do_flash_file "$image" "fwtool -q -i /tmp/sysupgrade.meta -T $image" || return 1
++
++	echo "Switching Xiaomi boot slot to $target_slot"
++	fw_setenv flag_boot_rootfs "$target_slot" || return 1
++	fw_setenv flag_last_success "$target_slot" || return 1
++	fw_setenv flag_boot_success 1 || return 1
++	fw_setenv flag_try_sys1_failed 0 || return 1
++	fw_setenv flag_try_sys2_failed 0 || return 1
++	fw_setenv flag_ota_reboot 0 || return 1
++
++	nand_do_restore_config || return 1
++	sync
++
++	return 0
++}
++
+ platform_check_image() {
+ 	case "$(board_name)" in
+ 	linksys,ln6001)
+@@ -35,6 +73,16 @@ platform_do_upgrade() {
+ 	linksys,ln6001)
+ 		ln6001_do_upgrade "$1" || return 1
+ 		;;
++	xiaomi,be7000)
++		sync
++		be7000_do_upgrade "$1" && {
++			echo "sysupgrade successful"
++			umount -a
++			reboot -f
++		}
++		echo "sysupgrade failed"
++		return 1
++		;;
+ 	*)
+ 		default_do_upgrade "$1"
+ 		;;
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wireless-defaults b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wireless-defaults
+new file mode 100755
+index 00000000..95872ce0
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wireless-defaults
+@@ -0,0 +1,119 @@
++#!/bin/sh
++
++. /lib/functions.sh
++
++MARKER="/etc/config/.be7000_wireless_defaults"
++
++[ "$(board_name)" = "xiaomi,be7000" ] || exit 0
++[ -e "$MARKER" ] && exit 0
++
++wait_for_radios()
++{
++	local timeout="${1:-0}"
++	local i=0
++
++	while :; do
++		[ -s /etc/config/wireless ] || wifi config >/dev/null 2>&1
++
++		if uci -q get wireless.radio0 >/dev/null &&
++		   uci -q get wireless.radio1 >/dev/null &&
++		   uci -q get wireless.default_radio0 >/dev/null &&
++		   uci -q get wireless.default_radio1 >/dev/null; then
++			return 0
++		fi
++
++		[ "$i" -ge "$timeout" ] && return 1
++		i=$((i + 1))
++		sleep 1
++	done
++}
++
++bdata_get()
++{
++	local key="$1"
++	local part
++	local value
++
++	if command -v fw_printsys >/dev/null 2>&1 && [ -s /etc/fw_sys.config ]; then
++		value="$(fw_printsys -n "$key" 2>/dev/null)"
++		[ -n "$value" ] && {
++			echo "$value"
++			return
++		}
++	fi
++
++	part="$(find_mtd_part bdata)"
++	[ -n "$part" ] || return
++
++	strings "$part" 2>/dev/null | sed -n "s/^${key}=//p" | head -n 1
++}
++
++region_to_country()
++{
++	local region
++
++	region="$(printf "%s" "$1" | tr '[:lower:]' '[:upper:]')"
++
++	case "$region" in
++	EU|DE)
++		echo "DE"
++		;;
++	UK)
++		echo "GB"
++		;;
++	AS)
++		echo "MY"
++		;;
++	US)
++		echo "MX"
++		;;
++	CN|ID|IN|JP|KR|RU|SG)
++		echo "$region"
++		;;
++	[A-Z][A-Z])
++		echo "$region"
++		;;
++	esac
++}
++
++get_country()
++{
++	region_to_country "$(bdata_get region)"
++}
++
++apply_defaults()
++{
++	local country
++
++	country="$(get_country)"
++
++	uci -q batch <<-EOF
++		set wireless.radio0.channel='auto'
++		set wireless.radio0.htmode='HE40'
++		set wireless.default_radio0.ssid='BE7000'
++		set wireless.radio1.channel='auto'
++		set wireless.radio1.htmode='EHT80'
++		set wireless.default_radio1.ssid='BE7000_5G'
++	EOF
++
++	if [ -n "$country" ]; then
++		uci -q set wireless.radio0.country="$country"
++		uci -q set wireless.radio1.country="$country"
++	fi
++
++	uci -q commit wireless
++	touch "$MARKER"
++}
++
++case "$1" in
++	--wait)
++		wait_for_radios "${2:-20}" || exit 1
++		;;
++	*)
++		wait_for_radios 0 || exit 1
++		;;
++esac
++
++apply_defaults
++
++exit 0
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/sbin/nfc b/target/linux/qualcommbe/ipq95xx/base-files/sbin/nfc
+new file mode 100755
+index 00000000..73a28230
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/sbin/nfc
+@@ -0,0 +1,375 @@
++#!/bin/sh
++
++I2C_BUS=0
++I2C_ADDR=54
++I2C_TRANSFER=be7000-nfc-i2ctransfer
++CC="0xe1 0x43 0x80 0x09"
++WSC_MIME="0x61 0x70 0x70 0x6c 0x69 0x63 0x61 0x74 0x69 0x6f 0x6e 0x2f 0x76 0x6e 0x64 0x2e 0x77 0x66 0x61 0x2e 0x77 0x73 0x63"
++
++usage()
++{
++	cat <<EOF
++usage:
++	nfc init
++	nfc disable
++	nfc update '<hex bytes>' <len>
++	nfc update-url [url]
++	nfc update-wifi
++	nfc update-auto
++EOF
++	exit 1
++}
++
++need_i2c()
++{
++	command -v "$I2C_TRANSFER" >/dev/null 2>&1 || {
++		echo "nfc: $I2C_TRANSFER is missing" >&2
++		exit 1
++	}
++}
++
++nfc_write_delay()
++{
++	command -v usleep >/dev/null 2>&1 && usleep 10000
++}
++
++normalize_hex()
++{
++	set -- $1
++	echo "$*"
++}
++
++hex_count()
++{
++	set -- $1
++	echo $#
++}
++
++byte_to_i2c()
++{
++	printf "0x%02x" "$1"
++}
++
++word_to_i2c()
++{
++	printf "0x%02x 0x%02x" "$((($1 >> 8) & 0xff))" "$(($1 & 0xff))"
++}
++
++uint32_to_i2c()
++{
++	printf "0x%02x 0x%02x 0x%02x 0x%02x" \
++		"$((($1 >> 24) & 0xff))" "$((($1 >> 16) & 0xff))" \
++		"$((($1 >> 8) & 0xff))" "$(($1 & 0xff))"
++}
++
++str_to_i2c()
++{
++	printf "%s" "$1" | hexdump -ve '1/1 "0x%02x "'
++}
++
++attr()
++{
++	local type="$1"
++	local value="$2"
++	local len
++
++	value=$(normalize_hex "$value")
++	len=$(hex_count "$value")
++	echo "$(word_to_i2c "$type") $(word_to_i2c "$len") $value"
++}
++
++nfc_init()
++{
++	local cap
++
++	need_i2c
++	cap=$("$I2C_TRANSFER" -y "$I2C_BUS" w2@0x"$I2C_ADDR" 0x00 0x00 r4 2>/dev/null)
++	[ "$cap" = "$CC" ] || "$I2C_TRANSFER" -y "$I2C_BUS" w6@0x"$I2C_ADDR" 0x00 0x00 $CC >/dev/null
++}
++
++nfc_disable()
++{
++	need_i2c
++	"$I2C_TRANSFER" -y "$I2C_BUS" w6@0x"$I2C_ADDR" 0x00 0x01 0x00 0x00 0x00 0x00 >/dev/null
++}
++
++nfc_update()
++{
++	local ndef_str="$1"
++	local ndef_len="$2"
++	local count=0
++	local write_len s_pos ndef_start_addr addr_str value_str pad_str eep_str failed tail_addr i
++
++	need_i2c
++	[ -n "$ndef_str" ] && [ -n "$ndef_len" ] || usage
++	ndef_str=$(normalize_hex "$ndef_str")
++	ndef_len=$(hex_count "$ndef_str")
++
++	while [ "$count" -le 3 ]; do
++		write_len="$ndef_len"
++		s_pos=0
++		ndef_start_addr=1
++		failed=0
++		eep_str=$("$I2C_TRANSFER" -y "$I2C_BUS" w2@0x"$I2C_ADDR" 0x00 0x01 r"$ndef_len" 2>/dev/null)
++
++		[ "$ndef_str" = "$eep_str" ] && return 0
++
++		while [ "$write_len" -gt 3 ]; do
++			addr_str=$(word_to_i2c "$ndef_start_addr")
++			value_str="${ndef_str:$s_pos:19}"
++			"$I2C_TRANSFER" -y "$I2C_BUS" w6@0x"$I2C_ADDR" $addr_str $value_str >/dev/null || {
++				failed=1
++				break
++			}
++			write_len=$((write_len - 4))
++			ndef_start_addr=$((ndef_start_addr + 1))
++			s_pos=$((s_pos + 20))
++			nfc_write_delay
++		done
++
++		[ "$failed" = 1 ] && {
++			sleep "$count"
++			count=$((count + 1))
++			continue
++		}
++
++		if [ "$write_len" -gt 0 ]; then
++			pad_str=""
++			[ "$write_len" -eq 3 ] && pad_str="0x00"
++			[ "$write_len" -eq 2 ] && pad_str="0x00 0x00"
++			[ "$write_len" -eq 1 ] && pad_str="0x00 0x00 0x00"
++			addr_str=$(word_to_i2c "$ndef_start_addr")
++			value_str="${ndef_str:$s_pos}"
++			"$I2C_TRANSFER" -y "$I2C_BUS" w6@0x"$I2C_ADDR" $addr_str $value_str $pad_str >/dev/null || failed=1
++			tail_addr=$((ndef_start_addr + 1))
++		else
++			tail_addr="$ndef_start_addr"
++		fi
++
++		if [ "$failed" != 1 ]; then
++			i=0
++			while [ "$i" -lt 24 ]; do
++				addr_str=$(word_to_i2c "$tail_addr")
++				"$I2C_TRANSFER" -y "$I2C_BUS" w6@0x"$I2C_ADDR" $addr_str 0x00 0x00 0x00 0x00 >/dev/null || {
++					failed=1
++					break
++				}
++				tail_addr=$((tail_addr + 1))
++				i=$((i + 1))
++				nfc_write_delay
++			done
++		fi
++
++		sleep "$count"
++		count=$((count + 1))
++	done
++
++	return 1
++}
++
++wifi_section()
++{
++	local section="$1"
++	local disabled mode ifname device
++
++	config_get disabled "$section" disabled 0
++	config_get mode "$section" mode
++	config_get ifname "$section" ifname
++	config_get device "$section" device
++
++	[ "$disabled" = 0 ] || return
++	[ "$mode" = ap ] || return
++
++	case "$device:$ifname" in
++		*radio1*|*phy1*) NFC_WIFI_SECTION="$section" ;;
++		*) [ -n "$NFC_WIFI_SECTION" ] || NFC_WIFI_SECTION="$section" ;;
++	esac
++}
++
++auth_type()
++{
++	case "$1" in
++		psk2+ccmp|ccmp|sae|sae-mixed|psk2) echo 32 ;;
++		mixed-psk|psk-mixed*) echo 34 ;;
++		psk|psk+*) echo 2 ;;
++		none|open|"") echo 1 ;;
++		*) echo 32 ;;
++	esac
++}
++
++encr_type()
++{
++	case "$1" in
++		none|open|"") echo 1 ;;
++		*) echo 8 ;;
++	esac
++}
++
++build_wsc_payload()
++{
++	local section="$1"
++	local ssid key enc cred auth encr
++
++	config_get ssid "$section" ssid
++	config_get key "$section" key
++	config_get enc "$section" encryption none
++
++	[ -n "$ssid" ] || return 1
++
++	auth=$(auth_type "$enc")
++	encr=$(encr_type "$enc")
++
++	cred="$(attr 0x1026 "0x01")"
++	cred="$cred $(attr 0x1045 "$(str_to_i2c "$ssid")")"
++	cred="$cred $(attr 0x1003 "$(word_to_i2c "$auth")")"
++	cred="$cred $(attr 0x100f "$(word_to_i2c "$encr")")"
++	if [ "$encr" != 1 ] && [ -n "$key" ]; then
++		cred="$cred $(attr 0x1027 "$(str_to_i2c "$key")")"
++	fi
++	cred="$cred $(attr 0x1020 "0xff 0xff 0xff 0xff 0xff 0xff")"
++
++	echo "$(attr 0x100e "$cred")"
++}
++
++build_ndef()
++{
++	local payload="$1"
++	local payload_len record record_len ndef
++
++	payload_len=$(hex_count "$payload")
++	record="0xd2 0x17 $(byte_to_i2c "$payload_len") $WSC_MIME $payload"
++	record_len=$(hex_count "$record")
++
++	if [ "$record_len" -lt 255 ]; then
++		ndef="0x03 $(byte_to_i2c "$record_len") $record 0xfe"
++	else
++		ndef="0x03 0xff $(uint32_to_i2c "$record_len") $record 0xfe"
++	fi
++
++	echo "$ndef"
++}
++
++build_uri_ndef()
++{
++	local url="$1"
++	local uri prefix payload payload_len record record_len ndef
++
++	case "$url" in
++		https://www.*)
++			prefix="0x02"
++			uri="${url#https://www.}"
++			;;
++		http://www.*)
++			prefix="0x01"
++			uri="${url#http://www.}"
++			;;
++		https://*)
++			prefix="0x04"
++			uri="${url#https://}"
++			;;
++		http://*)
++			prefix="0x03"
++			uri="${url#http://}"
++			;;
++		*)
++			prefix="0x00"
++			uri="$url"
++			;;
++	esac
++
++	payload="$prefix $(str_to_i2c "$uri")"
++	payload=$(normalize_hex "$payload")
++	payload_len=$(hex_count "$payload")
++
++	[ "$payload_len" -lt 256 ] || return 1
++
++	record="0xd1 0x01 $(byte_to_i2c "$payload_len") 0x55 $payload"
++	record_len=$(hex_count "$record")
++	ndef="0x03 $(byte_to_i2c "$record_len") $record 0xfe"
++
++	echo "$ndef"
++}
++
++nfc_default_url()
++{
++	local ipaddr
++
++	ipaddr="$(uci -q get nfc.nfc.url)"
++	[ -n "$ipaddr" ] && [ "$ipaddr" != "auto" ] && {
++		echo "$ipaddr"
++		return
++	}
++
++	ipaddr="$(uci -q get network.lan.ipaddr)"
++	ipaddr="${ipaddr%%/*}"
++	[ -n "$ipaddr" ] || ipaddr="192.168.1.1"
++	echo "http://$ipaddr/"
++}
++
++nfc_update_url()
++{
++	local url="$1"
++	local ndef ndef_len
++
++	[ -n "$url" ] && [ "$url" != "auto" ] || url="$(nfc_default_url)"
++
++	ndef="$(build_uri_ndef "$url")" || {
++		echo "nfc: URL NDEF is too long" >&2
++		return 1
++	}
++	ndef_len=$(hex_count "$ndef")
++
++	nfc_init
++	nfc_update "$ndef" "$ndef_len"
++}
++
++nfc_update_wifi()
++{
++	local payload ndef ndef_len
++
++	. /lib/functions.sh
++	config_load wireless
++	NFC_WIFI_SECTION=""
++	config_foreach wifi_section wifi-iface
++
++	if [ -z "$NFC_WIFI_SECTION" ]; then
++		nfc_disable
++		return 0
++	fi
++
++	payload=$(build_wsc_payload "$NFC_WIFI_SECTION") || {
++		nfc_disable
++		return 0
++	}
++	ndef=$(build_ndef "$payload")
++	ndef_len=$(hex_count "$ndef")
++
++	nfc_init
++	nfc_update "$ndef" "$ndef_len"
++}
++
++nfc_update_auto()
++{
++	local mode
++
++	mode="$(uci -q get nfc.nfc.mode)"
++	case "$mode" in
++		wifi|wps) nfc_update_wifi ;;
++		url|"") nfc_update_url "$(uci -q get nfc.nfc.url)" ;;
++		disable|off) nfc_disable ;;
++		*)
++			echo "nfc: unsupported mode '$mode'" >&2
++			return 1
++			;;
++	esac
++}
++
++case "$1" in
++	init) nfc_init ;;
++	disable) nfc_disable ;;
++	update) shift; nfc_update "$@" ;;
++	update-url) shift; nfc_update_url "$@" ;;
++	update-wifi) nfc_update_wifi ;;
++	update-auto) nfc_update_auto ;;
++	*) usage ;;
++esac
+diff --git a/target/linux/qualcommbe/patches-6.18/0337-net-ethernet-qualcomm-Add-module-parameters-for-driv.patch b/target/linux/qualcommbe/patches-6.18/0337-net-ethernet-qualcomm-Add-module-parameters-for-driv.patch
+index 2255a58e..82468ef5 100644
+--- a/target/linux/qualcommbe/patches-6.18/0337-net-ethernet-qualcomm-Add-module-parameters-for-driv.patch
++++ b/target/linux/qualcommbe/patches-6.18/0337-net-ethernet-qualcomm-Add-module-parameters-for-driv.patch
+@@ -31,7 +31,7 @@ Signed-off-by: Pavithra R <quic_pavir@quicinc.com>
+ +
+ +int edma_tx_napi_budget = EDMA_TX_NAPI_WORK_DEF;
+ +module_param(edma_tx_napi_budget, int, 0444);
+-+MODULE_PARM_DESC(edma_tx_napi_budget, "Tx NAPI budget (default:512 for ipq95xx, min:16, max:512)");
+++MODULE_PARM_DESC(edma_tx_napi_budget, "Tx NAPI budget (default:64 for ipq95xx, min:16, max:64)");
+ +
+ +int edma_rx_mitigation_pkt_cnt = EDMA_RX_MITIGATION_PKT_CNT_DEF;
+ +module_param(edma_rx_mitigation_pkt_cnt, int, 0444);
+@@ -233,9 +233,9 @@ Signed-off-by: Pavithra R <quic_pavir@quicinc.com>
+  #ifndef __EDMA_CFG_TX__
+  #define __EDMA_CFG_TX__
+  
+-+#define EDMA_TX_NAPI_WORK_DEF	512
+++#define EDMA_TX_NAPI_WORK_DEF	64
+ +#define EDMA_TX_NAPI_WORK_MIN	16
+-+#define EDMA_TX_NAPI_WORK_MAX	512
+++#define EDMA_TX_NAPI_WORK_MAX	64
+ +
+  /* Tx mitigation timer's default value. */
+  #define EDMA_TX_MITIGATION_TIMER_DEF	250
+diff --git a/target/linux/qualcommbe/patches-6.18/0342-net-qualcomm-Update-IPQ9574-PPE-driver.patch b/target/linux/qualcommbe/patches-6.18/0342-net-qualcomm-Update-IPQ9574-PPE-driver.patch
+index f4b1639b..8942ccf6 100644
+--- a/target/linux/qualcommbe/patches-6.18/0342-net-qualcomm-Update-IPQ9574-PPE-driver.patch
++++ b/target/linux/qualcommbe/patches-6.18/0342-net-qualcomm-Update-IPQ9574-PPE-driver.patch
+@@ -66,8 +66,9 @@ Signed-off-by: Balsam CHIHI <balsam.chihi@moment.tech>
+  	.txcmpl = &ipq9574_txcmpl_ring_info,
+  	.max_ports = 6,
+ -	.napi_budget_rx = 128,
+-+	.napi_budget_rx = 32,
+- 	.napi_budget_tx = 512,
++-	.napi_budget_tx = 512,
+++	.napi_budget_rx = EDMA_RX_NAPI_WORK_DEF,
+++	.napi_budget_tx = EDMA_TX_NAPI_WORK_DEF,
+  };
+  
+ @@ -156,13 +156,12 @@ static int edma_clock_set_and_enable(str
+diff --git a/target/linux/qualcommbe/patches-6.18/0356-clk-qcom-nsscc-qca8k-keep-QCA8084-AHB-clocks-on.patch b/target/linux/qualcommbe/patches-6.18/0356-clk-qcom-nsscc-qca8k-keep-QCA8084-AHB-clocks-on.patch
+new file mode 100644
+index 00000000..aa738ce2
+--- /dev/null
++++ b/target/linux/qualcommbe/patches-6.18/0356-clk-qcom-nsscc-qca8k-keep-QCA8084-AHB-clocks-on.patch
+@@ -0,0 +1,42 @@
++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
++From: OpenWrt
++Date: Mon, 22 Jun 2026 18:40:00 +0000
++Subject: [PATCH] clk: qcom: nsscc-qca8k: keep QCA8084 AHB clocks on
++
++The QCA8084 NSS clock controller is registered before the QCA8084 PHY
++package driver claims its clocks. During clk_disable_unused(), the core
++tries to disable the AHB, CNOC AHB and MDIO AHB branches and the hardware
++keeps reporting them as enabled, resulting in boot warnings.
++
++Keep these infrastructure clocks enabled until their PHY package consumer
++is probed.
++
++--- a/drivers/clk/qcom/nsscc-qca8k.c
+++++ b/drivers/clk/qcom/nsscc-qca8k.c
++@@ -1591,7 +1591,7 @@ static struct clk_branch nss_cc_ahb_clk
++ 				&nss_cc_ahb_clk_src.clkr.hw,
++ 			},
++ 			.num_parents = 1,
++-			.flags = CLK_SET_RATE_PARENT,
+++			.flags = CLK_SET_RATE_PARENT | CLK_IS_CRITICAL,
++ 			.ops = &clk_branch2_prepare_ops,
++ 		},
++ 	},
++@@ -1663,7 +1663,7 @@ static struct clk_branch nss_cc_cnoc_ahb
++ 				&nss_cc_ahb_clk_src.clkr.hw,
++ 			},
++ 			.num_parents = 1,
++-			.flags = CLK_SET_RATE_PARENT,
+++			.flags = CLK_SET_RATE_PARENT | CLK_IS_CRITICAL,
++ 			.ops = &clk_branch2_prepare_ops,
++ 		},
++ 	},
++@@ -1681,7 +1681,7 @@ static struct clk_branch nss_cc_mdio_ahb
++ 				&nss_cc_ahb_clk_src.clkr.hw,
++ 			},
++ 			.num_parents = 1,
++-			.flags = CLK_SET_RATE_PARENT,
+++			.flags = CLK_SET_RATE_PARENT | CLK_IS_CRITICAL,
++ 			.ops = &clk_branch2_prepare_ops,
++ 		},
++ 	},
+diff --git a/target/linux/qualcommbe/patches-6.18/0701-net-phy-qca808x-enable-qca8084-leds.patch b/target/linux/qualcommbe/patches-6.18/0701-net-phy-qca808x-enable-qca8084-leds.patch
+new file mode 100644
+index 00000000..139bd598
+--- /dev/null
++++ b/target/linux/qualcommbe/patches-6.18/0701-net-phy-qca808x-enable-qca8084-leds.patch
+@@ -0,0 +1,275 @@
++Subject: net: phy: qca808x: enable QCA8084 LEDs
++
++QCA8084 uses the same LED control registers as QCA8081. The driver
++already implements LED brightness, blink, hardware offload and polarity
++callbacks through the shared qca808x helpers, but the QCA8084 phy_driver
++entry did not expose them.
++
++Hook the shared LED callbacks up for QCA8084 so board DTS LED nodes can
++register port LEDs and use netdev trigger hardware offload. Also program
++the QCA8084 TLMM LED pinmux and use the QCA8084 LED source register map
++so each LED class index controls the source exposed by the package pins.
++
++Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
++
++--- a/drivers/net/phy/qcom/qca808x.c
+++++ b/drivers/net/phy/qcom/qca808x.c
++@@ -74,10 +74,20 @@
++ #define QCA808X_MMD7_LED1_CTRL			0x8076
++ #define QCA808X_MMD7_LED1_FORCE_CTRL		0x8077
++ #define QCA808X_MMD7_LED0_CTRL			0x8078
++-#define QCA808X_MMD7_LED_CTRL(x)		(0x8078 - ((x) * 2))
++ 
++ #define QCA808X_MMD7_LED0_FORCE_CTRL		0x8079
++-#define QCA808X_MMD7_LED_FORCE_CTRL(x)		(0x8079 - ((x) * 2))
+++
+++static const u16 qca808x_mmd7_led_ctrl[] = {
+++	QCA808X_MMD7_LED0_CTRL,
+++	QCA808X_MMD7_LED1_CTRL,
+++	QCA808X_MMD7_LED2_CTRL,
+++};
+++
+++static const u16 qca808x_mmd7_led_force_ctrl[] = {
+++	QCA808X_MMD7_LED0_FORCE_CTRL,
+++	QCA808X_MMD7_LED1_FORCE_CTRL,
+++	QCA808X_MMD7_LED2_FORCE_CTRL,
+++};
++ 
++ #define QCA808X_MMD7_LED_POLARITY_CTRL		0x901a
++ /* QSDK sets by default 0x46 to this reg that sets BIT 6 for
++@@ -95,6 +105,34 @@
++ #define QCA8081_PHY_ID				0x004dd101
++ #define QCA8084_PHY_ID				0x004dd180
++ 
+++static const u16 qca8084_mmd7_led_ctrl[] = {
+++	QCA808X_MMD7_LED0_CTRL,
+++	QCA808X_MMD7_LED2_CTRL,
+++	QCA808X_MMD7_LED1_CTRL,
+++};
+++
+++static const u16 qca8084_mmd7_led_force_ctrl[] = {
+++	QCA808X_MMD7_LED0_FORCE_CTRL,
+++	QCA808X_MMD7_LED2_FORCE_CTRL,
+++	QCA808X_MMD7_LED1_FORCE_CTRL,
+++};
+++
+++static u16 qca808x_led_ctrl_reg(struct phy_device *phydev, u8 index)
+++{
+++	if (phydev_id_compare(phydev, QCA8084_PHY_ID))
+++		return qca8084_mmd7_led_ctrl[index];
+++
+++	return qca808x_mmd7_led_ctrl[index];
+++}
+++
+++static u16 qca808x_led_force_ctrl_reg(struct phy_device *phydev, u8 index)
+++{
+++	if (phydev_id_compare(phydev, QCA8084_PHY_ID))
+++		return qca8084_mmd7_led_force_ctrl[index];
+++
+++	return qca808x_mmd7_led_force_ctrl[index];
+++}
+++
++ #define QCA8084_MMD3_CDT_PULSE_CTRL		0x8075
++ #define QCA8084_CDT_PULSE_THRESH_VAL		0xa060
++ 
++@@ -137,6 +175,18 @@
++ /* QCA8084 integrates 4 PHYs, PCS0 and PCS1(includes PCS and XPCS). */
++ #define QCA8084_MDIO_DEVICE_NUM			7
++ 
+++#define QCA8084_TLMM_GPIO_CFGN			0xc400000
+++#define QCA8084_TLMM_GPIO_CFGN_FUNC_SEL		GENMASK(5, 2)
+++#define QCA8084_TLMM_GPIO_OFFSET		0x1000
+++#define QCA8084_TLMM_GPIO_CFG(pin) \
+++	(QCA8084_TLMM_GPIO_CFGN + QCA8084_TLMM_GPIO_OFFSET * (pin))
+++
+++#define QCA8084_TLMM_CLK_GATE_EN		0xc500000
+++#define QCA8084_TLMM_CLK_GATE_EN_CRIF_READ_EN	BIT(0)
+++#define QCA8084_TLMM_CLK_GATE_EN_SUMMARY_INTR_EN \
+++	BIT(1)
+++#define QCA8084_TLMM_CLK_GATE_EN_AHB_HCLK_EN	BIT(2)
+++
++ #define QCA8084_PCS_CFG				0xc90f014
++ #define QCA8084_PCS_ADDR0_MASK			GENMASK(4, 0)
++ #define QCA8084_PCS_ADDR1_MASK			GENMASK(9, 5)
++@@ -179,6 +229,7 @@ enum {
++ struct qca808x_priv {
++ 	int led_polarity_mode;
++ 	int channel_id;
+++	bool has_channel_id;
++ 	struct qcom_phy_hw_stats hw_stats;
++ };
++ 
++@@ -309,6 +360,61 @@ qca8084_mii_modify_exit:
++ 	return ret;
++ };
++ 
+++static int qca8084_led_pinmux_set(struct phy_device *phydev, u8 index)
+++{
+++	struct qca808x_priv *priv = phydev->priv;
+++	int phy_index = phydev->mdio.addr - 1;
+++	u32 pin, func;
+++	int ret;
+++
+++	if (!phydev_id_compare(phydev, QCA8084_PHY_ID))
+++		return 0;
+++
+++	if (index > 2)
+++		return -EINVAL;
+++
+++	if (priv && priv->has_channel_id)
+++		phy_index = priv->channel_id;
+++
+++	if (phy_index < 0 || phy_index > 3)
+++		return -EINVAL;
+++
+++	ret = phy_set_bits_mmd(phydev, MDIO_MMD_AN,
+++			       QCA808X_MMD7_LED_POLARITY_CTRL,
+++			       QCA808X_LED_ACTIVE_HIGH);
+++	if (ret)
+++		return ret;
+++
+++	switch (index) {
+++	case 0:
+++		pin = 2 + phy_index;
+++		func = 1;
+++		break;
+++	case 1:
+++		pin = 16 + phy_index;
+++		func = 1;
+++		break;
+++	case 2:
+++		pin = 6 + phy_index;
+++		func = (phy_index == 0 || phy_index == 3) ? 3 : 2;
+++		break;
+++	default:
+++		return -EINVAL;
+++	}
+++
+++	ret = qca8084_mii_modify(phydev, QCA8084_TLMM_CLK_GATE_EN, 0,
+++				 QCA8084_TLMM_CLK_GATE_EN_CRIF_READ_EN |
+++				 QCA8084_TLMM_CLK_GATE_EN_SUMMARY_INTR_EN |
+++				 QCA8084_TLMM_CLK_GATE_EN_AHB_HCLK_EN);
+++	if (ret)
+++		return ret;
+++
+++	return qca8084_mii_modify(phydev, QCA8084_TLMM_GPIO_CFG(pin),
+++				  QCA8084_TLMM_GPIO_CFGN_FUNC_SEL,
+++				  FIELD_PREP(QCA8084_TLMM_GPIO_CFGN_FUNC_SEL,
+++					     func));
+++}
+++
++ static int qca808x_phy_fast_retrain_config(struct phy_device *phydev)
++ {
++ 	int ret;
++@@ -418,6 +524,7 @@ static int qca808x_probe(struct phy_devi
++ 		return ret;
++ 
++ 	priv->channel_id = ch_id;
+++	priv->has_channel_id = !ret;
++ 	phydev->priv = priv;
++ 
++ 	return 0;
++@@ -717,7 +824,7 @@ static int qca808x_led_hw_control_enable
++ 	if (index > 2)
++ 		return -EINVAL;
++ 
++-	reg = QCA808X_MMD7_LED_FORCE_CTRL(index);
+++	reg = qca808x_led_force_ctrl_reg(phydev, index);
++ 	return qca808x_led_reg_hw_control_enable(phydev, reg);
++ }
++ 
++@@ -741,12 +848,16 @@ static int qca808x_led_hw_control_set(st
++ 	if (index > 2)
++ 		return -EINVAL;
++ 
++-	reg = QCA808X_MMD7_LED_CTRL(index);
+++	reg = qca808x_led_ctrl_reg(phydev, index);
++ 
++ 	ret = qca808x_led_parse_netdev(phydev, rules, &offload_trigger);
++ 	if (ret)
++ 		return ret;
++ 
+++	ret = qca8084_led_pinmux_set(phydev, index);
+++	if (ret)
+++		return ret;
+++
++ 	ret = qca808x_led_hw_control_enable(phydev, index);
++ 	if (ret)
++ 		return ret;
++@@ -763,7 +874,7 @@ static bool qca808x_led_hw_control_statu
++ 	if (index > 2)
++ 		return false;
++ 
++-	reg = QCA808X_MMD7_LED_FORCE_CTRL(index);
+++	reg = qca808x_led_force_ctrl_reg(phydev, index);
++ 	return qca808x_led_reg_hw_control_status(phydev, reg);
++ }
++ 
++@@ -780,7 +891,7 @@ static int qca808x_led_hw_control_get(st
++ 	if (qca808x_led_hw_control_status(phydev, index))
++ 		return -EINVAL;
++ 
++-	reg = QCA808X_MMD7_LED_CTRL(index);
+++	reg = qca808x_led_ctrl_reg(phydev, index);
++ 
++ 	val = phy_read_mmd(phydev, MDIO_MMD_AN, reg);
++ 	if (val & QCA808X_LED_TX_BLINK)
++@@ -810,7 +921,7 @@ static int qca808x_led_hw_control_reset(
++ 	if (index > 2)
++ 		return -EINVAL;
++ 
++-	reg = QCA808X_MMD7_LED_CTRL(index);
+++	reg = qca808x_led_ctrl_reg(phydev, index);
++ 
++ 	return phy_clear_bits_mmd(phydev, MDIO_MMD_AN, reg,
++ 				  QCA808X_LED_PATTERN_MASK);
++@@ -825,13 +936,17 @@ static int qca808x_led_brightness_set(st
++ 	if (index > 2)
++ 		return -EINVAL;
++ 
+++	ret = qca8084_led_pinmux_set(phydev, index);
+++	if (ret)
+++		return ret;
+++
++ 	if (!value) {
++ 		ret = qca808x_led_hw_control_reset(phydev, index);
++ 		if (ret)
++ 			return ret;
++ 	}
++ 
++-	reg = QCA808X_MMD7_LED_FORCE_CTRL(index);
+++	reg = qca808x_led_force_ctrl_reg(phydev, index);
++ 	return qca808x_led_reg_brightness_set(phydev, reg, value);
++ }
++ 
++@@ -840,11 +955,16 @@ static int qca808x_led_blink_set(struct
++ 				 unsigned long *delay_off)
++ {
++ 	u16 reg;
+++	int ret;
++ 
++ 	if (index > 2)
++ 		return -EINVAL;
++ 
++-	reg = QCA808X_MMD7_LED_FORCE_CTRL(index);
+++	ret = qca8084_led_pinmux_set(phydev, index);
+++	if (ret)
+++		return ret;
+++
+++	reg = qca808x_led_force_ctrl_reg(phydev, index);
++ 	return qca808x_led_reg_blink_set(phydev, reg, delay_on, delay_off);
++ }
++ 
++@@ -1432,6 +1552,12 @@ static struct phy_driver qca808x_driver[
++ 	.link_change_notify	= qca8084_link_change_notify,
++ 	.probe			= qca8084_probe,
++ 	.remove			= qca8084_remove,
+++	.led_brightness_set	= qca808x_led_brightness_set,
+++	.led_blink_set		= qca808x_led_blink_set,
+++	.led_hw_is_supported	= qca808x_led_hw_is_supported,
+++	.led_hw_control_set	= qca808x_led_hw_control_set,
+++	.led_hw_control_get	= qca808x_led_hw_control_get,
+++	.led_polarity_set	= qca808x_led_polarity_set,
++ }, };
++ 
++ module_phy_driver(qca808x_driver);
+diff --git a/target/linux/qualcommbe/patches-6.18/0702-dt-bindings-clk-qcom-ipq9574-add-wcss-q6-clocks.patch b/target/linux/qualcommbe/patches-6.18/0702-dt-bindings-clk-qcom-ipq9574-add-wcss-q6-clocks.patch
+new file mode 100644
+index 00000000..c986d2f6
+--- /dev/null
++++ b/target/linux/qualcommbe/patches-6.18/0702-dt-bindings-clk-qcom-ipq9574-add-wcss-q6-clocks.patch
+@@ -0,0 +1,80 @@
++Subject: dt-bindings: clk: qcom: ipq9574: add WCSS Q6 clocks
++
++Add the IPQ9574 GCC clock IDs needed by the native WCSS remoteproc
++bring-up path. These clocks are used by qcom_q6v5_wcss when booting the
++integrated Wi-Fi firmware outside PAS mode.
++
++Signed-off-by: Alexandru Gagniuc <mr.nuke.me@gmail.com>
++Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
++---
++ include/dt-bindings/clock/qcom,ipq9574-gcc.h | 22 ++++++++++++++++++++
++ 1 file changed, 22 insertions(+)
++
++diff --git a/include/dt-bindings/clock/qcom,ipq9574-gcc.h b/include/dt-bindings/clock/qcom,ipq9574-gcc.h
++index 0e7c319897f3..8c74f50a2790 100644
++--- a/include/dt-bindings/clock/qcom,ipq9574-gcc.h
+++++ b/include/dt-bindings/clock/qcom,ipq9574-gcc.h
++@@ -132,8 +132,16 @@
++ #define GCC_NSSNOC_SNOC_1_CLK				123
++ #define GCC_QDSS_ETR_USB_CLK				124
++ #define WCSS_AHB_CLK_SRC				125
+++#define GCC_Q6_AHB_CLK					126
+++#define GCC_Q6_AHB_S_CLK				127
+++#define GCC_WCSS_ECAHB_CLK				128
+++#define GCC_WCSS_ACMT_CLK				129
+++#define GCC_SYS_NOC_WCSS_AHB_CLK			130
++ #define WCSS_AXI_M_CLK_SRC				131
+++#define GCC_ANOC_WCSS_AXI_M_CLK				132
++ #define QDSS_AT_CLK_SRC					133
+++#define GCC_Q6SS_ATBM_CLK				134
+++#define GCC_WCSS_DBG_IFC_ATB_CLK			135
++ #define GCC_NSSNOC_ATB_CLK				136
++ #define GCC_QDSS_AT_CLK					137
++ #define GCC_SYS_NOC_AT_CLK				138
++@@ -146,18 +154,27 @@
++ #define QDSS_TRACECLKIN_CLK_SRC				145
++ #define GCC_QDSS_TRACECLKIN_CLK				146
++ #define QDSS_TSCTR_CLK_SRC				147
+++#define GCC_Q6_TSCTR_1TO2_CLK				148
+++#define GCC_WCSS_DBG_IFC_NTS_CLK			149
++ #define GCC_QDSS_TSCTR_DIV2_CLK				150
++ #define GCC_QDSS_TS_CLK					151
++ #define GCC_QDSS_TSCTR_DIV4_CLK				152
++ #define GCC_NSS_TS_CLK					153
++ #define GCC_QDSS_TSCTR_DIV8_CLK				154
++ #define GCC_QDSS_TSCTR_DIV16_CLK			155
+++#define GCC_Q6SS_PCLKDBG_CLK				156
+++#define GCC_Q6SS_TRIG_CLK				157
+++#define GCC_WCSS_DBG_IFC_APB_CLK			158
+++#define GCC_WCSS_DBG_IFC_DAPBUS_CLK			159
++ #define GCC_QDSS_DAP_CLK				160
++ #define GCC_QDSS_APB2JTAG_CLK				161
++ #define GCC_QDSS_TSCTR_DIV3_CLK				162
++ #define QPIC_IO_MACRO_CLK_SRC				163
++ #define GCC_QPIC_IO_MACRO_CLK                           164
++ #define Q6_AXI_CLK_SRC					165
+++#define GCC_Q6_AXIM_CLK					166
+++#define GCC_WCSS_Q6_TBU_CLK				167
+++#define GCC_MEM_NOC_Q6_AXI_CLK				168
++ #define Q6_AXIM2_CLK_SRC				169
++ #define NSSNOC_MEMNOC_BFDCD_CLK_SRC			170
++ #define GCC_NSSNOC_MEMNOC_CLK				171
++@@ -182,6 +199,7 @@
++ #define GCC_UNIPHY2_SYS_CLK				190
++ #define GCC_CMN_12GPLL_SYS_CLK				191
++ #define GCC_NSSNOC_XO_DCD_CLK				192
+++#define GCC_Q6SS_BOOT_CLK				193
++ #define UNIPHY_SYS_CLK_SRC				194
++ #define NSS_TS_CLK_SRC					195
++ #define GCC_ANOC_PCIE0_1LANE_M_CLK			196
++@@ -203,4 +221,8 @@
++ #define GCC_PCIE2_PIPE_CLK				212
++ #define GCC_PCIE3_PIPE_CLK				213
++ #define GPLL0_OUT_AUX					214
+++#define GCC_WCSS_AHB_S_CLK				215
+++#define GCC_WCSS_AXI_M_CLK				216
+++#define GCC_Q6_AXIM2_CLK				217
+++
++ #endif
++-- 
++2.45.1
+diff --git a/target/linux/qualcommbe/patches-6.18/0703-clk-qcom-gcc-ipq9574-add-wcss-q6-clocks.patch b/target/linux/qualcommbe/patches-6.18/0703-clk-qcom-gcc-ipq9574-add-wcss-q6-clocks.patch
+new file mode 100644
+index 00000000..b127ef2d
+--- /dev/null
++++ b/target/linux/qualcommbe/patches-6.18/0703-clk-qcom-gcc-ipq9574-add-wcss-q6-clocks.patch
+@@ -0,0 +1,490 @@
++Subject: clk: qcom: gcc-ipq9574: add WCSS Q6 clocks
++
++Expose the IPQ9574 GCC branch clocks required to start the WCSS Q6
++remote processor. The native WCSS loader needs a pre-boot clock set and
++a smaller post-boot clock set before ath11k can obtain its remoteproc.
++
++Signed-off-by: Alexandru Gagniuc <mr.nuke.me@gmail.com>
++Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
++---
++ drivers/clk/qcom/gcc-ipq9574.c | 380 +++++++++++++++++++++++++++++++++
++ 1 file changed, 380 insertions(+)
++
++diff --git a/drivers/clk/qcom/gcc-ipq9574.c b/drivers/clk/qcom/gcc-ipq9574.c
++index 6dc86e686de4..aef5ed5cd9f5 100644
++--- a/drivers/clk/qcom/gcc-ipq9574.c
+++++ b/drivers/clk/qcom/gcc-ipq9574.c
++@@ -2659,6 +2659,24 @@ static struct clk_rcg2 system_noc_bfdcd_clk_src = {
++ 	},
++ };
++ 
+++static struct clk_branch gcc_q6ss_boot_clk = {
+++	.halt_reg = 0x25080,
+++	.halt_check = BRANCH_HALT_SKIP,
+++	.clkr = {
+++		.enable_reg = 0x25080,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_q6ss_boot_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&system_noc_bfdcd_clk_src.clkr.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
++ static struct clk_branch gcc_nssnoc_snoc_clk = {
++ 	.halt_reg = 0x17028,
++ 	.clkr = {
++@@ -2729,6 +2747,108 @@ static struct clk_rcg2 wcss_ahb_clk_src = {
++ 	},
++ };
++ 
+++static struct clk_branch gcc_q6_ahb_clk = {
+++	.halt_reg = 0x25014,
+++	.clkr = {
+++		.enable_reg = 0x25014,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_q6_ahb_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&wcss_ahb_clk_src.clkr.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
+++static struct clk_branch gcc_q6_ahb_s_clk = {
+++	.halt_reg = 0x25018,
+++	.clkr = {
+++		.enable_reg = 0x25018,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_q6_ahb_s_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&wcss_ahb_clk_src.clkr.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
+++static struct clk_branch gcc_wcss_ecahb_clk = {
+++	.halt_reg = 0x25058,
+++	.clkr = {
+++		.enable_reg = 0x25058,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_wcss_ecahb_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&wcss_ahb_clk_src.clkr.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
+++static struct clk_branch gcc_wcss_acmt_clk = {
+++	.halt_reg = 0x2505c,
+++	.clkr = {
+++		.enable_reg = 0x2505c,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_wcss_acmt_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&wcss_ahb_clk_src.clkr.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
+++static struct clk_branch gcc_wcss_ahb_s_clk = {
+++	.halt_reg = 0x25060,
+++	.clkr = {
+++		.enable_reg = 0x25060,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_wcss_ahb_s_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&wcss_ahb_clk_src.clkr.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
+++static struct clk_branch gcc_sys_noc_wcss_ahb_clk = {
+++	.halt_reg = 0x2e030,
+++	.clkr = {
+++		.enable_reg = 0x2e030,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_sys_noc_wcss_ahb_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&wcss_ahb_clk_src.clkr.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
++ static const struct freq_tbl ftbl_wcss_axi_m_clk_src[] = {
++ 	F(24000000, P_XO, 1, 0, 0),
++ 	F(133333333, P_GPLL0, 6, 0, 0),
++@@ -2749,6 +2869,40 @@ static struct clk_rcg2 wcss_axi_m_clk_src = {
++ 	},
++ };
++ 
+++static struct clk_branch gcc_wcss_axi_m_clk = {
+++	.halt_reg = 0x25064,
+++	.clkr = {
+++		.enable_reg = 0x25064,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_wcss_axi_m_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&wcss_axi_m_clk_src.clkr.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
+++static struct clk_branch gcc_anoc_wcss_axi_m_clk = {
+++	.halt_reg = 0x2e0a8,
+++	.clkr = {
+++		.enable_reg = 0x2e0a8,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_anoc_wcss_axi_m_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&wcss_axi_m_clk_src.clkr.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
++ static const struct freq_tbl ftbl_qdss_at_clk_src[] = {
++ 	F(240000000, P_GPLL4, 5, 0, 0),
++ 	{ }
++@@ -2767,6 +2920,40 @@ static struct clk_rcg2 qdss_at_clk_src = {
++ 	},
++ };
++ 
+++static struct clk_branch gcc_q6ss_atbm_clk = {
+++	.halt_reg = 0x2501c,
+++	.clkr = {
+++		.enable_reg = 0x2501c,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_q6ss_atbm_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&qdss_at_clk_src.clkr.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
+++static struct clk_branch gcc_wcss_dbg_ifc_atb_clk = {
+++	.halt_reg = 0x2503c,
+++	.clkr = {
+++		.enable_reg = 0x2503c,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_wcss_dbg_ifc_atb_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&qdss_at_clk_src.clkr.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
++ static struct clk_branch gcc_nssnoc_atb_clk = {
++ 	.halt_reg = 0x17014,
++ 	.clkr = {
++@@ -3003,6 +3190,40 @@ static struct clk_fixed_factor qdss_tsctr_div2_clk_src = {
++ 	},
++ };
++ 
+++static struct clk_branch gcc_q6_tsctr_1to2_clk = {
+++	.halt_reg = 0x25020,
+++	.clkr = {
+++		.enable_reg = 0x25020,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_q6_tsctr_1to2_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&qdss_tsctr_div2_clk_src.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
+++static struct clk_branch gcc_wcss_dbg_ifc_nts_clk = {
+++	.halt_reg = 0x25040,
+++	.clkr = {
+++		.enable_reg = 0x25040,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_wcss_dbg_ifc_nts_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&qdss_tsctr_div2_clk_src.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
++ static struct clk_branch gcc_qdss_tsctr_div2_clk = {
++ 	.halt_reg = 0x2d044,
++ 	.clkr = {
++@@ -3177,6 +3398,74 @@ static struct clk_branch gcc_qdss_tsctr_div16_clk = {
++ 	},
++ };
++ 
+++static struct clk_branch gcc_q6ss_pclkdbg_clk = {
+++	.halt_reg = 0x25024,
+++	.clkr = {
+++		.enable_reg = 0x25024,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_q6ss_pclkdbg_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&qdss_dap_sync_clk_src.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
+++static struct clk_branch gcc_q6ss_trig_clk = {
+++	.halt_reg = 0x25068,
+++	.clkr = {
+++		.enable_reg = 0x25068,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_q6ss_trig_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&qdss_dap_sync_clk_src.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
+++static struct clk_branch gcc_wcss_dbg_ifc_apb_clk = {
+++	.halt_reg = 0x25038,
+++	.clkr = {
+++		.enable_reg = 0x25038,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_wcss_dbg_ifc_apb_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&qdss_dap_sync_clk_src.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
+++static struct clk_branch gcc_wcss_dbg_ifc_dapbus_clk = {
+++	.halt_reg = 0x25044,
+++	.clkr = {
+++		.enable_reg = 0x25044,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_wcss_dbg_ifc_dapbus_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&qdss_dap_sync_clk_src.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
++ static struct clk_branch gcc_qdss_dap_clk = {
++ 	.halt_reg = 0x2d058,
++ 	.clkr = {
++@@ -3298,6 +3587,58 @@ static struct clk_rcg2 q6_axi_clk_src = {
++ 	},
++ };
++ 
+++static struct clk_branch gcc_q6_axim_clk = {
+++	.halt_reg = 0x2500c,
+++	.clkr = {
+++		.enable_reg = 0x2500c,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_q6_axim_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&q6_axi_clk_src.clkr.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
+++static struct clk_branch gcc_wcss_q6_tbu_clk = {
+++	.halt_reg = 0x12050,
+++	.halt_check = BRANCH_HALT_DELAY,
+++	.clkr = {
+++		.enable_reg = 0xb00c,
+++		.enable_mask = BIT(6),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_wcss_q6_tbu_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&q6_axi_clk_src.clkr.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
+++static struct clk_branch gcc_mem_noc_q6_axi_clk = {
+++	.halt_reg = 0x19010,
+++	.clkr = {
+++		.enable_reg = 0x19010,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_mem_noc_q6_axi_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&q6_axi_clk_src.clkr.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
++ static const struct freq_tbl ftbl_q6_axim2_clk_src[] = {
++ 	F(342857143, P_GPLL4, 3.5, 0, 0),
++ 	{ }
++@@ -3323,6 +3664,23 @@ static struct clk_rcg2 q6_axim2_clk_src = {
++ 	},
++ };
++ 
+++static struct clk_branch gcc_q6_axim2_clk = {
+++	.halt_reg = 0x25010,
+++	.clkr = {
+++		.enable_reg = 0x25010,
+++		.enable_mask = BIT(0),
+++		.hw.init = &(const struct clk_init_data) {
+++			.name = "gcc_q6_axim2_clk",
+++			.parent_hws = (const struct clk_hw *[]) {
+++				&q6_axim2_clk_src.clkr.hw
+++			},
+++			.num_parents = 1,
+++			.flags = CLK_SET_RATE_PARENT,
+++			.ops = &clk_branch2_ops,
+++		},
+++	},
+++};
+++
++ static const struct freq_tbl ftbl_nssnoc_memnoc_bfdcd_clk_src[] = {
++ 	F(533333333, P_GPLL0, 1.5, 0, 0),
++ 	{ }
++@@ -3847,8 +4204,18 @@ static struct clk_regmap *gcc_ipq9574_clks[] = {
++ 	[GCC_NSSNOC_SNOC_1_CLK] = &gcc_nssnoc_snoc_1_clk.clkr,
++ 	[GCC_QDSS_ETR_USB_CLK] = &gcc_qdss_etr_usb_clk.clkr,
++ 	[WCSS_AHB_CLK_SRC] = &wcss_ahb_clk_src.clkr,
+++	[GCC_Q6_AHB_CLK] = &gcc_q6_ahb_clk.clkr,
+++	[GCC_Q6_AHB_S_CLK] = &gcc_q6_ahb_s_clk.clkr,
+++	[GCC_WCSS_ECAHB_CLK] = &gcc_wcss_ecahb_clk.clkr,
+++	[GCC_WCSS_ACMT_CLK] = &gcc_wcss_acmt_clk.clkr,
+++	[GCC_WCSS_AHB_S_CLK] = &gcc_wcss_ahb_s_clk.clkr,
+++	[GCC_SYS_NOC_WCSS_AHB_CLK] = &gcc_sys_noc_wcss_ahb_clk.clkr,
++ 	[WCSS_AXI_M_CLK_SRC] = &wcss_axi_m_clk_src.clkr,
+++	[GCC_WCSS_AXI_M_CLK] = &gcc_wcss_axi_m_clk.clkr,
+++	[GCC_ANOC_WCSS_AXI_M_CLK] = &gcc_anoc_wcss_axi_m_clk.clkr,
++ 	[QDSS_AT_CLK_SRC] = &qdss_at_clk_src.clkr,
+++	[GCC_Q6SS_ATBM_CLK] = &gcc_q6ss_atbm_clk.clkr,
+++	[GCC_WCSS_DBG_IFC_ATB_CLK] = &gcc_wcss_dbg_ifc_atb_clk.clkr,
++ 	[GCC_NSSNOC_ATB_CLK] = &gcc_nssnoc_atb_clk.clkr,
++ 	[GCC_QDSS_AT_CLK] = &gcc_qdss_at_clk.clkr,
++ 	[GCC_SYS_NOC_AT_CLK] = &gcc_sys_noc_at_clk.clkr,
++@@ -3861,19 +4228,29 @@ static struct clk_regmap *gcc_ipq9574_clks[] = {
++ 	[QDSS_TRACECLKIN_CLK_SRC] = &qdss_traceclkin_clk_src.clkr,
++ 	[GCC_QDSS_TRACECLKIN_CLK] = &gcc_qdss_traceclkin_clk.clkr,
++ 	[QDSS_TSCTR_CLK_SRC] = &qdss_tsctr_clk_src.clkr,
+++	[GCC_Q6_TSCTR_1TO2_CLK] = &gcc_q6_tsctr_1to2_clk.clkr,
+++	[GCC_WCSS_DBG_IFC_NTS_CLK] = &gcc_wcss_dbg_ifc_nts_clk.clkr,
++ 	[GCC_QDSS_TSCTR_DIV2_CLK] = &gcc_qdss_tsctr_div2_clk.clkr,
++ 	[GCC_QDSS_TS_CLK] = &gcc_qdss_ts_clk.clkr,
++ 	[GCC_QDSS_TSCTR_DIV4_CLK] = &gcc_qdss_tsctr_div4_clk.clkr,
++ 	[GCC_NSS_TS_CLK] = &gcc_nss_ts_clk.clkr,
++ 	[GCC_QDSS_TSCTR_DIV8_CLK] = &gcc_qdss_tsctr_div8_clk.clkr,
++ 	[GCC_QDSS_TSCTR_DIV16_CLK] = &gcc_qdss_tsctr_div16_clk.clkr,
+++	[GCC_Q6SS_PCLKDBG_CLK] = &gcc_q6ss_pclkdbg_clk.clkr,
+++	[GCC_Q6SS_TRIG_CLK] = &gcc_q6ss_trig_clk.clkr,
+++	[GCC_WCSS_DBG_IFC_APB_CLK] = &gcc_wcss_dbg_ifc_apb_clk.clkr,
+++	[GCC_WCSS_DBG_IFC_DAPBUS_CLK] = &gcc_wcss_dbg_ifc_dapbus_clk.clkr,
++ 	[GCC_QDSS_DAP_CLK] = &gcc_qdss_dap_clk.clkr,
++ 	[GCC_QDSS_APB2JTAG_CLK] = &gcc_qdss_apb2jtag_clk.clkr,
++ 	[GCC_QDSS_TSCTR_DIV3_CLK] = &gcc_qdss_tsctr_div3_clk.clkr,
++ 	[QPIC_IO_MACRO_CLK_SRC] = &qpic_io_macro_clk_src.clkr,
++ 	[GCC_QPIC_IO_MACRO_CLK] = &gcc_qpic_io_macro_clk.clkr,
++ 	[Q6_AXI_CLK_SRC] = &q6_axi_clk_src.clkr,
+++	[GCC_Q6_AXIM_CLK] = &gcc_q6_axim_clk.clkr,
+++	[GCC_WCSS_Q6_TBU_CLK] = &gcc_wcss_q6_tbu_clk.clkr,
+++	[GCC_MEM_NOC_Q6_AXI_CLK] = &gcc_mem_noc_q6_axi_clk.clkr,
++ 	[Q6_AXIM2_CLK_SRC] = &q6_axim2_clk_src.clkr,
+++	[GCC_Q6_AXIM2_CLK] = &gcc_q6_axim2_clk.clkr,
++ 	[NSSNOC_MEMNOC_BFDCD_CLK_SRC] = &nssnoc_memnoc_bfdcd_clk_src.clkr,
++ 	[GCC_NSSNOC_MEMNOC_CLK] = &gcc_nssnoc_memnoc_clk.clkr,
++ 	[GCC_NSSNOC_MEM_NOC_1_CLK] = &gcc_nssnoc_mem_noc_1_clk.clkr,
++@@ -3896,6 +4273,7 @@ static struct clk_regmap *gcc_ipq9574_clks[] = {
++ 	[GCC_UNIPHY1_SYS_CLK] = &gcc_uniphy1_sys_clk.clkr,
++ 	[GCC_UNIPHY2_SYS_CLK] = &gcc_uniphy2_sys_clk.clkr,
++ 	[GCC_CMN_12GPLL_SYS_CLK] = &gcc_cmn_12gpll_sys_clk.clkr,
+++	[GCC_Q6SS_BOOT_CLK] = &gcc_q6ss_boot_clk.clkr,
++ 	[UNIPHY_SYS_CLK_SRC] = &uniphy_sys_clk_src.clkr,
++ 	[NSS_TS_CLK_SRC] = &nss_ts_clk_src.clkr,
++ 	[GCC_ANOC_PCIE0_1LANE_M_CLK] = &gcc_anoc_pcie0_1lane_m_clk.clkr,
++-- 
++2.45.1
+diff --git a/target/linux/qualcommbe/patches-6.18/0704-remoteproc-qcom-q6v5-wcss-add-ipq9574-support.patch b/target/linux/qualcommbe/patches-6.18/0704-remoteproc-qcom-q6v5-wcss-add-ipq9574-support.patch
+new file mode 100644
+index 00000000..86c4f4f1
+--- /dev/null
++++ b/target/linux/qualcommbe/patches-6.18/0704-remoteproc-qcom-q6v5-wcss-add-ipq9574-support.patch
+@@ -0,0 +1,538 @@
++Subject: remoteproc: qcom_q6v5_wcss: add IPQ9574 support
++
++Add the IPQ9574 WCSS data and reset/start/stop sequence used by the
++native Q6 firmware loader. This lets the IPQ9574 q6v5_wcss node bind as a
++remoteproc provider for the integrated ath11k AHB device.
++
++Also load the optional M3 firmware image used by IPQ9574 firmware
++packages and point the IPQ9574 firmware names at OpenWrt's ath11k
++firmware installation path.
++
++Signed-off-by: Alexandru Gagniuc <mr.nuke.me@gmail.com>
++Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
++---
++--- a/drivers/remoteproc/qcom_q6v5_wcss.c
+++++ b/drivers/remoteproc/qcom_q6v5_wcss.c
++@@ -31,6 +31,9 @@
++ #define Q6SS_MEM_PWR_CTL		0x0B0
++ #define Q6SS_STRAP_ACC			0x110
++ #define Q6SS_CGC_OVERRIDE		0x034
+++#define Q6SS_BOOT_CORE_START		0x400
+++#define Q6SS_BOOT_CMD                   0x404
+++#define Q6SS_BOOT_STATUS		0x408
++ #define Q6SS_BCR_REG			0x6000
++ 
++ /* AXI Halt Register Offsets */
++@@ -48,7 +51,11 @@
++ /* Q6SS_BRC_RESET */
++ #define Q6SS_BRC_BLK_ARES		BIT(0)
++ 
+++/* QDSP6SS CBCR */
+++#define Q6SS_CBCR_CLKEN			BIT(0)
+++
++ /* Q6SS_GFMUX_CTL */
+++#define Q6SS_CLK_SRC_MUX		BIT(0)
++ #define Q6SS_CLK_ENABLE			BIT(1)
++ #define Q6SS_SWITCH_CLK_SRC		BIT(8)
++ 
++@@ -67,6 +74,7 @@
++ #define HALT_CHECK_MAX_LOOPS		200
++ #define Q6SS_XO_CBCR		GENMASK(5, 3)
++ #define Q6SS_SLEEP_CBCR		GENMASK(5, 2)
+++#define Q6SS_CORE_CBCR		BIT(5)
++ 
++ /* Q6SS config/status registers */
++ #define TCSR_GLOBAL_CFG0	0x0
++@@ -77,9 +85,11 @@
++ #define Q6SS_RST_EVB		0x10
++ 
++ #define BHS_EN_REST_ACK		BIT(0)
+++#define WCSS_HM_RET		BIT(1)
++ #define SSCAON_ENABLE		BIT(13)
++ #define SSCAON_BUS_EN		BIT(15)
++ #define SSCAON_BUS_MUX_MASK	GENMASK(18, 16)
+++#define SSCAON_MASK             GENMASK(17, 15)
++ 
++ #define MEM_BANKS		19
++ #define TCSR_WCSS_CLK_MASK	0x1F
++@@ -88,11 +98,13 @@
++ #define MAX_HALT_REG		4
++ enum {
++ 	WCSS_IPQ8074,
+++	WCSS_IPQ9574,
++ 	WCSS_QCS404,
++ };
++ 
++ struct wcss_data {
++-	const char *firmware_name;
+++	const char *q6_firmware_name;
+++	const char *m3_firmware_name;
++ 	unsigned int crash_reason_smem;
++ 	u32 version;
++ 	bool aon_reset_required;
++@@ -102,6 +114,7 @@ struct wcss_data {
++ 	int ssctl_id;
++ 	const struct rproc_ops *ops;
++ 	bool requires_force_stop;
+++	bool auto_boot;
++ };
++ 
++ struct q6v5_wcss {
++@@ -128,6 +141,12 @@ struct q6v5_wcss {
++ 	struct clk *qdsp6ss_xo_cbcr;
++ 	struct clk *qdsp6ss_core_gfmux;
++ 	struct clk *lcc_bcr_sleep;
+++	struct clk_bulk_data *clks;
+++	/* clocks that must be started before the Q6 is booted */
+++	struct clk_bulk_data *pre_boot_clks;
+++	int num_clks;
+++	int num_pre_boot_clks;
+++
++ 	struct regulator *cx_supply;
++ 	struct qcom_sysmon *sysmon;
++ 
++@@ -146,6 +165,7 @@ struct q6v5_wcss {
++ 	unsigned int crash_reason_smem;
++ 	u32 version;
++ 	bool requires_force_stop;
+++	const char *m3_firmware_name;
++ 
++ 	struct qcom_rproc_glink glink_subdev;
++ 	struct qcom_rproc_pdm pdm_subdev;
++@@ -236,6 +256,103 @@ static int q6v5_wcss_reset(struct q6v5_w
++ 	return 0;
++ }
++ 
+++static int q6v7_wcss_reset(struct q6v5_wcss *wcss, struct rproc *rproc)
+++{
+++	int ret;
+++	u32 val;
+++
+++	ret = regmap_update_bits(wcss->halt_map,
+++				 wcss->halt_nc + TCSR_GLOBAL_CFG1,
+++				 0xff00, 0x1100);
+++	if (ret) {
+++		dev_err(wcss->dev, "TCSR_GLOBAL_CFG1 failed\n");
+++		return ret;
+++	}
+++
+++	ret = clk_bulk_prepare_enable(wcss->num_pre_boot_clks,
+++				      wcss->pre_boot_clks);
+++	if (ret) {
+++		dev_err(wcss->dev, "failed to enable clocks, err=%d\n", ret);
+++		return ret;
+++	};
+++
+++	/* Write bootaddr to Q6WCSS */
+++	writel(rproc->bootaddr >> 4, wcss->reg_base + Q6SS_RST_EVB);
+++
+++	/* Deassert AON Reset */
+++	ret = reset_control_deassert(wcss->wcss_aon_reset);
+++	if (ret) {
+++		dev_err(wcss->dev, "wcss_aon_reset failed\n");
+++		goto disable_pre_boot_clocks;
+++	}
+++
+++	/* Set MPM configs*/
+++	/*set CFG[18:15]=1*/
+++	val = readl(wcss->rmb_base + SSCAON_CONFIG);
+++	val &= ~SSCAON_MASK;
+++	val |= SSCAON_BUS_EN;
+++	writel(val, wcss->rmb_base + SSCAON_CONFIG);
+++
+++	/* Wait for SSCAON_STATUS, up to 1 second */
+++	ret = readl_poll_timeout(wcss->rmb_base + SSCAON_STATUS,
+++				 val, (val & 0xffff) == 0x10, 1000, 1000000);
+++	if (ret) {
+++		dev_err(wcss->dev, " Boot Error, SSCAON=0x%08X\n", val);
+++		goto assert_aon_reset;
+++	}
+++
+++	/* BHS require xo cbcr to be enabled */
+++	val = readl(wcss->reg_base + Q6SS_XO_CBCR);
+++	val |= Q6SS_CBCR_CLKEN;
+++	writel(val, wcss->reg_base + Q6SS_XO_CBCR);
+++
+++	/* Enable core cbcr */
+++	val = readl(wcss->reg_base + Q6SS_CORE_CBCR);
+++	val |= Q6SS_CBCR_CLKEN;
+++	writel(val, wcss->reg_base + Q6SS_CORE_CBCR);
+++
+++	/* Enable sleep cbcr */
+++	val = readl(wcss->reg_base + Q6SS_SLEEP_CBCR);
+++	val |= Q6SS_CBCR_CLKEN;
+++	writel(val, wcss->reg_base + Q6SS_SLEEP_CBCR);
+++
+++	/* Boot core start */
+++	writel(0x1, wcss->reg_base + Q6SS_BOOT_CORE_START);
+++	writel(0x1, wcss->reg_base + Q6SS_BOOT_CMD);
+++
+++	/* Pray god and wait for reset to complete */
+++	ret = readl_poll_timeout(wcss->reg_base + Q6SS_BOOT_STATUS, val,
+++				 (val & BIT(0)), 1000, 20000);
+++	if (ret) {
+++		dev_err(wcss->dev, "WCSS boot timed out\n");
+++		ret = -ETIMEDOUT;
+++		goto assert_aon_reset;
+++	}
+++
+++	/* Enable post-boot clocks */
+++	ret = clk_bulk_prepare_enable(wcss->num_clks, wcss->clks);
+++	if (ret) {
+++		dev_err(wcss->dev, "failed to enable clocks, err=%d\n", ret);
+++		goto assert_aon_reset;
+++	};
+++
+++	return 0;
+++
+++assert_aon_reset:
+++	reset_control_assert(wcss->wcss_aon_reset);
+++disable_pre_boot_clocks:
+++	clk_bulk_disable_unprepare(wcss->num_pre_boot_clks,
+++				   wcss->pre_boot_clks);
+++	return ret;
+++}
+++
+++static void q6v7_wcss_disable_clocks(struct q6v5_wcss *wcss)
+++{
+++	clk_bulk_disable_unprepare(wcss->num_clks, wcss->clks);
+++	clk_bulk_disable_unprepare(wcss->num_pre_boot_clks,
+++				   wcss->pre_boot_clks);
+++}
+++
++ static int q6v5_wcss_start(struct rproc *rproc)
++ {
++ 	struct q6v5_wcss *wcss = rproc->priv;
++@@ -270,21 +387,37 @@ static int q6v5_wcss_start(struct rproc
++ 	if (ret)
++ 		goto wcss_q6_reset;
++ 
++-	/* Write bootaddr to EVB so that Q6WCSS will jump there after reset */
++-	writel(rproc->bootaddr >> 4, wcss->reg_base + Q6SS_RST_EVB);
+++	switch (wcss->version) {
+++	case WCSS_QCS404:
+++	case WCSS_IPQ8074:
+++		/* Write bootaddr to Q6WCSS */
+++		writel(rproc->bootaddr >> 4, wcss->reg_base + Q6SS_RST_EVB);
+++		ret = q6v5_wcss_reset(wcss);
+++		break;
+++	case WCSS_IPQ9574:
+++		ret = q6v7_wcss_reset(wcss, rproc);
+++		break;
+++	}
++ 
++-	ret = q6v5_wcss_reset(wcss);
++ 	if (ret)
++ 		goto wcss_q6_reset;
++ 
++ 	ret = qcom_q6v5_wait_for_start(&wcss->q6v5, 5 * HZ);
++ 	if (ret == -ETIMEDOUT)
++ 		dev_err(wcss->dev, "start timed out\n");
+++	if (ret) {
+++		if (wcss->version == WCSS_IPQ9574) {
+++			reset_control_assert(wcss->wcss_aon_reset);
+++			q6v7_wcss_disable_clocks(wcss);
+++		}
+++		goto wcss_q6_reset;
+++	}
++ 
++-	return ret;
+++	return 0;
++ 
++ wcss_q6_reset:
++ 	reset_control_assert(wcss->wcss_q6_reset);
+++	usleep_range(1000, 2000);
++ 
++ wcss_reset:
++ 	reset_control_assert(wcss->wcss_reset);
++@@ -638,6 +771,41 @@ static int q6v5_wcss_powerdown(struct q6
++ 	return 0;
++ }
++ 
+++static int q6v7_wcss_powerdown(struct q6v5_wcss *wcss)
+++{
+++	u32 val;
+++	int ret;
+++
+++	q6v5_wcss_halt_axi_port(wcss, wcss->halt_map, wcss->halt_wcss);
+++
+++	val = readl(wcss->rmb_base + SSCAON_CONFIG);
+++	val &= ~SSCAON_MASK;
+++	val |= SSCAON_BUS_EN;
+++	writel(val, wcss->rmb_base + SSCAON_CONFIG);
+++
+++	val |= WCSS_HM_RET;
+++	writel(val, wcss->rmb_base + SSCAON_CONFIG);
+++
+++	ret = readl_poll_timeout(wcss->rmb_base + SSCAON_STATUS,
+++				 val, (val & 0xffff) == 0x400, 1000,
+++				 HALT_CHECK_MAX_LOOPS);
+++	if (ret) {
+++		dev_err(wcss->dev,
+++			"can't get SSCAON_STATUS rc:%d)\n", ret);
+++		return ret;
+++	}
+++
+++	usleep_range(2000, 4000);
+++
+++	reset_control_assert(wcss->wcss_aon_reset);
+++
+++	val = readl(wcss->rmb_base + SSCAON_CONFIG);
+++	val &= ~WCSS_HM_RET;
+++	writel(val, wcss->rmb_base + SSCAON_CONFIG);
+++
+++	return 0;
+++}
+++
++ static int q6v5_q6_powerdown(struct q6v5_wcss *wcss)
++ {
++ 	int ret;
++@@ -705,6 +873,24 @@ static int q6v5_q6_powerdown(struct q6v5
++ 	return 0;
++ }
++ 
+++static void q6v7_q6_powerdown(struct q6v5_wcss *wcss)
+++{
+++	u32 val;
+++
+++	q6v5_wcss_halt_axi_port(wcss, wcss->halt_map, wcss->halt_q6);
+++
+++	/* Disable Q6 Core clock */
+++	val = readl(wcss->reg_base + Q6SS_GFMUX_CTL_REG);
+++	val &= ~Q6SS_CLK_SRC_MUX;
+++	writel(val, wcss->reg_base + Q6SS_GFMUX_CTL_REG);
+++
+++	q6v7_wcss_disable_clocks(wcss);
+++
+++	reset_control_assert(wcss->wcss_q6_reset);
+++	usleep_range(1000, 2000);
+++	reset_control_assert(wcss->wcss_reset);
+++}
+++
++ static int q6v5_wcss_stop(struct rproc *rproc)
++ {
++ 	struct q6v5_wcss *wcss = rproc->priv;
++@@ -719,11 +905,21 @@ static int q6v5_wcss_stop(struct rproc *
++ 		}
++ 	}
++ 
++-	if (wcss->version == WCSS_QCS404) {
+++	switch (wcss->version) {
+++	case WCSS_QCS404:
++ 		ret = q6v5_qcs404_wcss_shutdown(wcss);
++ 		if (ret)
++ 			return ret;
++-	} else {
+++		break;
+++	case WCSS_IPQ9574:
+++		ret = q6v7_wcss_powerdown(wcss);
+++		if (ret)
+++			return ret;
+++
+++		q6v7_q6_powerdown(wcss);
+++
+++		break;
+++	default:
++ 		ret = q6v5_wcss_powerdown(wcss);
++ 		if (ret)
++ 			return ret;
++@@ -732,6 +928,7 @@ static int q6v5_wcss_stop(struct rproc *
++ 		ret = q6v5_q6_powerdown(wcss);
++ 		if (ret)
++ 			return ret;
+++		break;
++ 	}
++ 
++ 	qcom_q6v5_unprepare(&wcss->q6v5);
++@@ -751,11 +948,41 @@ static void *q6v5_wcss_da_to_va(struct r
++ 	return wcss->mem_region + offset;
++ }
++ 
+++static int q6v5_wcss_load_aux(struct q6v5_wcss *wcss, const char *fw_name)
+++{
+++	const struct firmware *extra_fw;
+++	int ret;
+++
+++	dev_info(wcss->dev, "loading additional firmware image %s\n", fw_name);
+++
+++	ret = request_firmware(&extra_fw, fw_name, wcss->dev);
+++	if (ret)
+++		return ret;
+++
+++	ret = qcom_mdt_load_no_init(wcss->dev, extra_fw, fw_name,
+++				    wcss->mem_region, wcss->mem_phys,
+++				    wcss->mem_size, &wcss->mem_reloc);
+++
+++	release_firmware(extra_fw);
+++
+++	if (ret)
+++		dev_err(wcss->dev, "can't load %s\n", fw_name);
+++
+++	return ret;
+++}
+++
++ static int q6v5_wcss_load(struct rproc *rproc, const struct firmware *fw)
++ {
++ 	struct q6v5_wcss *wcss = rproc->priv;
++ 	int ret;
++ 
+++	if (wcss->m3_firmware_name) {
+++		ret = q6v5_wcss_load_aux(wcss, wcss->m3_firmware_name);
+++		/* Continue if M3 firmware does not exist */
+++		if (ret && (ret != -ENOENT))
+++			return ret;
+++	}
+++
++ 	ret = qcom_mdt_load_no_init(wcss->dev, fw, rproc->firmware,
++ 				    wcss->mem_region, wcss->mem_phys,
++ 				    wcss->mem_size, &wcss->mem_reloc);
++@@ -837,7 +1064,9 @@ static int q6v5_wcss_init_mmio(struct q6
++ 	if (!wcss->reg_base)
++ 		return -ENOMEM;
++ 
++-	if (wcss->version == WCSS_IPQ8074) {
+++	switch (wcss->version) {
+++	case WCSS_IPQ8074:
+++	case WCSS_IPQ9574:
++ 		wcss->rmb_base = devm_platform_ioremap_resource_byname(pdev, "rmb");
++ 		if (IS_ERR(wcss->rmb_base))
++ 			return PTR_ERR(wcss->rmb_base);
++@@ -969,6 +1198,44 @@ static int q6v5_wcss_init_regulator(stru
++ 	return 0;
++ }
++ 
+++static int ipq9574_init_clocks(struct q6v5_wcss *wcss)
+++{
+++	static const char *const pre_boot_clks[] = {
+++		"anoc_wcss_axi_m", "q6_ahb", "q6_ahb_s", "q6_axim", "q6ss_boot",
+++		"mem_noc_q6_axi", "sys_noc_wcss_ahb", "wcss_acmt", "wcss_ecahb",
+++		"wcss_q6_tbu" };
+++	static const char *const clks[] = {
+++		"q6_axim2", "wcss_ahb_s", "wcss_axi_m" };
+++	int i, ret;
+++
+++	wcss->num_clks = ARRAY_SIZE(clks);
+++	wcss->num_pre_boot_clks = ARRAY_SIZE(pre_boot_clks);
+++
+++	wcss->pre_boot_clks = devm_kcalloc(wcss->dev, wcss->num_pre_boot_clks,
+++					   sizeof(*wcss->pre_boot_clks),
+++					   GFP_KERNEL);
+++	if (!wcss->pre_boot_clks)
+++		return -ENOMEM;
+++
+++	wcss->clks = devm_kcalloc(wcss->dev, wcss->num_clks,
+++				  sizeof(*wcss->clks), GFP_KERNEL);
+++	if (!wcss->clks)
+++		return -ENOMEM;
+++
+++	for (i = 0; i < wcss->num_pre_boot_clks; i++)
+++		wcss->pre_boot_clks[i].id = pre_boot_clks[i];
+++
+++	for (i = 0; i < wcss->num_clks; i++)
+++		wcss->clks[i].id = clks[i];
+++
+++	ret = devm_clk_bulk_get(wcss->dev, wcss->num_pre_boot_clks,
+++				wcss->pre_boot_clks);
+++	if (ret < 0)
+++		return ret;
+++
+++	return devm_clk_bulk_get(wcss->dev, wcss->num_clks, wcss->clks);
+++}
+++
++ static int q6v5_wcss_probe(struct platform_device *pdev)
++ {
++ 	const struct wcss_data *desc;
++@@ -981,7 +1248,7 @@ static int q6v5_wcss_probe(struct platfo
++ 		return -EINVAL;
++ 
++ 	rproc = devm_rproc_alloc(&pdev->dev, pdev->name, desc->ops,
++-				 desc->firmware_name, sizeof(*wcss));
+++				 desc->q6_firmware_name, sizeof(*wcss));
++ 	if (!rproc) {
++ 		dev_err(&pdev->dev, "failed to allocate rproc\n");
++ 		return -ENOMEM;
++@@ -992,6 +1259,7 @@ static int q6v5_wcss_probe(struct platfo
++ 
++ 	wcss->version = desc->version;
++ 	wcss->requires_force_stop = desc->requires_force_stop;
+++	wcss->m3_firmware_name = desc->m3_firmware_name;
++ 
++ 	ret = q6v5_wcss_init_mmio(wcss, pdev);
++ 	if (ret)
++@@ -1001,7 +1269,8 @@ static int q6v5_wcss_probe(struct platfo
++ 	if (ret)
++ 		return ret;
++ 
++-	if (wcss->version == WCSS_QCS404) {
+++	switch (wcss->version) {
+++	case WCSS_QCS404:
++ 		ret = q6v5_wcss_init_clock(wcss);
++ 		if (ret)
++ 			return ret;
++@@ -1009,6 +1278,11 @@ static int q6v5_wcss_probe(struct platfo
++ 		ret = q6v5_wcss_init_regulator(wcss);
++ 		if (ret)
++ 			return ret;
+++		break;
+++	case WCSS_IPQ9574:
+++		ret = ipq9574_init_clocks(wcss);
+++		if (ret)
+++			return ret;
++ 	}
++ 
++ 	ret = q6v5_wcss_init_reset(wcss, desc);
++@@ -1033,6 +1307,7 @@ static int q6v5_wcss_probe(struct platfo
++ 		}
++ 	}
++ 
+++	rproc->auto_boot = desc->auto_boot;
++ 	ret = rproc_add(rproc);
++ 	if (ret)
++ 		goto remove_sysmon_subdev;
++@@ -1063,17 +1338,31 @@ static void q6v5_wcss_remove(struct plat
++ }
++ 
++ static const struct wcss_data wcss_ipq8074_res_init = {
++-	.firmware_name = "IPQ8074/q6_fw.mdt",
+++	.q6_firmware_name = "IPQ8074/q6_fw.mdt",
+++	.m3_firmware_name = "IPQ8074/m3_fw.mdt",
++ 	.crash_reason_smem = WCSS_CRASH_REASON,
++ 	.aon_reset_required = true,
++ 	.wcss_q6_reset_required = true,
++ 	.ops = &q6v5_wcss_ipq8074_ops,
++ 	.requires_force_stop = true,
+++	.auto_boot = true,
+++};
+++
+++static const struct wcss_data wcss_ipq9574_res_init = {
+++	.q6_firmware_name = "ath11k/IPQ9574/hw1.0/q6_fw.mdt",
+++	.m3_firmware_name = "ath11k/IPQ9574/hw1.0/m3_fw.mdt",
+++	.version = WCSS_IPQ9574,
+++	.crash_reason_smem = WCSS_CRASH_REASON,
+++	.aon_reset_required = true,
+++	.ssr_name = "q6wcss",
+++	.ops = &q6v5_wcss_ipq8074_ops,
+++	.requires_force_stop = true,
+++	.auto_boot = false,
++ };
++ 
++ static const struct wcss_data wcss_qcs404_res_init = {
++ 	.crash_reason_smem = WCSS_CRASH_REASON,
++-	.firmware_name = "wcnss.mdt",
+++	.q6_firmware_name = "wcnss.mdt",
++ 	.version = WCSS_QCS404,
++ 	.aon_reset_required = false,
++ 	.wcss_q6_reset_required = false,
++@@ -1082,10 +1371,12 @@ static const struct wcss_data wcss_qcs40
++ 	.ssctl_id = 0x12,
++ 	.ops = &q6v5_wcss_qcs404_ops,
++ 	.requires_force_stop = false,
+++	.auto_boot = true,
++ };
++ 
++ static const struct of_device_id q6v5_wcss_of_match[] = {
++ 	{ .compatible = "qcom,ipq8074-wcss-pil", .data = &wcss_ipq8074_res_init },
+++	{ .compatible = "qcom,ipq9574-wcss-pil", .data = &wcss_ipq9574_res_init },
++ 	{ .compatible = "qcom,qcs404-wcss-pil", .data = &wcss_qcs404_res_init },
++ 	{ },
++ };
+diff --git a/target/linux/qualcommbe/patches-6.18/0707-net-phy-qca808x-disable-EEE-on-QCA8084-QXGMII.patch b/target/linux/qualcommbe/patches-6.18/0707-net-phy-qca808x-disable-EEE-on-QCA8084-QXGMII.patch
+new file mode 100644
+index 00000000..72aef7ea
+--- /dev/null
++++ b/target/linux/qualcommbe/patches-6.18/0707-net-phy-qca808x-disable-EEE-on-QCA8084-QXGMII.patch
+@@ -0,0 +1,35 @@
++Subject: [PATCH] net: phy: qca808x: disable EEE on QCA8084 QXGMII links
++
++QCA8084 links running over the 10G-QXGMII package path can report
++MAC-facing RX CRC and fragment errors when EEE is negotiated with the
++link partner. On a Xiaomi BE7000 WAN link, clearing the copper PHY EEE
++advertisement register and restarting autoneg stopped the raw XGMAC RX
++CRC/fragment counters from increasing, including under burst ping
++traffic.
++
++Disable EEE for QCA8084 PHYs using the 10G-QXGMII interface through
++phylib so that EEE modes are not advertised or re-enabled from userspace.
++
++Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
++---
++ drivers/net/phy/qcom/qca808x.c | 10 +++++++++-
++ 1 file changed, 9 insertions(+), 1 deletion(-)
++
++--- a/drivers/net/phy/qcom/qca808x.c
+++++ b/drivers/net/phy/qcom/qca808x.c
++@@ -1149,6 +1149,14 @@
++ 	else
++ 		qca808x_fill_possible_interfaces(phydev);
++-
+++
+++	if (phydev->interface == PHY_INTERFACE_MODE_10G_QXGMII) {
+++		/* EEE negotiated on the copper side can disturb the QCA8084
+++		 * QXGMII/XGMAC RX path, showing up as raw XGMAC CRC and
+++		 * fragment errors. Keep QXGMII package links out of EEE.
+++		 */
+++		phy_disable_eee(phydev);
+++	}
+++
++ 	/* Configure the ADC to convert the signal using falling edge
++ 	 * instead of the default rising edge.
++ 	 */
+-- 
+2.43.0
+

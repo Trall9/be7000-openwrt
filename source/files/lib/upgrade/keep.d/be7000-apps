@@ -1,0 +1,9 @@
+/etc/usb-watchdog.conf
+/etc/usb-watchdog.seen
+/etc/init.d/qbittorrent
+/etc/init.d/xray
+/etc/init.d/tailscale
+/etc/init.d/dockerd
+/etc/init.d/jackett
+/etc/crontabs/
+/etc/be7000-rc.state

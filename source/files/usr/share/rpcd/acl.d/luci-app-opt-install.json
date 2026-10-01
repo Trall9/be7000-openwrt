@@ -1,0 +1,15 @@
+{
+	"luci-app-opt-install": {
+		"description": "Установка/удаление ПО на внешний диск (opt-install)",
+		"read": {
+			"file": {
+				"/usr/bin/opt-install": [ "exec" ]
+			}
+		},
+		"write": {
+			"file": {
+				"/usr/bin/opt-install": [ "exec" ]
+			}
+		}
+	}
+}

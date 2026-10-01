@@ -1,0 +1,9 @@
+#!/bin/sh
+# Фильтрация iptables на мосту — ТОЛЬКО для docker0 (изоляция контейнеров).
+# Глобальный net.bridge.bridge-nf-call-iptables=1 (его ставит пакет dockerd)
+# включает её и на br-lan, и тогда прозрачный прокси Podkop (tproxy) перестаёт
+# принимать соединения устройств сети (проверено 30.09). Глобально — 0 (11-br-netfilter.conf).
+[ "$ACTION" = add ] || exit 0
+[ "$INTERFACE" = docker0 ] || [ "$DEVICENAME" = docker0 ] || exit 0
+ip link set dev docker0 type bridge nf_call_iptables 1 nf_call_ip6tables 1 2>/dev/null
+exit 0

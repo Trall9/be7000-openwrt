@@ -1,0 +1,22 @@
+#!/bin/sh
+# Готовая зона firewall «vpn» для туннелей WireGuard / AmneziaWG / OpenVPN.
+# Интерфейс туннеля создаётся в LuCI: Сеть → Интерфейсы → Добавить,
+# на вкладке «Настройки межсетевого экрана» выбрать зону vpn — и трафик
+# из LAN пойдёт в туннель с NAT (masq). Ничего не делаем, если зона уже есть.
+[ "$(uci -q get firewall.vpn)" = "zone" ] && exit 0
+uci -q show firewall | grep -q "\.name='vpn'" && exit 0
+
+uci -q batch <<-'EOT'
+	set firewall.vpn=zone
+	set firewall.vpn.name='vpn'
+	set firewall.vpn.input='REJECT'
+	set firewall.vpn.output='ACCEPT'
+	set firewall.vpn.forward='REJECT'
+	set firewall.vpn.masq='1'
+	set firewall.vpn.mtu_fix='1'
+	set firewall.lan_vpn=forwarding
+	set firewall.lan_vpn.src='lan'
+	set firewall.lan_vpn.dest='vpn'
+	commit firewall
+EOT
+exit 0
