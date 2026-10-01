@@ -1,7 +1,7 @@
 From 04230ac606d123358f59199e3212314a721e1277 Mon Sep 17 00:00:00 2001
 From: Trall9 <Trall9@users.noreply.github.com>
 Date: Thu, 1 Oct 2026 15:40:08 +0200
-Subject: [PATCH 2/5] be7000: local patches (NSS, AWG, podkop, byedpi,
+Subject: [PATCH 2/6] be7000: local patches (NSS, AWG, podkop, byedpi,
  perf/uci-defaults, sysupgrade guard)
 
 ---

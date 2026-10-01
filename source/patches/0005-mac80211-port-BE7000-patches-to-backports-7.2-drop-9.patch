@@ -1,7 +1,7 @@
 From c57b7f971af91a691d22c0321f112648094930fd Mon Sep 17 00:00:00 2001
 From: Trall9 <Trall9@users.noreply.github.com>
 Date: Thu, 1 Oct 2026 21:34:35 +0200
-Subject: [PATCH 5/5] mac80211: port BE7000 patches to backports 7.2 (drop
+Subject: [PATCH 5/6] mac80211: port BE7000 patches to backports 7.2 (drop
  961/307 merged upstream, 960 without max_tx_ring)
 
 ---

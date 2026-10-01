@@ -1,7 +1,7 @@
 From 8f0f3a3fb4a9357da5d6487d2b2931c18493a3cb Mon Sep 17 00:00:00 2001
 From: Trall9 <Trall9@users.noreply.github.com>
 Date: Thu, 1 Oct 2026 20:07:50 +0200
-Subject: [PATCH 3/5] be7000: zapret package; kmod-ipt-ipopt depends on
+Subject: [PATCH 3/6] be7000: zapret package; kmod-ipt-ipopt depends on
  nf-conntrack (ECM DSCPREMARK)
 
 ---

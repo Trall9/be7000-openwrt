@@ -1,7 +1,7 @@
 From 6ddf7e66988e4ffac3e376fea4eeca53ff190b44 Mon Sep 17 00:00:00 2001
 From: Trall9 <Trall9@users.noreply.github.com>
 Date: Thu, 1 Oct 2026 20:45:51 +0200
-Subject: [PATCH 4/5] be7000: feed patch minidlna for ffmpeg 9 (ch_layout)
+Subject: [PATCH 4/6] be7000: feed patch minidlna for ffmpeg 9 (ch_layout)
 
 ---
  feed-patches/apply.sh                              |  6 ++++++

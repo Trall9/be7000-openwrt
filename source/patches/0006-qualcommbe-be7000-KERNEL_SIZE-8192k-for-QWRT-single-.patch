@@ -1,0 +1,28 @@
+From 7e2e2055ebc2c0edbb202174f47401e9d55b2a41 Mon Sep 17 00:00:00 2001
+From: Trall9 <Trall9@users.noreply.github.com>
+Date: Thu, 1 Oct 2026 22:30:52 +0200
+Subject: [PATCH 6/6] qualcommbe: be7000 KERNEL_SIZE 8192k for QWRT single-UBI
+ layout (kernel 6.18.54 FIT is 6.3 MB)
+
+---
+ target/linux/qualcommbe/image/ipq95xx.mk | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/target/linux/qualcommbe/image/ipq95xx.mk b/target/linux/qualcommbe/image/ipq95xx.mk
+index 80b2eb63..419cd6b0 100644
+--- a/target/linux/qualcommbe/image/ipq95xx.mk
++++ b/target/linux/qualcommbe/image/ipq95xx.mk
+@@ -92,7 +92,9 @@ define Device/xiaomi_be7000
+ 	BLOCKSIZE := 128k
+ 	PAGESIZE := 2048
+ 	SOC := ipq9574
+-	KERNEL_SIZE := 6096k
++	# QWRT-разметка: том kernel в общем 80-МБ UBI, загрузчик читает его целиком
++	# (ubi read 0x50000000 kernel) — лимит стокового слота 6096k тут не действует
++	KERNEL_SIZE := 8192k
+ 	IMAGE_SIZE := 32116k
+ 	DEVICE_PACKAGES := ath11k-firmware-ipq9574 \
+ 					kmod-ath12k ath12k-firmware-qcn9274 \
+-- 
+2.43.0
+

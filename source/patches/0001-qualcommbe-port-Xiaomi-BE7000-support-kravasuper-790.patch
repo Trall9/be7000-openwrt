@@ -1,7 +1,7 @@
 From f29e41cd4fbb1cdb36769d80534e4a6567448e0a Mon Sep 17 00:00:00 2001
 From: Trall9 <Trall9@users.noreply.github.com>
 Date: Thu, 1 Oct 2026 15:36:14 +0200
-Subject: [PATCH 1/5] qualcommbe: port Xiaomi BE7000 support (kravasuper
+Subject: [PATCH 1/6] qualcommbe: port Xiaomi BE7000 support (kravasuper
  790d036) to main
 
 ---

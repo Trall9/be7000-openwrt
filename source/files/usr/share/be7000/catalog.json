@@ -66,8 +66,8 @@
 
 		{ "id": "samba", "cat": "files", "kind": "apk", "pkgs": ["samba4-server", "luci-app-samba4"], "page": "admin/services/samba4", "size": 10,
 		  "title": "Samba (сетевая папка)", "desc": "Доступ к USB-диску с Windows/macOS/телефона: \\\\192.168.1.1." },
-		{ "id": "minidlna", "cat": "files", "kind": "apk", "pkgs": ["minidlna", "luci-app-minidlna"], "page": "admin/services/minidlna", "size": 3,
-		  "title": "MiniDLNA", "desc": "Фильмы и музыка с диска на телевизоре (DLNA)." },
+		{ "id": "minidlna", "cat": "files", "kind": "apk", "pkgs": ["minidlna", "luci-app-minidlna"], "page": "admin/services/minidlna", "size": 15,
+		  "title": "MiniDLNA", "desc": "Фильмы и музыка с диска на телевизоре (DLNA). Вместе с ffmpeg занимает ~15 МБ флеша." },
 		{ "id": "qbittorrent", "cat": "files", "kind": "disk", "app": "qbittorrent", "web": 8080, "size": 35,
 		  "title": "qBittorrent", "desc": "Торрент-клиент с веб-интерфейсом :8080, закачки на USB-диск." },
 		{ "id": "transmission", "cat": "files", "kind": "apk", "pkgs": ["transmission-daemon", "transmission-web", "luci-app-transmission"], "page": "admin/services/transmission", "web": 9091, "size": 5,
