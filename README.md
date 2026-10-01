@@ -32,34 +32,25 @@ recovery загрузчика (он не стирается), а `sysupgrade` о
 
 ## Чем отличается от других сборок для BE7000
 
-| | Эта сборка | [Beam WRT](https://github.com/timofey-maykov/be7000-openwrt) | [Quarx2k](https://github.com/Quarx2k/OpenWRT-BE7000) | [kravasuper](https://github.com/kravasuper/openwrt) |
-|---|---|---|---|---|
-| Разметка | QWRT, 1 × 80 МБ | сток, 2 × 40 МБ (A/B) | без записи во флеш (kexec с USB) | сток, 2 × 40 МБ |
-| Ядро / Wi-Fi | 6.18.54 / драйверы ядра 7.2 | 6.18.36 / 6.18 | 6.18.52 / нативные | 6.18.36 / 6.18 |
-| Откат на сток | через QWRT recovery | слотом (сток остаётся) | вынуть флешку | слотом |
-| Каталог приложений, Entware, фид kmod | ✅ | — | — | — |
-| AmneziaWG + быстрая настройка `vpn://` | ✅ | AmneziaWG | — | — |
-| Podkop, zapret, byedpi | ✅ | — | — | — |
-| Docker, qBittorrent, Jackett на USB-диск | ✅ | — | — | — |
+| | Эта сборка (beta2) | [Beam WRT](https://github.com/timofey-maykov/be7000-openwrt) 1.4.0 | [Quarx2k](https://github.com/Quarx2k/OpenWRT-BE7000) r36754 |
+|---|---|---|---|
+| Разметка | QWRT, 1 × 80 МБ | сток, 2 × 40 МБ (A/B) | NAND или загрузка с USB (kexec) |
+| Ядро / Wi-Fi | 6.18.54 / backports 7.2 | 6.18.52 / backports 7.2 | 6.18.54 / backports 7.2 |
+| Откат на сток | через QWRT recovery | слотом, сток остаётся | слотом / вынуть флешку |
+| Обновление | только recovery | sysupgrade с настройками, страница в LuCI | sysupgrade, attended sysupgrade |
+| Режимы 5 ГГц (одно радио / два / MLO) | одно радио | ✅ все три | ✅ все три |
+| Аппаратная разгрузка NAT (PPE) | — | ✅ экспериментально | ✅ модуль offload |
+| Фид пакетов и kmod под своё ядро | ✅ | ✅ | — |
+| AmneziaWG | ✅ + быстрая настройка `vpn://` | ✅ | — |
+| Podkop, zapret, byedpi, pbr | ✅ | — | — |
+| Каталог приложений, Entware | ✅ | — | — |
+| Docker на USB | ✅ (+ qBittorrent, Jackett, Xray, Tailscale) | ✅ | — |
+| Перенос /overlay на USB (extroot) | — | ✅ | — |
+| Импорт настроек Wi-Fi/WAN/LAN со стока | — | ✅ | — |
+| Установщики для Windows/Linux | — | — | ✅ |
 
-Сравнение — по репозиториям авторов на сентябрь 2026; у них могло что-то добавиться.
-Если у вас стоковый загрузчик и вы хотите сохранить сток во втором слоте — берите Beam WRT.
-
-## Версии компонентов (beta2)
-
-| | |
-|---|---|
-| OpenWrt | main @ `31ef8052` (01.10.2026) |
-| Ядро | **6.18.54** — самый свежий longterm (kernel.org) |
-| Драйверы Wi-Fi | backports **7.2** (ath11k / ath12k из ядра 7.2) + патчи BE7000 |
-| Пакеты | фиды OpenWrt на 01.10.2026 (`source/feeds.lock`) |
-
-## Для кого
-
-| Ваша разметка | Подходит? |
-|---|---|
-| QWRT-загрузчик, `rootfs` 80 МБ (`/proc/mtd`: `mtd23 05000000 "rootfs"`, раздела `rootfs_1` нет) | **да** |
-| Стоковый загрузчик, два слота по 40 МБ | **нет** — образ в слот не помещается. Берите [Beam WRT](https://github.com/timofey-maykov/be7000-openwrt) |
+Сравнение по репозиториям и образам авторов на 02.10.2026. Если у вас стоковый загрузчик и вы хотите
+сохранить сток во втором слоте — берите Beam WRT или Quarx2k.
 
 ## Что внутри
 
