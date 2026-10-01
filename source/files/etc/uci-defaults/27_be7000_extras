@@ -16,6 +16,11 @@ if [ -x /etc/init.d/https-dns-proxy ]; then
 	fi
 fi
 
+# banIP: служба в образе включена, а конфиг ban_enabled=0 → на каждой загрузке
+# «user.err banIP is disabled». Выключенный конфиг = выключенная служба
+# (как adblock-fast); «Включить» в LuCI включает обратно.
+[ -x /etc/init.d/banip ] && [ "$(uci -q get banip.global.ban_enabled)" != "1" ] && /etc/init.d/banip disable
+
 # vnstat2: база по умолчанию в RAM (/var/lib/vnstat) — история пропадала бы
 # при каждой перезагрузке. Храним во флеше, сохраняем раз в 30 мин.
 if [ -f /etc/vnstat.conf ]; then

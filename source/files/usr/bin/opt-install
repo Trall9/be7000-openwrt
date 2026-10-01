@@ -76,7 +76,7 @@ mount_ext4() {
 # Пакеты прошивки тоже живут в /opt (zapret → /opt/zapret). Том с диска,
 # смонтированный поверх /opt, спрятал бы их — поэтому до монтирования
 # сохраняем корневой /opt, а после прокидываем его каталоги внутрь тома.
-OPT_ROOTFS=/var/run/opt-rootfs
+OPT_ROOTFS=/tmp/run/opt-rootfs  # реальный путь: /var → /tmp, а в /proc/mounts пишется именно он
 opt_rootfs_save() {
 	grep -q " $OPT_ROOTFS " /proc/mounts && return 0
 	[ -n "$(ls -A "$EXT_MP" 2>/dev/null)" ] || return 0
