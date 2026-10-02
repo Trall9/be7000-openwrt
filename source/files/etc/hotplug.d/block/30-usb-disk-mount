@@ -8,6 +8,11 @@ case "$DEVNAME" in
 esac
 sleep 2
 TYPE=$(blkid -o value -s TYPE /dev/$DEVNAME 2>/dev/null)
+# уже смонтирован (например, это /overlay на диске) — не трогаем
+grep -q "^/dev/$DEVNAME " /proc/mounts && exit 0
+# раздел extroot не монтируем в /mnt: его подключает fstools или be7000-extroot
+EXT=$(uci -q get fstab.extroot.uuid)
+[ -n "$EXT" ] && [ "$(blkid -o value -s UUID /dev/$DEVNAME 2>/dev/null)" = "$EXT" ] && exit 0
 MP=/mnt/$DEVNAME
 mkdir -p $MP
 grep -q " $MP " /proc/mounts && exit 0

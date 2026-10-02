@@ -14,6 +14,7 @@
 /etc/init.d/be7000-ppe enable 2>/dev/null
 /etc/init.d/be7000-5g-split enable 2>/dev/null
 /etc/init.d/be7000-bootlog enable 2>/dev/null
+/etc/init.d/be7000-extroot enable 2>/dev/null
 # На одноразделной QWRT-раскладке fw_printenv не заработает (нет 0:appsblenv) —
 # bootconfirm сам громко напишет в лог и выйдет, это нормально.
 /etc/init.d/be7000-bootconfirm start 2>/dev/null

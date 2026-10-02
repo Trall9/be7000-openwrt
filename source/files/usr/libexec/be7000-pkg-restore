@@ -12,6 +12,14 @@ DONE=/etc/backup/installed_packages.restored
 [ -s "$LIST" ] || exit 0
 # список старше текущей прошивки? восстанавливаем один раз на каждый список
 [ -f "$DONE" ] && cmp -s "$LIST" "$DONE" && exit 0
+# extroot настроен, но /overlay сейчас во флеше (диск не подключился или
+# be7000-extroot ещё переносит настройки) — не забиваем 20 МБ флеша пакетами
+EXT=$(uci -q get fstab.extroot.uuid)
+if [ -n "$EXT" ] && [ "$(uci -q get fstab.extroot.enabled)" != 0 ] &&
+   ! block info 2>/dev/null | grep "UUID=\"$EXT\"" | grep -q 'MOUNT="/overlay"'; then
+	logger -t be7000-pkg-restore "extroot не подключён — пакеты поставлю, когда /overlay будет на диске"
+	exit 0
+fi
 
 pkgs=""
 for p in $(awk -F'\t' '$2 == "overlay" { print $1 }' "$LIST"); do

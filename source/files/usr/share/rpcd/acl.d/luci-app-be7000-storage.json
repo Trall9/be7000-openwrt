@@ -1,0 +1,16 @@
+{
+	"luci-app-be7000-storage": {
+		"description": "Move /overlay onto a USB disk (extroot)",
+		"read": {
+			"ubus": {
+				"be7000-storage": [ "status", "list", "job" ]
+			}
+		},
+		"write": {
+			"ubus": {
+				"be7000-storage": [ "use", "revert" ],
+				"system": [ "reboot" ]
+			}
+		}
+	}
+}
