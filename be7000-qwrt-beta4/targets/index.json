@@ -3,9 +3,9 @@
   "architecture": "aarch64_cortex-a73",
   "packages": {
     "base-files": "17~31ef8052",
-    "block-mount": "2026.07.25~2aa16407-r1",
+    "block-mount": "2026.07.25~2aa16407-r2",
     "dropbear": "2026.94-r2",
-    "fstools": "2026.07.25~2aa16407-r1",
+    "fstools": "2026.07.25~2aa16407-r2",
     "fwtool": "2025.10.03~04cd252e-r1",
     "ip6tables-nft": "1.8.10-r3",
     "iptables-mod-extra": "1.8.10-r3",
