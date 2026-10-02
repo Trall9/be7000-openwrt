@@ -139,10 +139,13 @@ function with_i18n(pkgs) {
 }
 
 function install_apk(it) {
+	// списки обновляем всегда: snapshot-фиды пересобираются несколько раз в сутки,
+	// и по индексу даже 2-часовой давности apk получает 404 (wget error 8)
 	let have_lists = length(fs.glob('/var/cache/apk/*') ?? []) > 0;
-	if (!have_lists) {
-		log('обновление списков пакетов…');
-		if (run_logged('apk update') != 0) { log('ОШИБКА: не удалось скачать списки пакетов (есть ли интернет?)'); return 1; }
+	log('обновление списков пакетов…');
+	if (run_logged('apk update >/dev/null') != 0) {
+		if (!have_lists) { log('ОШИБКА: не удалось скачать списки пакетов (есть ли интернет?)'); return 1; }
+		log('ВНИМАНИЕ: списки не обновились, пробую по старым');
 	}
 	let free = df_mb('/overlay');
 	let need = (it.size ?? 1) + 2;
@@ -170,6 +173,28 @@ function install_apk(it) {
 	return 0;
 }
 
+// донастройка после установки (до запуска служб): порты, пароли, обходы
+// ошибок пакетов — /usr/share/be7000/post/<id>.sh
+const POST = '/usr/share/be7000/post/';
+function run_post(it) {
+	if (!fs.access(POST + it.id + '.sh', 'x')) return;
+	log('донастройка…');
+	if (run_logged(POST + it.id + '.sh') != 0)
+		log('ВНИМАНИЕ: донастройка завершилась с ошибкой (см. выше)');
+}
+
+// повтор донастройки для установленных пакетов Entware: `opkg upgrade`
+// перезаписывает их init-скрипты. Зовётся из /etc/init.d/entware до rc.unslung.
+function fixup() {
+	let ew = entware_db();
+	for (let it in catalog().items) {
+		if (it.kind != 'entware' || !fs.access(POST + it.id + '.sh', 'x')) continue;
+		let all = true;
+		for (let p in it.pkgs) if (!ew[p]) all = false;
+		if (all) system(POST + it.id + '.sh >/dev/null 2>&1');
+	}
+}
+
 function install_entware(it) {
 	if (!fs.access('/opt/bin/opkg', 'x')) {
 		log('Entware не установлен — устанавливаю (нужен USB-диск)…');
@@ -181,6 +206,7 @@ function install_entware(it) {
 	log('opkg install ' + join(' ', it.pkgs));
 	let rc = run_logged('/opt/bin/opkg install ' + join(' ', map(it.pkgs, q)));
 	if (rc != 0) { log('ОШИБКА: opkg install завершился с кодом ' + rc); return rc; }
+	run_post(it);
 	// службы Entware (/opt/etc/init.d/S*) этих пакетов — запустить
 	for (let p in it.pkgs) {
 		let files = split(sh('/opt/bin/opkg files ' + q(p) + ' 2>/dev/null'), '\n');
@@ -258,5 +284,6 @@ case 'install': arg || die('укажите приложение'); start(arg, '_
 case '_worker': worker(arg); break;
 case 'remove':  arg || die('укажите приложение'); remove(arg); break;
 case 'log':     print(fs.readfile(LOG) ?? ''); break;
+case 'fixup':   fixup(); break;
 default:        out('usage: be7000-catalog {status|install <id>|remove <id>|log}'); exit(2);
 }

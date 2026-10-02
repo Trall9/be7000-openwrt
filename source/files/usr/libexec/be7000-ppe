@@ -1,0 +1,86 @@
+#!/bin/sh
+# Hardware offload of the Qualcomm PPE.
+# Из Beam WRT (github.com/timofey-maykov/be7000-openwrt, overlay-files).
+#
+#   status        JSON for the LuCI page
+#   nat on|off    routed flows (NAT) through the PPE, the firewall's
+#                 flow_offloading and flow_offloading_hw, applies at once
+#   bridge on|off bridging of the LAN ports in the PPE, module option
+#                 bridge_offload, applies after a reboot
+#   sync          write the module option from uci into /etc/modules.conf,
+#                 run at boot before the modules load
+#
+# The bridge choice lives in be7000.ppe.bridge_offload, so it survives an
+# update; /etc/modules.conf is only its copy for kmodloader.
+
+CONF=/etc/modules.conf
+PARAM=/sys/module/qcom_ppe/parameters/bridge_offload
+
+bridge_cfg() {
+	[ "$(uci -q get be7000.ppe.bridge_offload)" = 1 ] && echo 1 || echo 0
+}
+
+sync_conf() {
+	local tmp=$CONF.tmp
+	[ -f $CONF ] || : > $CONF
+	grep -v '^options qcom-ppe ' $CONF > $tmp
+	[ "$(bridge_cfg)" = 1 ] && echo 'options qcom-ppe bridge_offload=1' >> $tmp
+	cmp -s $tmp $CONF && rm -f $tmp || mv $tmp $CONF
+}
+
+ensure_section() {
+	[ -f /etc/config/be7000 ] || : > /etc/config/be7000
+	uci -q get be7000.ppe >/dev/null || uci set be7000.ppe=ppe
+}
+
+case "$1" in
+status)
+	nat_sw=$(uci -q get firewall.@defaults[0].flow_offloading)
+	nat_hw=$(uci -q get firewall.@defaults[0].flow_offloading_hw)
+	present=0; active=0
+	if [ -f $PARAM ]; then
+		present=1
+		case "$(cat $PARAM)" in Y|1) active=1 ;; esac
+	fi
+	hw_conns=$(grep -c HW_OFFLOAD /proc/net/nf_conntrack 2>/dev/null)
+	printf '{"present":%s,"nat":%s,"bridge":%s,"bridge_active":%s,"hw_conns":%s}\n' \
+		$present \
+		$([ "$nat_sw" = 1 ] && [ "$nat_hw" = 1 ] && echo true || echo false) \
+		$([ "$(bridge_cfg)" = 1 ] && echo true || echo false) \
+		$([ $active = 1 ] && echo true || echo false) \
+		${hw_conns:-0}
+	;;
+nat)
+	case "$2" in
+	on) v=1 ;;
+	off) v=0 ;;
+	*) echo "nat on|off"; exit 1 ;;
+	esac
+	# be7000-qwrt: выключение снимает только аппаратную часть, программный
+	# flow_offloading (у нас включён по умолчанию) остаётся.
+	[ $v = 1 ] && uci set firewall.@defaults[0].flow_offloading=1
+	uci set firewall.@defaults[0].flow_offloading_hw=$v
+	uci commit firewall
+	/etc/init.d/firewall reload >/dev/null 2>&1
+	echo "nat $2"
+	;;
+bridge)
+	case "$2" in
+	on) v=1 ;;
+	off) v=0 ;;
+	*) echo "bridge on|off"; exit 1 ;;
+	esac
+	ensure_section
+	uci set be7000.ppe.bridge_offload=$v
+	uci commit be7000
+	sync_conf
+	echo "bridge $2, applies after a reboot"
+	;;
+sync)
+	sync_conf
+	;;
+*)
+	echo "usage: $0 status | nat on|off | bridge on|off | sync"
+	exit 1
+	;;
+esac

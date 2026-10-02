@@ -6,10 +6,14 @@
 # стоковый U-Boot молча переключает слот — behavior v1.2.3 timofey-maykov).
 /etc/init.d/be7000_boot_success enable 2>/dev/null
 /etc/init.d/be7000-bootconfirm enable 2>/dev/null
-/etc/init.d/be7000-rf-hog enable 2>/dev/null
+# be7000-rf-hog больше не включаем: уровни TLMM6/7 задаёт DTS (pinctrl), режимы 5 ГГц — be7000-5g-split.
+/etc/init.d/be7000-rf-hog disable 2>/dev/null
 /etc/init.d/opt-apps enable 2>/dev/null
 /etc/init.d/luci-lang-fix enable 2>/dev/null
 /etc/init.d/be7000-rc-restore enable 2>/dev/null
+/etc/init.d/be7000-ppe enable 2>/dev/null
+/etc/init.d/be7000-5g-split enable 2>/dev/null
+/etc/init.d/be7000-bootlog enable 2>/dev/null
 # На одноразделной QWRT-раскладке fw_printenv не заработает (нет 0:appsblenv) —
 # bootconfirm сам громко напишет в лог и выйдет, это нормально.
 /etc/init.d/be7000-bootconfirm start 2>/dev/null

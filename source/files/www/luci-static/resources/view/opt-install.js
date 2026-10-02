@@ -5,7 +5,7 @@
 
 return view.extend({
 	appMeta: {
-		qbittorrent: { port: 8080, title: 'qBittorrent (торрент-клиент)', desc: 'Веб-морда :8080. Закачки и конфиг хранятся на диске (/mnt/sda1/opt/apps/qbittorrent). Лимиты скорости стоит задать в настройках веб-морды.' },
+		qbittorrent: { port: 8080, title: 'qBittorrent (торрент-клиент)', desc: 'Веб-морда :8080. Закачки и конфиг хранятся на диске (/mnt/sda1/opt/apps/qbittorrent). Вход: логин admin, пароль временный — нажмите «Пароль WebUI» (qBittorrent перезапустится и покажет его), затем задайте свой: Настройки → WebUI → Аутентификация. Лимиты скорости стоит задать там же.' },
 		xray: { title: 'Xray-core (VLESS/Reality)', desc: 'Резервный прокси. После установки отредактируйте /mnt/sda1/opt/apps/xray/config.json и перезапустите сервис.' },
 		tailscale: { title: 'Tailscale (доступ домой)', desc: 'Доступ к домашней сети из любой точки, в том числе из-за CGNAT. После установки выполните по SSH: /mnt/sda1/opt/apps/tailscale/tailscale up' },
 		docker: { title: 'Docker (контейнеры)', desc: 'dockerd + containerd + docker-compose из фида OpenWrt, ~230 МБ на ext4-томе /opt (на диске создаётся файл ext4store.img, 16 ГБ, sparse). Управление — LuCI → Службы → Docker. RAM: dockerd ~100 МБ — держите включённым, только если есть контейнеры.' },
@@ -116,12 +116,13 @@ return view.extend({
 		}
 	},
 
-	handleInstall: function(ev, app) {
+	/* ui.createHandlerFn(ctx, fn, ...args) передаёт args ПЕРВЫМИ, event — последним */
+	handleInstall: function(app, ev) {
 		var self = this;
 		ui.showModal(_('Установить %s на внешний диск?').format(this.appMeta[app].title) +
 			'<br><small>' + _('Скачивается ~30–80 МБ, роутер должен иметь интернет. Установка идёт в фоне.') + '</small>', [
 			E('div', { 'class': 'btn-row' }, [
-				E('button', { 'class': 'btn cbi-button-action', 'click': ui.createHandlerFn(function() {
+				E('button', { 'class': 'btn cbi-button-action', 'click': ui.createHandlerFn(self, function() {
 					ui.hideModal();
 					return self.run(['install', app]).then(function(res) {
 						if (res && res.stderr) ui.addNotification(null, E('p', {}, res.stderr), 'warning');
@@ -133,12 +134,12 @@ return view.extend({
 		]);
 	},
 
-	handleRemove: function(ev, app) {
+	handleRemove: function(app, ev) {
 		var self = this;
 		ui.showModal(_('Удалить %s?').format(this.appMeta[app].title) +
 			'<br><small>' + _('Будет удалён только бинарь и сервис. Данные на диске останутся.') + '</small>', [
 			E('div', { 'class': 'btn-row' }, [
-				E('button', { 'class': 'btn cbi-button-negative', 'click': ui.createHandlerFn(function() {
+				E('button', { 'class': 'btn cbi-button-negative', 'click': ui.createHandlerFn(self, function() {
 					ui.hideModal();
 					return self.run(['remove', app]).then(function(res) {
 						if (res && res.stderr) ui.addNotification(null, E('p', {}, res.stderr), 'warning');
@@ -150,7 +151,7 @@ return view.extend({
 		]);
 	},
 
-	handleService: function(ev, app, action) {
+	handleService: function(app, action, ev) {
 		var self = this;
 		return this.run([action, app]).then(function(res) {
 			if (res && res.stderr) ui.addNotification(null, E('p', {}, res.stderr));
@@ -158,10 +159,10 @@ return view.extend({
 		});
 	},
 
-	handleToggle: function(ev, app) {
+	handleToggle: function(app, ev) {
 		var en = document.getElementById('opt-service-enable-' + app);
 		var op = (en && en.getAttribute('data-enabled') === '1') ? 'disable' : 'enable';
-		return this.handleService(ev, app, op);
+		return this.handleService(app, op, ev);
 	},
 
 	handleQbtPassword: function(ev) {

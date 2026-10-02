@@ -36,6 +36,12 @@ return view.extend({
 
 	call: function(cmd, args) {
 		return this.fexec(cmd, args).catch(function(err) {
+			/* «install» только запускает фоновую установку; если ответ не пришёл
+			   (роутер занят), она, как правило, уже идёт — статус и лог обновятся сами */
+			if (args[0] == 'install' && /timed out|timeout/i.test((err && err.message) || '')) {
+				ui.addNotification(null, E('p', {}, _('Роутер долго не отвечал на запуск установки. Скорее всего, она уже идёт — статус и лог ниже обновятся сами.')), 'warning');
+				return null;
+			}
 			ui.addNotification(null, E('p', {}, _('Ошибка вызова %s: %s. Обновите страницу (Ctrl+F5); если повторяется — войдите в LuCI заново.')
 				.format(args.join(' '), (err && err.message) || err)), 'danger');
 			return null;

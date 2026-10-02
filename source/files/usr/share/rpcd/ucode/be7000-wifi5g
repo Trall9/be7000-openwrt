@@ -1,0 +1,99 @@
+'use strict';
+
+import { popen, access, readfile } from 'fs';
+import { cursor } from 'uci';
+
+const BIN = '/usr/sbin/be7000-5g-split';
+const LOG = '/tmp/be7000-5g-split.log';
+const PARAM = '/sys/module/ath12k/parameters/board_id';
+
+function sh(cmd) {
+	let fd = popen(cmd, 'r');
+	let out = fd ? trim(fd.read('all') ?? '') : '';
+	if (fd)
+		fd.close();
+	return out;
+}
+
+// NO-EHT on the 5 GHz rules of the QCN9274 phy: the firmware turns off
+// 802.11be for some countries (RU among them), the AP silently runs as Wi-Fi 6
+function eht_state() {
+	let country5 = null, no_eht = false;
+	let c = cursor();
+	c.foreach('wireless', 'wifi-device', function(d) {
+		if (d.band == '5g' && country5 == null)
+			country5 = d.country ?? '';
+	});
+	let phy = sh('ls /sys/bus/pci/devices/0002:01:00.0/ieee80211 2>/dev/null | head -1');
+	if (length(phy)) {
+		let head = `phy#${replace(phy, 'phy', '')} `, inphy = false;
+		for (let line in split(sh('iw reg get'), '\n')) {
+			if (substr(line, 0, 4) == 'phy#' || line == 'global')
+				inphy = (index(line, head) == 0);
+			else if (inphy) {
+				let m = match(line, /^\s*\(([0-9]+) - ([0-9]+)/);
+				if (m && +m[1] >= 5000 && +m[2] <= 5925 && index(line, 'NO-EHT') >= 0)
+					no_eht = true;
+			}
+		}
+	}
+	return { country5, no_eht };
+}
+
+return {
+	'be7000-wifi5g': {
+		status: {
+			call: function() {
+				let running = sh('ps w | grep -q "[b]e7000-5g-split \\(o[nf]\\|mode [a-z]\\)" && echo 1') == '1';
+				let mode = sh(`${BIN} mode`);
+				return {
+					available: access(BIN) == true && access(PARAM) == true,
+					mode,
+					split: mode != 'single',
+					saved: sh('uci -q get be7000.wifi.mode_5g') || (sh('uci -q get be7000.wifi.split_5g') == '1' ? 'split' : 'single'),
+					mlo_up: sh('iw dev 2>/dev/null | grep -c "MLD with links"') != '0',
+					running,
+					log: trim(readfile(LOG) ?? ''),
+					...eht_state()
+				};
+			}
+		},
+		set_country: {
+			args: { country: '' },
+			call: function(req) {
+				let cc = uc(req.args?.country ?? '');
+				if (!match(cc, /^[A-Z][A-Z]$/))
+					return { ok: false, output: 'country is two letters' };
+				// only the 5 GHz radios of the QCN9274: that is where the
+				// radio firmware drops Wi-Fi 7 for some countries
+				let c = cursor(), n = 0;
+				c.foreach('wireless', 'wifi-device', function(d) {
+					if (d.band == '5g' && index(d.path ?? '', 'pci') >= 0) {
+						c.set('wireless', d['.name'], 'country', cc);
+						n++;
+					}
+				});
+				if (!n)
+					return { ok: false, output: 'no 5 GHz radio' };
+				c.commit('wireless');
+				sh('(sleep 1; wifi up) </dev/null >/dev/null 2>&1 &');
+				return { ok: true, radios: n };
+			}
+		},
+		set: {
+			args: { mode: '', split: false },
+			call: function(req) {
+				if (access(BIN) != true)
+					return { ok: false, output: 'be7000-5g-split not found' };
+				let mode = req.args?.mode;
+				if (index([ 'single', 'split', 'mlo' ], mode) < 0)
+					mode = req.args?.split ? 'split' : 'single';
+				// takes 20-90 s (firmware reload, wifi reload, MLO check): run
+				// it detached and let the page poll status
+				// a switch that hangs somewhere must not leave the page waiting forever
+				sh(`(timeout 300 ${BIN} mode ${mode} || echo "switch stopped or failed, rc $?") >${LOG} 2>&1 </dev/null &`);
+				return { ok: true, mode };
+			}
+		}
+	}
+};

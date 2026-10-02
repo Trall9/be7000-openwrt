@@ -1,0 +1,33 @@
+'use strict';
+
+import { popen } from 'fs';
+
+const BIN = '/usr/libexec/be7000-ppe';
+
+function run(args) {
+	let fd = popen(`${BIN} ${args} 2>&1`, 'r');
+	let out = fd ? trim(fd.read('all') ?? '') : '';
+	let rc = fd ? fd.close() : -1;
+	return { rc, out };
+}
+
+return {
+	'be7000-ppe': {
+		status: {
+			call: function() {
+				let r = run('status');
+				try { return json(r.out); } catch (e) { return { error: r.out }; }
+			}
+		},
+		set: {
+			args: { what: '', on: false },
+			call: function(req) {
+				let what = req.args?.what;
+				if (what != 'nat' && what != 'bridge')
+					return { ok: false, output: 'what is nat or bridge' };
+				let r = run(`${what} ${req.args?.on ? 'on' : 'off'}`);
+				return { ok: r.rc == 0, output: r.out };
+			}
+		}
+	}
+};

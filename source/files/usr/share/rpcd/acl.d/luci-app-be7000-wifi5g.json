@@ -1,0 +1,18 @@
+{
+	"luci-app-be7000-wifi5g": {
+		"description": "5 GHz split into two radios",
+		"read": {
+			"ubus": {
+				"be7000-wifi5g": [ "status" ]
+			}
+		},
+		"write": {
+			"file": {
+				"/usr/sbin/be7000-5g-split": [ "exec" ]
+			},
+			"ubus": {
+				"be7000-wifi5g": [ "set", "set_country" ]
+			}
+		}
+	}
+}

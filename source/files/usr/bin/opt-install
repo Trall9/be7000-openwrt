@@ -133,8 +133,15 @@ mount_ext4_locked() {
 init_name() { case "$1" in docker) echo dockerd ;; *) echo "$1" ;; esac; }
 
 busy_app() {
-	[ -f "$STATE_FILE" ] || return 1
 	local app pid
+	# установка из Каталога приложений (свой state-файл) — тоже занятость:
+	# параллельные apk/opkg и монтирование /opt мешают друг другу
+	if [ -f /var/run/be7000-catalog.state ]; then
+		app=$(awk '{print $1}' /var/run/be7000-catalog.state 2>/dev/null)
+		pid=$(awk '{print $2}' /var/run/be7000-catalog.state 2>/dev/null)
+		[ "$pid" != done ] && [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && { echo "$app (каталог)"; return 0; }
+	fi
+	[ -f "$STATE_FILE" ] || return 1
 	app=$(awk '{print $1}' "$STATE_FILE" 2>/dev/null)
 	pid=$(awk '{print $2}' "$STATE_FILE" 2>/dev/null)
 	[ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && { echo "$app"; return 0; }
@@ -163,7 +170,10 @@ bin_version() {
 	esac
 }
 
-svc_running() { pgrep -f "$1" >/dev/null 2>&1; }
+# только процессы, чья командная строка НАЧИНАЕТСЯ с пути бинаря: подстрока
+# находила и чужие процессы (grep/tail/ssh с этим словом) — «Стоп» ждал 15 с
+# и показывал «работает» при остановленной программе
+svc_running() { pgrep -f "^$1( |$)" >/dev/null 2>&1; }
 
 # ---------------- установка (фоновый воркер) ----------------
 
@@ -518,6 +528,8 @@ START=99
 STOP=10
 start() {
 	[ -x /opt/etc/init.d/rc.unslung ] || { logger -t entware "нет /opt (диск не смонтирован?)"; return 0; }
+	# донастройка пакетов из каталога (opkg upgrade перезаписывает их init-скрипты)
+	[ -x /usr/bin/be7000-catalog ] && /usr/bin/be7000-catalog fixup >/dev/null 2>&1
 	/opt/etc/init.d/rc.unslung start >/dev/null 2>&1
 	touch /var/run/entware.started
 }
@@ -680,6 +692,13 @@ service_ctl() {
 	svc=$(init_name "$app")
 	[ -x "/etc/init.d/$svc" ] || die "сервис $app не установлен"
 	/etc/init.d/"$svc" "$op"
+	# procd stop/start возвращается сразу, а процесс завершается/стартует секунды —
+	# ждём (до 15 с), чтобы следующий status в LuCI уже показал верное состояние
+	local i=0
+	case "$op" in
+		stop)          while [ $i -lt 30 ] && app_running "$app"; do sleep 0.5; i=$((i + 1)); done ;;
+		start|restart) while [ $i -lt 30 ] && ! app_running "$app"; do sleep 0.5; i=$((i + 1)); done ;;
+	esac
 	case "$op" in
 		disable) mounted && { grep -qxs "$app" "$AUTOSTART_OFF" || echo "$app" >> "$AUTOSTART_OFF"; } ;;
 		enable)  [ -f "$AUTOSTART_OFF" ] && sed -i "/^$app\$/d" "$AUTOSTART_OFF" ;;
@@ -710,11 +729,11 @@ qbt_password() {
 
 app_running() {
 	case "$1" in
-		qbittorrent) svc_running "qbittorrent-nox" ;;
-		xray)        svc_running "opt/apps/xray/xray" ;;
-		tailscale)   svc_running "tailscaled" ;;
+		qbittorrent) svc_running "$APPS_DIR/qbittorrent/qbittorrent-nox" ;;
+		xray)        svc_running "$APPS_DIR/xray/xray" ;;
+		tailscale)   svc_running "$APPS_DIR/tailscale/tailscaled" ;;
 		docker)      pgrep -x dockerd >/dev/null 2>&1 ;;
-		jackett)     svc_running "Jackett/jackett" ;;
+		jackett)     svc_running "$JACKETT_DIR/jackett" ;;
 		entware)     [ -f /var/run/entware.started ] ;;
 		*) return 1 ;;
 	esac
@@ -736,6 +755,9 @@ autostart() {
 		done
 	fi
 	[ -x /etc/init.d/dockerd ] && [ -x "$DOCKER_ROOT/usr/bin/dockerd" ] && [ ! -e /usr/bin/dockerd ] && docker_links
+	# init Entware, созданный старой версией, — без повторной донастройки пакетов
+	[ -f /etc/init.d/entware ] && ! grep -q 'be7000-catalog fixup' /etc/init.d/entware && \
+		sed -i '/rc.unslung start/i\	[ -x /usr/bin/be7000-catalog ] \&\& /usr/bin/be7000-catalog fixup >/dev/null 2>\&1' /etc/init.d/entware
 	for app in $APPS_ALL; do
 		svc=$(init_name "$app")
 		[ -x "/etc/init.d/$svc" ] || continue
@@ -787,6 +809,10 @@ case "$1" in
 	disk-info)   disk_info ;;
 	format-disk) format_disk "$2" "$3" ;;
 	_format)     LOG_FILE=/tmp/opt-install-format.log; do_format "$2"; echo "format done $?" > /var/run/opt-install.format ;;
-	format-log)  cat /tmp/opt-install-format.log 2>/dev/null; cat /var/run/opt-install.format 2>/dev/null ;;
+	format-log)  cat /tmp/opt-install-format.log 2>/dev/null; cat /var/run/opt-install.format 2>/dev/null
+	             # воркер умер, не записав итог (kill, OOM) — иначе LuCI ждёт вечно
+	             set -- $(cat /var/run/opt-install.format 2>/dev/null)
+	             [ "$1" = format ] && [ "$2" != done ] && [ -n "$2" ] && ! kill -0 "$2" 2>/dev/null && \
+	             	! grep -q '^format done' /var/run/opt-install.format 2>/dev/null && echo "format done 99" ;;
 	*)           echo "usage: opt-install {status|install|remove|start|stop|restart|enable|disable|log|mount-ext4|autostart} [app]"; exit 2 ;;
 esac

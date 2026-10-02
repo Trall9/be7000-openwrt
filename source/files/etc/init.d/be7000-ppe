@@ -1,0 +1,8 @@
+#!/bin/sh /etc/rc.common
+# Copy the PPE bridge offload choice into /etc/modules.conf before
+# /etc/init.d/boot (START=10) loads the modules.
+START=09
+
+boot() {
+	/usr/libexec/be7000-ppe sync
+}

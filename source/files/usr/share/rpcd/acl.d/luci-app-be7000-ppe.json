@@ -1,0 +1,15 @@
+{
+	"luci-app-be7000-ppe": {
+		"description": "Hardware offload of the Qualcomm PPE",
+		"read": {
+			"ubus": {
+				"be7000-ppe": [ "status" ]
+			}
+		},
+		"write": {
+			"ubus": {
+				"be7000-ppe": [ "set" ]
+			}
+		}
+	}
+}
