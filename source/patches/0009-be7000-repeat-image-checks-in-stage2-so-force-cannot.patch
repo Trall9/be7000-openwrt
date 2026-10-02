@@ -1,0 +1,52 @@
+From a5be8989a6d03fa297efa56f25275b856a229f6a Mon Sep 17 00:00:00 2001
+From: Trall9 <tralllll9@gmail.com>
+Date: Fri, 2 Oct 2026 03:42:58 +0200
+Subject: [PATCH 9/9] be7000: repeat image checks in stage2 so --force cannot
+ skip them
+
+LuCI "Force upgrade" (sysupgrade --force) skips platform_check_image.
+On the QWRT single-UBI layout a kernel FIT without config@al02-c6 means
+a board that only recovery can bring back, so run be7000_single_check
+again in be7000_do_upgrade before detaching the UBI. ubinfo and hexdump
+are copied to the ramfs for it.
+Tested on hardware: sysupgrade -F with a broken FIT -> "image check
+failed, nothing written", the old system boots.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_016s4ZCYE4HWyW97D5LRd25E
+---
+ .../ipq95xx/base-files/lib/upgrade/platform.sh        | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh b/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
+index c7eb15be..cacbeb04 100644
+--- a/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
++++ b/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
+@@ -1,7 +1,7 @@
+ PART_NAME=firmware
+ REQUIRE_IMAGE_METADATA=1
+ 
+-RAMFS_COPY_BIN='fw_printenv fw_setenv head cmp sha256sum tr mktemp'
++RAMFS_COPY_BIN='fw_printenv fw_setenv head cmp sha256sum tr mktemp ubinfo hexdump'
+ RAMFS_COPY_DATA='/etc/fw_env.config /var/lock/fw_printenv.lock /etc/openwrt_release'
+ 
+ # Название UBI-раздела, с которого грузится система, берём ДОСЛОВНО из
+@@ -178,6 +178,15 @@ be7000_do_upgrade() {
+ 	be7000_ulog "target $target_part mtd$mtdnum slot ${target_slot:-single}"
+ 	be7000_ulog_flush
+ 
++	# Повтор проверок stage1: sysupgrade --force («Force upgrade» в LuCI)
++	# пропускает platform_check_image, а на QWRT-раскладке ошибка в образе =
++	# кирпич до recovery. Здесь --force не действует.
++	if be7000_single_layout && ! be7000_single_check "$image" >> "$BE7000_ULOG" 2>&1; then
++		be7000_ulog "image check failed, nothing written"
++		be7000_ulog_flush
++		return 1
++	fi
++
+ 	echo "Writing OpenWrt image to Xiaomi UBI partition $target_part (slot ${target_slot:-single})"
+ 	CI_UBIPART="$target_part"
+ 	CI_ROOTPART="ubi_rootfs"
+-- 
+2.43.0
+

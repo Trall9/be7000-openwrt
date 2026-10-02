@@ -41,6 +41,14 @@ apply)
 			logger -t be7000-rc "восстановлено из бэкапа: $n включена"
 			"$f" enable; "$f" start
 		else
+			# https-dns-proxy прописывает себя в dnsmasq (server 127.0.0.1#505x,
+			# noresolv). Выключить его, оставив dnsmasq смотреть на него, — это
+			# DNS, умирающий при следующей перезагрузке (так и было 02.10.2026).
+			# Пока dnsmasq на него смотрит, считаем его нужным.
+			if [ "$n" = https-dns-proxy ] && uci -q get dhcp.@dnsmasq[0].server | grep -q '127.0.0.1#505'; then
+				logger -t be7000-rc "https-dns-proxy в бэкапе выключен, но DNS идёт через него — оставляю включённым"
+				continue
+			fi
 			logger -t be7000-rc "восстановлено из бэкапа: $n выключена"
 			"$f" stop; "$f" disable
 		fi

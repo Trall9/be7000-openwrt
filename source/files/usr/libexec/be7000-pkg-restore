@@ -1,0 +1,44 @@
+#!/bin/sh
+# Ставит заново пакеты, которые пользователь ставил сам, после обновления
+# прошивки с сохранением настроек. Список пишет sysupgrade -k (галочка
+# «Include in backup a list of current installed packages» в Система →
+# Резервная копия / Обновление ПО): /etc/backup/installed_packages.txt,
+# строки «пакет<TAB>overlay|rom|unknown». Берём overlay — поставленное сверх
+# прошивки. Зовётся из hotplug 70-be7000-apk-update после apk update.
+
+LIST=/etc/backup/installed_packages.txt
+DONE=/etc/backup/installed_packages.restored
+
+[ -s "$LIST" ] || exit 0
+# список старше текущей прошивки? восстанавливаем один раз на каждый список
+[ -f "$DONE" ] && cmp -s "$LIST" "$DONE" && exit 0
+
+pkgs=""
+for p in $(awk -F'\t' '$2 == "overlay" { print $1 }' "$LIST"); do
+	case "$p" in kernel|kernel=*) continue ;; esac
+	apk info -e "$p" >/dev/null 2>&1 && continue
+	pkgs="$pkgs $p"
+done
+
+if [ -z "$pkgs" ]; then
+	cp "$LIST" "$DONE"
+	exit 0
+fi
+
+logger -t be7000-pkg-restore "ставлю снова:$pkgs"
+fail=""
+# одним вызовом быстрее; если не вышло — по одному, чтобы один
+# пропавший из фида пакет не мешал остальным
+if ! apk add $pkgs >/tmp/be7000-pkg-restore.log 2>&1; then
+	for p in $pkgs; do
+		apk add "$p" >>/tmp/be7000-pkg-restore.log 2>&1 || fail="$fail $p"
+	done
+fi
+if [ -n "$fail" ]; then
+	# не помечаем готовым: попробуем снова при следующем подъёме WAN
+	# (например, фид прошивки ещё не выложен)
+	logger -p user.err -t be7000-pkg-restore "не удалось поставить:$fail (журнал /tmp/be7000-pkg-restore.log)"
+	exit 1
+fi
+logger -t be7000-pkg-restore "готово"
+cp "$LIST" "$DONE"

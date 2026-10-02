@@ -1,0 +1,258 @@
+From 410532be5f72530338fd7c574b8eb4ce7edb4b2c Mon Sep 17 00:00:00 2001
+From: Trall9 <tralllll9@gmail.com>
+Date: Fri, 2 Oct 2026 03:36:43 +0200
+Subject: [PATCH 8/9] be7000: enable sysupgrade on the QWRT single-UBI layout
+
+Two causes made sysupgrade unusable on the 1x80 MB QWRT layout:
+- the opt-install overlayfs at /tmp/run/opt-rootfs moves into the stage2
+  ramfs together with /tmp and keeps ubifs/ubiblock busy, so ubidetach
+  failed and nothing was written; unmount everything backed by the UBI
+  partition first;
+- sysupgrade defaults to ADD_PROVISIONING=1, nand.sh then creates the
+  provisioning volume first (id 0) and shifts kernel/rootfs to 1/2;
+  bootipq takes volumes by number (root=/dev/ubiblock0_1) and refuses
+  to boot. Disable provisioning and check volume ids after writing.
+
+Also: pre-flight checks (sysupgrade.bin, FIT with config@al02-c6, size),
+sha256 verification of kernel/rootfs volumes, a step log in
+/tmp/be7000-upgrade.log (copied to fd 9 when stage2 opens it).
+Tested on hardware: beta3 -> beta3 with settings kept.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_016s4ZCYE4HWyW97D5LRd25E
+---
+ .../base-files/lib/upgrade/platform.sh        | 182 ++++++++++++++++--
+ 1 file changed, 161 insertions(+), 21 deletions(-)
+
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh b/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
+index 88b90e1d..c7eb15be 100644
+--- a/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
++++ b/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
+@@ -2,7 +2,7 @@ PART_NAME=firmware
+ REQUIRE_IMAGE_METADATA=1
+ 
+ RAMFS_COPY_BIN='fw_printenv fw_setenv head cmp sha256sum tr mktemp'
+-RAMFS_COPY_DATA='/etc/fw_env.config /var/lock/fw_printenv.lock'
++RAMFS_COPY_DATA='/etc/fw_env.config /var/lock/fw_printenv.lock /etc/openwrt_release'
+ 
+ # Название UBI-раздела, с которого грузится система, берём ДОСЛОВНО из
+ # первого ubi.mtd= в /proc/cmdline (его заполняет загрузчик). Слово за словом:
+@@ -24,25 +24,115 @@ be7000_single_layout() {
+ 	[ -z "$(find_mtd_index rootfs_1)" ]
+ }
+ 
+-# На QWRT-раскладке sysupgrade стирает единственный раздел системы, запасного
+-# слота нет. На BE7000 это трижды кончилось пустым разделом (26.09, 27.09,
+-# 30.09: оранжевый LED — загрузчик жив, ядра нет). Пока путь не отлажен по
+-# UART — отказываем ДО записи. Обновление — recovery QWRT-загрузчика.
+-be7000_single_refuse() {
+-	be7000_single_layout || return 1
+-	[ "$BE7000_ALLOW_SINGLE_SYSUPGRADE" = 1 ] && return 1
+-	echo "BE7000, QWRT layout (single 80 MB rootfs): sysupgrade is disabled,"
+-	echo "it would erase the only system partition. Nothing was written."
+-	echo "Flash ...-factory.ubi via the QWRT bootloader recovery page instead:"
+-	echo "power off, hold Reset, power on, release after ~10 s, open http://192.168.1.1"
++# Журнал обновления пишется в раздел "crash" (mtdoops, на QWRT-разметке mtd25):
++# его не трогают ни загрузка, ни recovery QWRT-загрузчика, поэтому после
++# неудачного обновления и перепрошивки через recovery видно, на каком шаге
++# остановились:  strings /dev/mtd$(grep '"crash"' /proc/mtd | cut -c4- | cut -d: -f1)
++# (crash_syslog не годится — его каждую загрузку перезаписывает be7000-bootlog).
++BE7000_ULOG=/tmp/be7000-upgrade.log
++
++be7000_ulog() {
++	local line="$(cut -d' ' -f1 /proc/uptime) $*"
++	echo "$*"
++	echo "$line" >> "$BE7000_ULOG"
++	# fd 9 — копия журнала на USB-диск, если её открыл stage2 (отладка)
++	{ echo "$line" >&9; } 2>/dev/null
++}
++
++be7000_ulog_flush() {
++	grep -q '"crash"' /proc/mtd || return 0
++	mtd -q -e crash write "$BE7000_ULOG" crash >/dev/null 2>&1 || :
++	sync
++}
++
++be7000_tar_len() {
++	tar xOf "$1" "sysupgrade-xiaomi_be7000/$2" 2>/dev/null | wc -c
++}
++
++# Проверки ДО записи (stage1, система ещё работает). На QWRT-раскладке
++# запасного слота нет: всё, что может не загрузиться, отсекаем здесь.
++#  - в образе есть kernel и root;
++#  - kernel — FIT с конфигом config@al02-c6: другой загрузчик QWRT не
++#    найдёт и не запустит ядро (оранжевый LED, только recovery);
++#  - kernel + root + 4 МБ под настройки помещаются в UBI раздела.
++be7000_single_check() {
++	local image="$1" klen rlen leb total need
++
++	klen="$(be7000_tar_len "$image" kernel)"
++	rlen="$(be7000_tar_len "$image" root)"
++	if [ "${klen:-0}" -le 0 ] || [ "${rlen:-0}" -le 0 ]; then
++		echo "BE7000: the image has no kernel or root, use ...-sysupgrade.bin"
++		return 1
++	fi
++
++	if [ "$(tar xOf "$image" sysupgrade-xiaomi_be7000/kernel 2>/dev/null | head -c 4 | hexdump -v -e '1/1 "%02x"')" != "d00dfeed" ]; then
++		echo "BE7000: the kernel is not a FIT image, the bootloader cannot start it"
++		return 1
++	fi
++	if ! tar xOf "$image" sysupgrade-xiaomi_be7000/kernel 2>/dev/null | grep -q -a 'config@al02-c6'; then
++		echo "BE7000: the kernel FIT has no config@al02-c6, the QWRT bootloader cannot start it"
++		return 1
++	fi
++
++	leb="$(ubinfo /dev/ubi0 2>/dev/null | sed -n 's/^Logical eraseblock size: *\([0-9]*\).*/\1/p')"
++	total="$(ubinfo /dev/ubi0 2>/dev/null | sed -n 's/^Total amount of logical eraseblocks: *\([0-9]*\).*/\1/p')"
++	if [ -n "$leb" ] && [ -n "$total" ]; then
++		# 24 = 20 резервных блоков под bad blocks + 4 служебных UBI
++		need=$(( (klen + leb - 1) / leb + (rlen + leb - 1) / leb + 4194304 / leb + 24 ))
++		if [ "$need" -gt "$total" ]; then
++			echo "BE7000: the image needs $need erase blocks, the partition has $total"
++			return 1
++		fi
++	fi
++
+ 	return 0
+ }
+ 
++# stage2 переносит /tmp в ramfs вместе со всем, что под ним смонтировано.
++# overlayfs поверх /overlay вне корня (opt-install: /tmp/run/opt-rootfs)
++# держит ubifs rootfs_data и squashfs-блок — ubidetach отказывает, и
++# обновление молча не происходит. Отмонтируем всё, что опирается на UBI
++# раздела, с конца (вложенные раньше родителей).
++be7000_release_ubi() {
++	local mp i=0
++
++	while [ $i -lt 3 ]; do
++		for mp in $(awk '$1 ~ /^overlayfs:|^\/dev\/ubi/ {print $2}' /proc/mounts | sort -r); do
++			umount "$mp" 2>/dev/null || umount -l "$mp" 2>/dev/null
++			be7000_ulog "umount $mp: $(grep -q " $mp " /proc/mounts && echo busy || echo ok)"
++		done
++		awk '$1 ~ /^overlayfs:|^\/dev\/ubi/' /proc/mounts | grep -q . || return 0
++		i=$((i + 1))
++	done
++	return 0
++}
++
++# Загрузчик берёт kernel и rootfs по номерам томов, а не по именам.
++be7000_check_vol_id() {
++	local ubidev vol
++	ubidev="$(nand_find_ubi "$CI_UBIPART")"
++	vol="$(nand_find_volume "$ubidev" "$1")"
++	[ "${vol##*_}" = "$2" ] || { be7000_ulog "volume $1 is $vol, expected id $2"; return 1; }
++}
++
++# Сверка записанного с образом: при расхождении система не загрузится,
++# а восстановить её можно только через recovery.
++be7000_verify_volume() {
++	local image="$1" member="$2" volname="$3" len="$4"
++	local ubidev vol want have
++
++	ubidev="$(nand_find_ubi "$CI_UBIPART")"
++	vol="$(nand_find_volume "$ubidev" "$volname")"
++	[ -n "$vol" ] || { be7000_ulog "verify: volume $volname not found"; return 1; }
++	want="$(tar xOf "$image" "sysupgrade-xiaomi_be7000/$member" | sha256sum | cut -d' ' -f1)"
++	have="$(head -c "$len" "/dev/$vol" | sha256sum | cut -d' ' -f1)"
++	be7000_ulog "verify $volname ($vol, $len bytes): want ${want%"${want#????????????}"} have ${have%"${have#????????????}"}"
++	[ -n "$want" ] && [ "$want" = "$have" ]
++}
++
+ be7000_do_upgrade() {
+ 	local image="$1"
+-	local mtdnum target_part target_slot flags_ok=1
+-
+-	be7000_single_refuse && return 1
++	local mtdnum target_part target_slot flags_ok=1 klen rlen
+ 
+ 	# Обновляем раздел, с которого работаем, и не трогаем ничего больше.
+ 	#
+@@ -81,12 +171,55 @@ be7000_do_upgrade() {
+ 		return 1
+ 	fi
+ 
++	klen="$(be7000_tar_len "$image" kernel)"
++	rlen="$(be7000_tar_len "$image" root)"
++	# не стираем: туда же пишет stage2 (если его вывод перехвачен)
++	be7000_ulog "=== be7000 upgrade: $(. /etc/openwrt_release 2>/dev/null; echo "$DISTRIB_RELEASE") -> image kernel $klen root $rlen ==="
++	be7000_ulog "target $target_part mtd$mtdnum slot ${target_slot:-single}"
++	be7000_ulog_flush
++
+ 	echo "Writing OpenWrt image to Xiaomi UBI partition $target_part (slot ${target_slot:-single})"
+ 	CI_UBIPART="$target_part"
+ 	CI_ROOTPART="ubi_rootfs"
+-	nand_detach_ubi "$target_part" || return 1
+-	ubiformat "/dev/mtd$mtdnum" -y || return 1
+-	nand_do_flash_file "$image" "fwtool -q -i /tmp/sysupgrade.meta -T $image" || return 1
++	be7000_release_ubi
++	if ! nand_detach_ubi "$target_part" >> "$BE7000_ULOG" 2>&1; then
++		# раздел ещё занят — ничего не стёрто, старая система загрузится
++		be7000_ulog "detach failed, nothing written"
++		be7000_ulog_flush
++		return 1
++	fi
++	be7000_ulog "detached, formatting (point of no return)"
++	be7000_ulog_flush
++	if ! ubiformat "/dev/mtd$mtdnum" -y >> "$BE7000_ULOG" 2>&1; then
++		be7000_ulog "ubiformat FAILED"
++		be7000_ulog_flush
++		return 1
++	fi
++	be7000_ulog "formatted, writing volumes"
++	# sysupgrade по умолчанию просит том "provisioning" (ADD_PROVISIONING=1),
++	# nand.sh создаёт его ПЕРВЫМ — он забирает id 0, kernel уезжает в 1,
++	# rootfs в 2. Загрузчик Xiaomi/QWRT ждёт kernel=0 и rootfs=1
++	# (root=/dev/ubiblock0_1 зашит в bootipq) — с таким UBI он не грузит
++	# ядро (оранжевый LED + AIoT; проверено 02.10.2026).
++	UPGRADE_OPT_ADD_PROVISIONING=0
++	if ! nand_do_flash_file "$image" "fwtool -q -i /tmp/sysupgrade.meta -T $image" >> "$BE7000_ULOG" 2>&1; then
++		be7000_ulog "flash FAILED"
++		be7000_ulog_flush
++		return 1
++	fi
++	be7000_ulog "volumes written: $(for v in /sys/class/ubi/ubi*_*; do [ -e "$v/name" ] && printf '%s=%s ' "${v##*/}" "$(cat "$v/name")"; done)"
++	if ! be7000_check_vol_id kernel 0 || ! be7000_check_vol_id ubi_rootfs 1; then
++		be7000_ulog "volume ids FAILED, the bootloader will not start this: flash factory.ubi via recovery"
++		be7000_ulog_flush
++		return 1
++	fi
++	if ! be7000_verify_volume "$image" kernel kernel "$klen" ||
++	   ! be7000_verify_volume "$image" root ubi_rootfs "$rlen"; then
++		be7000_ulog "verify FAILED, the system will not boot: flash factory.ubi via recovery"
++		be7000_ulog_flush
++		return 1
++	fi
++	be7000_ulog_flush
+ 
+ 	# Слотовые флаги осмысленны только на стоковой A/B раскладке со стоковым
+ 	# загрузчиком. На одноразделной QWRT их нет — не считаем это ошибкой.
+@@ -101,7 +234,14 @@ be7000_do_upgrade() {
+ 		[ "$flags_ok" = 1 ] || echo "WARNING: image written but boot flags could not be updated"
+ 	fi
+ 
+-	nand_do_restore_config || return 1
++	if ! nand_do_restore_config >> "$BE7000_ULOG" 2>&1; then
++		# система загрузится, но без настроек
++		be7000_ulog "restore config FAILED"
++		be7000_ulog_flush
++		return 1
++	fi
++	be7000_ulog "config restored, rebooting"
++	be7000_ulog_flush
+ 	sync
+ 
+ 	return 0
+@@ -117,8 +257,8 @@ platform_check_image() {
+ 		return 0
+ 		;;
+ 	xiaomi,be7000)
+-		be7000_single_refuse && return 1
+-		return 0
++		be7000_single_layout || return 0
++		be7000_single_check "$1"
+ 		;;
+ 	*)
+ 		return 0
+-- 
+2.43.0
+
