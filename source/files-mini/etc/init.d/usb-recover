@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+# One-shot cold-boot USB recovery: the Realtek hub chain sometimes glitch-loops
+# at boot; a single xHCI rebind fixes enumeration (verified 2026-09-26).
+START=99
+USE_PROCD=0
+
+boot() {
+	( sleep 45
+	  if [ ! -b /dev/sda ]; then
+		logger -t usb-recover "no /dev/sda 45s after boot - rebind xhci-hcd.1.auto"
+		echo xhci-hcd.1.auto > /sys/bus/platform/drivers/xhci-hcd/unbind 2>/dev/null
+		sleep 3
+		echo xhci-hcd.1.auto > /sys/bus/platform/drivers/xhci-hcd/bind 2>/dev/null
+	  fi
+	  [ -b /dev/sda ] && touch /tmp/usb-rebound
+	) &
+}
+
+start() { boot; }

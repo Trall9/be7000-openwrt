@@ -1,0 +1,12 @@
+#!/bin/sh /etc/rc.common
+# Первая загрузка после обновления с extroot: fstools не берёт диск другой
+# прошивки, роутер встаёт на флеше — переносим свежие настройки на диск и
+# перезагружаемся (be7000-extroot boot). После fstab (11), до сети (20).
+# Затем — сторож: если диск под /overlay отвалится, перезагрузка или откат на флеш.
+START=12
+
+boot() {
+	/usr/sbin/be7000-extroot boot
+	# сторож, пока /overlay на диске (be7000-extroot guard)
+	/usr/sbin/be7000-extroot guard </dev/null >/dev/null 2>&1 &
+}

@@ -1,0 +1,24 @@
+#!/bin/sh
+# Списки пакетов apk живут в RAM (/var/cache/apk) и пропадают при каждой
+# перезагрузке — LuCI «Программное обеспечение» показывает только установленное.
+# При подъёме WAN качаем индексы фидов в фоне (раз в 12 ч, не чаще).
+[ "$ACTION" = ifup ] || exit 0
+case "$INTERFACE" in wan|wan6) ;; *) exit 0 ;; esac
+
+STAMP=/var/run/be7000-apk-update
+[ -f "$STAMP" ] && [ $(( $(date +%s) - $(date -r "$STAMP" +%s) )) -lt 43200 ] && exit 0
+touch "$STAMP"
+
+# dropbear/hotplug не ждут дочерние процессы — отвязываемся через setsid
+setsid sh -c '
+	for i in 1 2 3 4 5 6; do
+		apk update >/dev/null 2>&1 && { logger -t apk-update "списки пакетов обновлены"; /usr/libexec/be7000-pkg-restore; exit 0; }
+		sleep 30
+	done
+	rm -f '"$STAMP"'
+	logger -t apk-update "не удалось обновить списки пакетов"
+	# часть фидов могла обновиться (например, нет только фида прошивки) —
+	# ставим что получится, остальное при следующем подъёме WAN
+	/usr/libexec/be7000-pkg-restore
+' </dev/null >/dev/null 2>&1 &
+exit 0

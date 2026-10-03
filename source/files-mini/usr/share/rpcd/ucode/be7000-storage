@@ -1,0 +1,76 @@
+'use strict';
+
+// Перенос /overlay на USB-диск: обёртка над /usr/sbin/be7000-extroot.
+// По образцу be7000-storage из Beam WRT (фоновая задача + опрос job).
+
+import { popen, access, readfile, unlink } from 'fs';
+
+const BIN = '/usr/sbin/be7000-extroot';
+const JOB_LOG = '/tmp/be7000-extroot.log';
+const JOB_RC = '/tmp/be7000-extroot.rc';
+
+function shellquote(s) {
+	return `'${replace(s, "'", "'\\''")}'`;
+}
+
+function run(args) {
+	let cmd = join(' ', map(args, (a) => shellquote(a)));
+	let fd = popen(`${shellquote(BIN)} ${cmd} 2>&1; echo __EXIT:$?`, 'r');
+	let all = fd ? fd.read('all') : '';
+	if (fd)
+		fd.close();
+	let m = match(all, /__EXIT:(\d+)\s*$/);
+	let code = m ? int(m[1]) : 1;
+	return { ok: code == 0, output: trim(replace(all, /__EXIT:\d+\s*$/, '')) };
+}
+
+function query(sub) {
+	return {
+		call: function() {
+			let r = run([sub, '--json']);
+			if (!r.ok)
+				return { ok: false, output: r.output };
+			try { return { ok: true, data: json(r.output) }; }
+			catch (e) { return { ok: false, output: r.output }; }
+		}
+	};
+}
+
+return {
+	'be7000-storage': {
+		status: query('status'),
+		list: query('list'),
+		use: {
+			args: { device: '', keep: false },
+			call: function(req) {
+				let dev = req.args?.device ?? '';
+				if (!match(dev, /^\/dev\/(sd[a-z][0-9]*|mmcblk[0-9](p[0-9]+)?)$/))
+					return { ok: false, output: 'неверное устройство' };
+				if (access(JOB_LOG) && !access(JOB_RC))
+					return { ok: false, output: 'перенос уже идёт' };
+				unlink(JOB_RC);
+				// форматирование и копирование дольше таймаута запроса LuCI
+				let cmd = `${shellquote(BIN)} use ${shellquote(dev)} ${req.args?.keep ? '--keep' : '--yes'}`;
+				let fd = popen(`(${cmd} >${JOB_LOG} 2>&1; echo $? >${JOB_RC}) </dev/null >/dev/null 2>&1 &`, 'r');
+				if (fd)
+					fd.close();
+				return { ok: true, started: true };
+			}
+		},
+		job: {
+			call: function() {
+				let rc = readfile(JOB_RC);
+				return {
+					done: rc != null,
+					ok: rc != null && int(trim(rc)) == 0,
+					output: trim(readfile(JOB_LOG) ?? '')
+				};
+			}
+		},
+		revert: {
+			call: function() {
+				return run(['revert', '--yes']);
+			}
+		}
+	}
+};

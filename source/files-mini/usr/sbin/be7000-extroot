@@ -1,0 +1,450 @@
+#!/bin/sh
+# Перенос /overlay на внешний диск ext4 (extroot).
+#
+# В /overlay живёт всё, что роутер помнит между перезагрузками: настройки,
+# поставленные пакеты, списки. На разметке QWRT под него ~20 МБ флеша (том
+# rootfs_data), с USB-диском места сколько угодно.
+#
+#   be7000-extroot status [--json]
+#   be7000-extroot list [--json]
+#   be7000-extroot use <раздел> --yes      форматировать в ext4 и перенести
+#   be7000-extroot use <раздел> --keep     перенести на готовый ext4 без форматирования
+#   be7000-extroot revert --yes [--reboot] вернуть /overlay во флеш
+#   be7000-extroot boot                    из /etc/init.d/be7000-extroot
+#
+# Из Beam WRT (github.com/timofey-maykov/be7000-openwrt, be7000-extroot 1.4.0):
+# набор команд, проверки занятых дисков (children_busy/parent_busy), delay_root
+# 15 с, метка раздела, запуск из LuCI фоновой задачей.
+#
+# Своё. Диск привязан к сборке прошивки: fstools сверяет UUID squashfs с
+# <диск>/etc/.extroot-uuid, если на диске есть etc/.extroot-default. После
+# обновления UUID другой, роутер встаёт на флеше с перенесёнными настройками,
+# а boot переносит их на диск (старый upper → upper.prev) и перезагружает.
+# Так старые пакеты и модули ядра с диска не перекрывают новую прошивку;
+# поставленное пользователем возвращает be7000-pkg-restore.
+
+LABEL=be7000_overlay
+MIN_MB=256
+MNT=/tmp/extroot.$$
+REFRESHED=/etc/be7000-extroot.refreshed
+LOST=/etc/be7000-extroot.lost  # во внутреннем томе: сколько раз подряд диск пропадал
+INT_MNT=/tmp/extroot-int
+
+die() { echo "$*" >&2; exit 1; }
+# при загрузке (START=12) logd может ещё не работать — пишем и в журнал ядра
+log() {
+	logger -t be7000-extroot "$*"
+	[ "$ACTION" = boot ] && echo "be7000-extroot: $*" > /dev/kmsg
+}
+
+current_overlay_device() {
+	awk '$2 == "/overlay" { d = $1 } END { print d }' /proc/mounts
+}
+
+rootfs_data_dev() {
+	local n
+	for n in /sys/class/ubi/ubi*_*/name; do
+		[ -e "$n" ] || continue
+		[ "$(cat "$n")" = rootfs_data ] && { echo "/dev/$(basename "$(dirname "$n")")"; return 0; }
+	done
+	return 1
+}
+
+# UUID squashfs прошивки — с ним fstools сверяет диск. В /proc/mounts /rom
+# записан как /dev/root, block info показывает настоящий ubiblock.
+rom_uuid() {
+	block info 2>/dev/null | grep 'MOUNT="/rom"' | sed -n 's/.* UUID="\([^"]*\)".*/\1/p'
+}
+
+blk_field() {
+	block info "$1" 2>/dev/null | sed -n "s/.* $2=\"\([^\"]*\)\".*/\1/p"
+}
+
+dev_by_uuid() {
+	block info 2>/dev/null | awk -v u="UUID=\"$1\"" 'index($0, u) { sub(":", "", $1); print $1; exit }'
+}
+
+dev_in_use() {
+	grep -q "^$1 " /proc/mounts && return 0
+	grep -q "^$1 " /proc/swaps 2>/dev/null && return 0
+	return 1
+}
+
+children_busy() {
+	local d
+	case "$1" in /dev/sd[a-z]|/dev/mmcblk[0-9]) ;; *) return 1 ;; esac
+	for d in "$1"[0-9]* "$1"p[0-9]*; do
+		[ -b "$d" ] || continue
+		dev_in_use "$d" && return 0
+	done
+	return 1
+}
+
+# После переразметки ядро может показывать старые узлы разделов поверх живой
+# ФС на весь диск; форматирование такого узла съест диск.
+parent_busy() {
+	local parent
+	case "$1" in
+	/dev/sd[a-z][0-9]*) parent="${1%%[0-9]*}" ;;
+	/dev/mmcblk[0-9]p[0-9]*) parent="${1%p[0-9]*}" ;;
+	*) return 1 ;;
+	esac
+	dev_in_use "$parent"
+}
+
+has_partitions() {
+	local d
+	for d in "$1"[0-9]* "$1"p[0-9]*; do
+		[ -b "$d" ] && return 0
+	done
+	return 1
+}
+
+size_mb() {
+	awk -v n="$(basename "$1")" '$4 == n { printf "%d", $3 / 1024 }' /proc/partitions
+}
+
+# Почему раздел нельзя взять (пусто — можно)
+why_unusable() {
+	local d="$1" sz
+	[ "$d" = "$(current_overlay_device)" ] && { echo "уже /overlay"; return; }
+	dev_in_use "$d" && { echo "смонтирован"; return; }
+	children_busy "$d" && { echo "разделы смонтированы"; return; }
+	parent_busy "$d" && { echo "смонтирован весь диск"; return; }
+	sz="$(size_mb "$d")"
+	[ "${sz:-0}" -ge $MIN_MB ] || { echo "меньше $MIN_MB МБ"; return; }
+}
+
+candidates() {
+	local d
+	for d in /dev/sd[a-z] /dev/sd[a-z][0-9]* /dev/mmcblk[0-9] /dev/mmcblk[0-9]p[0-9]*; do
+		[ -b "$d" ] || continue
+		# весь диск предлагаем, только если на нём нет разделов
+		case "$d" in /dev/sd[a-z]|/dev/mmcblk[0-9]) has_partitions "$d" && continue ;; esac
+		echo "$d"
+	done
+}
+
+model_of() {
+	local name="$(basename "$1")"
+	case "$name" in mmcblk*) name="${name%p[0-9]*}" ;; *) name="${name%%[0-9]*}" ;; esac
+	[ -r "/sys/class/block/$name/device/model" ] &&
+		tr -d '\r"\\' < "/sys/class/block/$name/device/model" | sed 's/[[:space:]]*$//'
+}
+
+# uci batch (stdin) в настройки внутреннего тома rootfs_data. Когда /overlay
+# и есть этот том — это живой /etc/config.
+with_internal() {
+	local dev dir mnt="" rc=0
+	dev="$(rootfs_data_dev)" || { echo "том rootfs_data не найден" >&2; return 1; }
+	if [ "$dev" = "$(current_overlay_device)" ]; then
+		uci -q batch
+		return $?
+	fi
+	dir="$(awk -v d="$dev" '$1 == d { print $2; exit }' /proc/mounts)"
+	if [ -z "$dir" ]; then
+		mnt=/tmp/extroot-int.$$
+		mkdir -p "$mnt"
+		mount -t ubifs "$dev" "$mnt" || { rmdir "$mnt"; echo "не смонтировать $dev" >&2; return 1; }
+		dir="$mnt"
+	fi
+	mkdir -p "$dir/upper/etc/config"
+	[ -f "$dir/upper/etc/config/fstab" ] || cp /rom/etc/config/fstab "$dir/upper/etc/config/fstab"
+	uci -q -c "$dir/upper/etc/config" batch || rc=1
+	[ -n "$INTERNAL_HOOK" ] && { $INTERNAL_HOOK "$dir" || rc=1; }
+	sync
+	[ -n "$mnt" ] && { umount "$mnt"; rmdir "$mnt"; }
+	return $rc
+}
+
+fstab_entry() {
+	cat <<-EOT
+		set fstab.extroot=mount
+		set fstab.extroot.target='/overlay'
+		set fstab.extroot.uuid='$1'
+		set fstab.extroot.options='rw,noatime'
+		set fstab.extroot.enabled='1'
+		set fstab.@global[0].delay_root='15'
+		commit fstab
+	EOT
+}
+
+cmd_status() {
+	local cur int uuid en dev st
+	cur="$(current_overlay_device)"
+	int="$(rootfs_data_dev)"
+	uuid="$(uci -q get fstab.extroot.uuid)"
+	en="$(uci -q get fstab.extroot.enabled)"
+	dev=""; [ -n "$uuid" ] && dev="$(dev_by_uuid "$uuid")"
+	if [ -n "$uuid" ] && [ "$en" != 0 ]; then
+		if [ -n "$dev" ] && [ "$cur" = "$dev" ]; then st=active
+		elif [ -n "$dev" ]; then st=inactive
+		else st=missing
+		fi
+	elif [ "$(cat "$LOST" 2>/dev/null)" -ge 2 ] 2>/dev/null; then
+		st=fallback
+	else
+		st=off
+	fi
+	set -- $(df -k /overlay | tail -1)
+	if [ "$JSON" = 1 ]; then
+		printf '{"state":"%s","device":"%s","internal":"%s","total_kb":%s,"available_kb":%s,"extroot_uuid":"%s","extroot_device":"%s"}\n' \
+			"$st" "$cur" "$int" "${2:-0}" "${4:-0}" "$uuid" "$dev"
+		return
+	fi
+	echo "/overlay: $cur ($(($4 / 1024)) МБ свободно из $(($2 / 1024)))"
+	case "$st" in
+	off)      echo "extroot не настроен" ;;
+	active)   echo "extroot работает: $dev (UUID $uuid)" ;;
+	inactive) echo "extroot настроен на $dev (UUID $uuid), но /overlay сейчас во флеше" ;;
+	missing)  echo "extroot настроен на UUID $uuid, диска нет — /overlay во флеше" ;;
+	fallback) echo "extroot выключен автоматически: диск дважды пропадал во время работы, /overlay во флеше" ;;
+	esac
+}
+
+cmd_list() {
+	local d first=1 why type label
+	[ "$JSON" = 1 ] && printf '['
+	for d in $(candidates); do
+		why="$(why_unusable "$d")"
+		type="$(blk_field "$d" TYPE)"
+		label="$(blk_field "$d" LABEL | tr -d '"\\')"
+		if [ "$JSON" = 1 ]; then
+			[ $first = 1 ] || printf ','
+			printf '{"device":"%s","size_mb":%s,"model":"%s","type":"%s","label":"%s","busy":"%s"}' \
+				"$d" "$(size_mb "$d")" "$(model_of "$d")" "$type" "$label" "$why"
+		else
+			echo "$d  $(size_mb "$d") МБ  ${type:-?}  ${label:+[$label]}  $(model_of "$d")${why:+  — $why}"
+		fi
+		first=0
+	done
+	[ "$JSON" = 1 ] && printf ']\n'
+	[ "$JSON" = 1 ] || [ $first = 0 ] || echo "дисков нет; вставьте диск в USB"
+}
+
+cmd_use() {
+	local dev="$1" mode="$2" why uuid type stamp
+	[ -n "$dev" ] || die "использование: be7000-extroot use <раздел> --yes|--keep"
+	[ -b "$dev" ] || die "$dev — не блочное устройство"
+	case "$dev" in /dev/ubi*|/dev/mtd*) die "$dev — внутренняя флеш-память" ;; esac
+	candidates | grep -qx "$dev" || die "$dev не подходит: на диске есть разделы, выберите раздел"
+	why="$(why_unusable "$dev")"
+	[ -z "$why" ] || die "$dev не подходит: $why"
+
+	case "$mode" in
+	format)
+		command -v mkfs.ext4 >/dev/null || die "нет mkfs.ext4"
+		echo "Форматирую $dev в ext4"
+		mkfs.ext4 -q -F -L "$LABEL" "$dev" || die "mkfs.ext4 не удалось"
+		;;
+	keep)
+		type="$(blk_field "$dev" TYPE)"
+		[ "$type" = ext4 ] || die "на $dev не ext4 (${type:-неизвестно}); нужно форматирование"
+		;;
+	*)
+		echo "Раздел $dev будет отформатирован в ext4, всё на нём пропадёт."
+		echo "Запустите снова с --yes, или с --keep для готового ext4 без форматирования."
+		exit 1
+		;;
+	esac
+
+	mkdir -p "$MNT"
+	mount -t ext4 -o rw,noatime "$dev" "$MNT" || { rmdir "$MNT"; die "не смонтировать $dev"; }
+	uuid="$(blk_field "$dev" UUID)"
+	[ -n "$uuid" ] || { umount "$MNT"; rmdir "$MNT"; die "не прочитать UUID $dev"; }
+
+	# прошлый оверлей на этом же диске — в сторону, не смешиваем
+	if [ -d "$MNT/upper" ]; then
+		stamp="$(date +%Y%m%d-%H%M%S)"
+		echo "На диске уже есть upper — переношу в upper.old-$stamp"
+		mv "$MNT/upper" "$MNT/upper.old-$stamp"
+	fi
+	rm -rf "$MNT/work" "$MNT/upper.prev"
+
+	# Сначала настройки: копия на диске уже несёт запись extroot
+	fstab_entry "$uuid" | with_internal || { umount "$MNT"; rmdir "$MNT"; die "не записать extroot во внутренний fstab"; }
+	[ "$(current_overlay_device)" = "$(rootfs_data_dev)" ] || fstab_entry "$uuid" | uci -q batch
+	rm -f "$REFRESHED" "$LOST"
+
+	echo "Копирую оверлей ($(du -sh /overlay/upper | cut -f1))"
+	cp -a /overlay/upper "$MNT/" || { umount "$MNT"; rmdir "$MNT"; die "копирование не удалось, диск не подключён"; }
+	mkdir -p "$MNT/work" "$MNT/etc"
+	# привязка к прошивке: fstools запишет .extroot-uuid при первой загрузке
+	touch "$MNT/etc/.extroot-default"
+	rm -f "$MNT/etc/.extroot-uuid"
+	sync
+	umount "$MNT"
+	rmdir "$MNT"
+	log "extroot настроен: $dev (UUID $uuid), $mode"
+	echo "Готово. /overlay переедет на $dev после перезагрузки."
+	[ "$REBOOT" = 1 ] && { sync; reboot; }
+	return 0
+}
+
+# Копия настроек с диска во внутренний том при возврате
+copy_settings_back() {
+	local dir="$1" f
+	for f in etc/config etc/passwd etc/shadow etc/group etc/dropbear etc/crontabs \
+	         etc/sysupgrade.conf etc/backup; do
+		[ -e "/overlay/upper/$f" ] || continue
+		mkdir -p "$dir/upper/$(dirname "$f")"
+		rm -rf "$dir/upper/$f"
+		cp -a "/overlay/upper/$f" "$dir/upper/$f" || return 1
+	done
+	uci -q -c "$dir/upper/etc/config" delete fstab.extroot
+	uci -q -c "$dir/upper/etc/config" commit fstab
+	rm -f "$dir/upper$REFRESHED" "$dir/upper$LOST"
+}
+
+cmd_revert() {
+	uci -q get fstab.extroot >/dev/null || die "extroot не настроен"
+	if [ "$YES" != 1 ]; then
+		echo "/overlay вернётся во флеш после перезагрузки. Настройки скопируются,"
+		echo "пакеты, поставленные на диск, — нет; диск остаётся как есть."
+		echo "Запустите снова с --yes."
+		exit 1
+	fi
+	if [ "$(current_overlay_device)" != "$(rootfs_data_dev)" ]; then
+		echo "Копирую настройки во внутреннюю память"
+		printf 'delete fstab.extroot\ncommit fstab\n' |
+			INTERNAL_HOOK=copy_settings_back with_internal || die "не удалось записать во внутренний том"
+	fi
+	uci -q delete fstab.extroot
+	uci -q commit fstab
+	rm -f "$REFRESHED" "$LOST"
+	log "extroot выключен"
+	echo "Готово. /overlay вернётся во флеш после перезагрузки."
+	[ "$REBOOT" = 1 ] && { sync; reboot; }
+	return 0
+}
+
+# При загрузке (START=12, до сети). Если extroot настроен, но fstools его не
+# взял, а диск на месте с UUID другой прошивки — это первая загрузка после
+# обновления: переносим на диск свежие настройки и перезагружаемся. Один раз
+# на сборку (метка $REFRESHED во флеше).
+cmd_boot() {
+	local uuid en dev cur rom disk_uuid
+	uuid="$(uci -q get fstab.extroot.uuid)"
+	en="$(uci -q get fstab.extroot.enabled)"
+	[ -n "$uuid" ] && [ "$en" != 0 ] || return 0
+	dev="$(dev_by_uuid "$uuid")"
+	cur="$(current_overlay_device)"
+	[ -n "$dev" ] && [ "$cur" = "$dev" ] && return 0
+	if [ -z "$dev" ]; then
+		log "диск extroot (UUID $uuid) не найден — /overlay во флеше, изменения сохранятся только здесь"
+		return 0
+	fi
+	rom="$(rom_uuid)"
+	mkdir -p "$MNT"
+	mount -t ext4 -o rw,noatime "$dev" "$MNT" || { rmdir "$MNT"; log "не смонтировать $dev"; return 0; }
+	disk_uuid="$(cat "$MNT/etc/.extroot-uuid" 2>/dev/null)"
+	if [ -z "$rom" ] || [ -z "$disk_uuid" ] || [ "$disk_uuid" = "$rom" ]; then
+		log "диск $dev на месте, но fstools его не подключил (UUID прошивки ${rom:-?}, диска ${disk_uuid:-нет}); /overlay во флеше"
+	elif [ "$(cat "$REFRESHED" 2>/dev/null)" = "$rom" ]; then
+		log "оверлей на $dev уже переносили для этой прошивки, но он не подключился; /overlay во флеше"
+	else
+		log "новая прошивка: старый upper на $dev → upper.prev, переношу текущие настройки"
+		echo "$rom" > "$REFRESHED"
+		rm -rf "$MNT/upper.prev" "$MNT/work"
+		[ -d "$MNT/upper" ] && mv "$MNT/upper" "$MNT/upper.prev"
+		if cp -a /overlay/upper "$MNT/"; then
+			mkdir -p "$MNT/work" "$MNT/etc"
+			touch "$MNT/etc/.extroot-default"
+			rm -f "$MNT/etc/.extroot-uuid"
+			sync
+			umount "$MNT"
+			rmdir "$MNT"
+			log "перезагрузка, чтобы /overlay встал на $dev"
+			reboot
+			return 0
+		fi
+		log "копирование на $dev не удалось; /overlay во флеше"
+	fi
+	umount "$MNT"
+	rmdir "$MNT"
+	return 0
+}
+
+# Сторож, пока /overlay на USB-диске (из /etc/init.d/be7000-extroot, в фоне).
+# Если диск переподключился (сбой USB, отошёл кабель), ext4 под /overlay
+# мёртв: уже запущенное работает, но новое не читается — ни SSH, ни LuCI.
+# Сам по себе такой роутер не оживёт. Сторож замечает это по смене
+# SCSI-адреса диска и перезагружает роутер; если диск пропадает второй раз
+# за 10 минут после загрузки — сначала выключает extroot во внутреннем fstab,
+# и роутер встаёт на флеше. После сбоя запускать программы нельзя (корень
+# мёртв), поэтому в цикле только встроенные команды shell, а всё, что нужно
+# для отката, готовится заранее, пока диск жив.
+cmd_guard() {
+	local dev disk sig n=0 t=0 l f
+	dev="$(current_overlay_device)"
+	case "$dev" in /dev/sd[a-z]*) disk="${dev#/dev/}"; disk="${disk%%[0-9]*}" ;; *) return 0 ;; esac
+	set -- /sys/block/$disk/device/scsi_device/*
+	sig="$1"
+	[ -e "$sig" ] || return 0
+
+	# внутренний том — смонтирован на всё время работы
+	if ! grep -q " $INT_MNT " /proc/mounts; then
+		mkdir -p "$INT_MNT"
+		mount -t ubifs "$(rootfs_data_dev)" "$INT_MNT" || { log "сторож: не смонтировать внутренний том"; return 1; }
+	fi
+	f="$INT_MNT/upper/etc/config/fstab"
+	[ -f "$f" ] || return 1
+	cp "$f" "$f.extroot-off"
+	sed -i "/config mount 'extroot'/,/^config/ s/option enabled '1'/option enabled '0'/" "$f.extroot-off"
+	n="$(cat "$INT_MNT/upper$LOST" 2>/dev/null)"
+	[ -n "$n" ] || n=0
+	mkfifo /tmp/extroot-guard.fifo 2>/dev/null
+	exec 3<>/tmp/extroot-guard.fifo
+	log "сторож: следит за $dev ($sig), сбоев подряд: $n"
+
+	while :; do
+		read -t 15 -u 3 l
+		t=$((t + 15))
+		if [ $t -eq 600 ] && [ "$n" != 0 ]; then
+			n=0
+			echo 0 > "$INT_MNT/upper$LOST"
+		fi
+		set -- /sys/block/$disk/device/scsi_device/*
+		[ "$1" = "$sig" ] && continue
+
+		n=$((n + 1))
+		echo $n > "$INT_MNT/upper$LOST"
+		if [ $n -ge 2 ]; then
+			while IFS= read -r l; do echo "$l"; done < "$f.extroot-off" > "$f"
+			echo "be7000-extroot: диск под /overlay пропал ($sig → ${1##*/}), второй раз подряд: extroot выключен, перезагрузка на флеш" > /dev/kmsg
+		else
+			echo "be7000-extroot: диск под /overlay пропал ($sig → ${1##*/}), перезагрузка" > /dev/kmsg
+		fi
+		echo s > /proc/sysrq-trigger
+		read -t 3 -u 3 l
+		echo u > /proc/sysrq-trigger
+		read -t 1 -u 3 l
+		echo b > /proc/sysrq-trigger
+	done
+}
+
+ACTION="$1"
+[ $# -gt 0 ] && shift
+YES=0; REBOOT=0; JSON=0; MODE=""; DEV=""
+for a in "$@"; do
+	case "$a" in
+	--yes) YES=1; MODE="${MODE:-format}" ;;
+	--keep) MODE=keep ;;
+	--reboot) REBOOT=1 ;;
+	--json) JSON=1 ;;
+	*) DEV="$a" ;;
+	esac
+done
+
+case "$ACTION" in
+status) cmd_status ;;
+list)   cmd_list ;;
+use)    cmd_use "$DEV" "$MODE" ;;
+revert) cmd_revert ;;
+boot)   cmd_boot ;;
+guard)  cmd_guard ;;
+*)
+	echo "использование: be7000-extroot {status|list|use <раздел> --yes|--keep|revert --yes [--reboot]} [--json]" >&2
+	exit 1
+	;;
+esac

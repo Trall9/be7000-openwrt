@@ -1,0 +1,3 @@
+#!/bin/sh
+# mini: отключено, как в стоковом OpenWrt (оригинал — base-files порта)
+exit 0

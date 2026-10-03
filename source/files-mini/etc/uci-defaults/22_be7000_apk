@@ -1,0 +1,18 @@
+#!/bin/sh
+# apk-фиды минимальной сборки (из 22_be7000_persist полной, только п. 2).
+[ "$(board_name)" = "xiaomi,be7000" ] || exit 0
+# снапшоты публикуют aarch64_cortex-a73, которого не существует — рабочий arch = aarch64_generic
+sed -i s/aarch64_cortex-a73/aarch64_generic/g /etc/apk/repositories.d/distfeeds.list 2>/dev/null
+grep -qx aarch64_generic /etc/apk/arch 2>/dev/null || echo aarch64_generic >> /etc/apk/arch
+# официальный target-фид собран под чужое ядро (другой vermagic) — вместо него фид прошивки.
+# Ядро у mini то же, что у полной сборки, поэтому фид — полной (суффикс -mini отбрасываем).
+sed -i '\#/targets/qualcommbe/ipq95xx/packages/#d' /etc/apk/repositories.d/distfeeds.list 2>/dev/null
+. /etc/openwrt_release
+FEED=${DISTRIB_RELEASE%-mini}
+cat > /etc/apk/repositories.d/be7000.list <<EOF2
+# Фид прошивки BE7000 ($FEED): драйверы (kmod) и пакеты сборки.
+https://trall9.github.io/be7000-openwrt/$FEED/targets/packages.adb
+https://trall9.github.io/be7000-openwrt/$FEED/be7000/packages.adb
+EOF2
+/etc/init.d/usb-recover enable 2>/dev/null
+exit 0

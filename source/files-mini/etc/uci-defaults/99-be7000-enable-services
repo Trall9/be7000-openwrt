@@ -1,0 +1,9 @@
+#!/bin/sh
+# build-система не создаёт rc.d-ссылки ни для скриптов порта (base-files), ни для files/
+/etc/init.d/be7000_boot_success enable 2>/dev/null
+/etc/init.d/be7000-rf-hog disable 2>/dev/null
+/etc/init.d/luci-lang-fix enable 2>/dev/null
+/etc/init.d/be7000-rc-restore enable 2>/dev/null
+/etc/init.d/be7000-bootlog enable 2>/dev/null
+/etc/init.d/be7000-extroot enable 2>/dev/null
+exit 0

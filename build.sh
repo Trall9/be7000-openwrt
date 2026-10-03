@@ -3,6 +3,7 @@
 # Требования: Linux (или WSL2), ~40 ГБ диска, пакеты для сборки OpenWrt:
 #   https://openwrt.org/docs/guide-developer/toolchain/install-buildsystem
 # Использование: ./build.sh [каталог] [потоков]
+#   MINI=1 ./build.sh … — минимальный вариант (состав стокового OpenWrt + поддержка BE7000)
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
 DIR=${1:-openwrt-be7000}
@@ -23,8 +24,9 @@ done
 ./scripts/feeds install -a
 ./feed-patches/apply.sh
 
-rm -rf files && cp -a "$HERE/source/files" files
-cp "$HERE/source/diffconfig" .config
+SFX=${MINI:+-mini}
+rm -rf files && cp -a "$HERE/source/files$SFX" files
+cp "$HERE/source/diffconfig$SFX" .config
 make defconfig
 make download -j"$JOBS"
 # IGNORE_ERRORS=m: необязательные модули (kmod для фида), которые не собираются, пропускаются

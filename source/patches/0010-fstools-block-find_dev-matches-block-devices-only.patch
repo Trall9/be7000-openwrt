@@ -1,0 +1,65 @@
+From d050ef3088020aeb55d4a0e3945bbb4611a339e6 Mon Sep 17 00:00:00 2001
+From: Trall9 <tralllll9@gmail.com>
+Date: Fri, 2 Oct 2026 12:25:51 +0200
+Subject: [PATCH] fstools: block: find_dev matches block devices only
+
+On Xiaomi BE7000 the squashfs root /dev/ubiblock0_1 and the character
+device /dev/gpiochip0 are both 254:0. find_dev() compared st_rdev of any
+/dev node, picked gpiochip0, and check_extroot() rejected every extroot
+with etc/.extroot-default ("unable to lookup root device /dev/gpiochip0").
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_013s2VZi5nRhTzdeeLSd7jmt
+---
+ package/system/fstools/Makefile               |  2 +-
+ ...ck-find_dev-match-block-devices-only.patch | 25 +++++++++++++++++++
+ 2 files changed, 26 insertions(+), 1 deletion(-)
+ create mode 100644 package/system/fstools/patches/100-block-find_dev-match-block-devices-only.patch
+
+diff --git a/package/system/fstools/Makefile b/package/system/fstools/Makefile
+index 8f9321fb..2a6405bb 100644
+--- a/package/system/fstools/Makefile
++++ b/package/system/fstools/Makefile
+@@ -8,7 +8,7 @@
+ include $(TOPDIR)/rules.mk
+ 
+ PKG_NAME:=fstools
+-PKG_RELEASE:=1
++PKG_RELEASE:=2
+ 
+ PKG_SOURCE_PROTO:=git
+ PKG_SOURCE_URL=$(PROJECT_GIT)/project/fstools.git
+diff --git a/package/system/fstools/patches/100-block-find_dev-match-block-devices-only.patch b/package/system/fstools/patches/100-block-find_dev-match-block-devices-only.patch
+new file mode 100644
+index 00000000..e2b5cc43
+--- /dev/null
++++ b/package/system/fstools/patches/100-block-find_dev-match-block-devices-only.patch
+@@ -0,0 +1,25 @@
++From: be7000-openwrt
++Subject: [PATCH] block: find_dev: match block devices only
++
++find_dev() looks up the device of / by comparing st_rdev of every node in
++/dev with st_dev of the mount point, without checking the node type. On
++Xiaomi BE7000 (ipq9574) the squashfs root is /dev/ubiblock0_1 = 254:0 and
++the first gpio chip is the character device /dev/gpiochip0 = 254:0, so
++check_extroot() picks gpiochip0, fails to look it up and rejects every
++extroot that has etc/.extroot-default:
++
++  block: extroot: unable to lookup root device /dev/gpiochip0
++
++Only block devices can hold a root filesystem.
++
++--- a/block.c
+++++ b/block.c
++@@ -1446,7 +1446,7 @@ static int find_dev(const char *path, ch
++ 	while ((e = readdir(d)) != NULL) {
++ 		snprintf(buf, len, "/dev/%s", e->d_name);
++ 
++-		if (stat(buf, &s) || s.st_rdev != root)
+++		if (stat(buf, &s) || !S_ISBLK(s.st_mode) || s.st_rdev != root)
++ 			continue;
++ 
++ 		closedir(d);
+-- 
+2.43.0
+

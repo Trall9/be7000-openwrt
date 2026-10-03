@@ -1,0 +1,59 @@
+#!/bin/sh
+# Сохранение/восстановление «включена ли служба» через бэкап настроек.
+# sysupgrade -b сохраняет только файлы, а включение службы — это ссылка в /etc/rc.d,
+# и выключенная служба в бэкапе никак не отражена. После восстановления бэкапа
+# (sysupgrade -r / LuCI «Восстановить») все службы оказываются в заводском состоянии.
+#
+#   save  — (вызывает sysupgrade перед созданием бэкапа) пишет STATE:
+#           «<служба> 1|0» для каждого /etc/init.d/*, и помечает его применённым;
+#   apply — (init be7000-rc-restore, при загрузке) если STATE пришёл из
+#           восстановленного бэкапа (ещё не применён) — включает/выключает службы
+#           как было. Службы, которых в старой прошивке не было, не трогаются.
+
+STATE=/etc/be7000-rc.state
+APPLIED=/etc/be7000-rc.state.applied
+SELF="be7000-rc-restore"
+
+sum() { md5sum "$STATE" 2>/dev/null | cut -d' ' -f1; }
+
+case "$1" in
+save)
+	{
+		echo "# $(date '+%F %T') $(grep -s DISTRIB_DESCRIPTION /etc/openwrt_release | cut -d"'" -f2)"
+		for f in /etc/init.d/*; do
+			[ -x "$f" ] || continue
+			n=${f##*/}
+			[ "$n" = "$SELF" ] && continue
+			"$f" enabled 2>/dev/null && echo "$n 1" || echo "$n 0"
+		done
+	} > "$STATE.tmp" && mv -f "$STATE.tmp" "$STATE"
+	sum > "$APPLIED"
+	;;
+apply)
+	[ -f "$STATE" ] || exit 0
+	[ "$(sum)" = "$(cat "$APPLIED" 2>/dev/null)" ] && exit 0
+	grep -v '^#' "$STATE" | while read -r n want; do
+		f=/etc/init.d/$n
+		[ -x "$f" ] || continue
+		if "$f" enabled 2>/dev/null; then have=1; else have=0; fi
+		[ "$have" = "$want" ] && continue
+		if [ "$want" = 1 ]; then
+			logger -t be7000-rc "восстановлено из бэкапа: $n включена"
+			"$f" enable; "$f" start
+		else
+			# https-dns-proxy прописывает себя в dnsmasq (server 127.0.0.1#505x,
+			# noresolv). Выключить его, оставив dnsmasq смотреть на него, — это
+			# DNS, умирающий при следующей перезагрузке (так и было 02.10.2026).
+			# Пока dnsmasq на него смотрит, считаем его нужным.
+			if [ "$n" = https-dns-proxy ] && uci -q get dhcp.@dnsmasq[0].server | grep -q '127.0.0.1#505'; then
+				logger -t be7000-rc "https-dns-proxy в бэкапе выключен, но DNS идёт через него — оставляю включённым"
+				continue
+			fi
+			logger -t be7000-rc "восстановлено из бэкапа: $n выключена"
+			"$f" stop; "$f" disable
+		fi
+	done
+	sum > "$APPLIED"
+	;;
+*) echo "usage: $0 save|apply"; exit 2 ;;
+esac

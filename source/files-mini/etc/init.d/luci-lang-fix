@@ -1,0 +1,24 @@
+#!/bin/sh /etc/rc.common
+# Регистрация языков LuCI при каждой загрузке.
+# Пакеты luci-i18n-*-<lang> прописывают luci.languages.<lang> своими
+# uci-defaults — один раз, при первой загрузке. Восстановление бэкапа
+# настроек со старой прошивки (или с QWRT) возвращает старый /etc/config/luci
+# без этих записей, и LuCI молча остаётся на английском. Чиним по факту
+# наличия base.<lang>.lmo.
+START=15
+
+boot() {
+	local f lang changed=0
+	for f in /usr/lib/lua/luci/i18n/base.*.lmo; do
+		[ -e "$f" ] || continue
+		lang=${f##*/base.}; lang=${lang%.lmo}
+		uci -q get luci.languages.$lang >/dev/null && continue
+		case "$lang" in
+			ru) uci -q set luci.languages.ru='Русский (Russian)' ;;
+			*)  uci -q set luci.languages.$lang="$lang" ;;
+		esac
+		changed=1
+	done
+	[ "$changed" = 1 ] && uci -q commit luci
+	return 0
+}
