@@ -12,6 +12,8 @@
 # on every single boot.
 START=99
 
+. /lib/functions.sh
+
 slot_from_cmdline() {
 	local arg
 	# Matched word by word: the image passes a second ubi.mtd= for the spare
@@ -35,6 +37,16 @@ set_if_changed() {
 
 start() {
 	local slot
+	# Slot flags only matter to the stock A/B loader. On the QWRT layout (no
+	# rootfs_1) writing them only risks the loader env: with a wrong envsize
+	# fw_setenv saves the default env over bootcmd and the router boot-loops.
+	if [ -z "$(find_mtd_index rootfs_1)" ]; then
+		return 0
+	fi
+	if fw_printenv 2>&1 >/dev/null | grep -qi 'bad crc'; then
+		logger -t bootconfirm "fw_printenv reports a bad CRC, not touching the environment; check /etc/fw_env.config"
+		return 0
+	fi
 	# Without a usable environment we cannot confirm anything. Say so loudly:
 	# the installer leaves the boot marked as unconfirmed on purpose, and a
 	# router that can never confirm will keep falling back to the stock slot.

@@ -1,0 +1,93 @@
+From 2a6e29f24e619aaaabbb38d309e22169b215847f Mon Sep 17 00:00:00 2001
+From: Trall9 <tralllll9@gmail.com>
+Date: Wed, 7 Oct 2026 00:18:33 +0200
+Subject: [PATCH] be7000: keep the QWRT loader env intact (256K envsize, no
+ slot flags)
+
+On the QWRT layout (single rootfs, no rootfs_1) the loader keeps its env
+in 256K, but the board file set 64K. fw_printenv then hit a bad CRC and
+fw_setenv in be7000_boot_success saved the default env over bootcmd and
+loadaddr, leaving bootipq to boot-loop the router (steady orange LED).
+
+- uboot-envtools: 0x40000 on the QWRT layout, 0x10000 on stock A/B;
+  a kept 64K config is regenerated on the QWRT layout.
+- be7000_boot_success: skip slot flags on the QWRT layout and whenever
+  fw_printenv reports a bad CRC.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Q4KpSAUmJKo8wk8dN2H5zD
+---
+ .../uboot-envtools/files/qualcommbe_ipq95xx   | 20 ++++++++++++++++---
+ .../base-files/etc/init.d/be7000_boot_success | 11 ++++++++++
+ 2 files changed, 28 insertions(+), 3 deletions(-)
+
+diff --git a/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx b/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx
+index 1eefa40d..48f7c93e 100644
+--- a/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx
++++ b/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx
+@@ -7,7 +7,16 @@ board=$(board_name)
+ 
+ case "$board" in
+ xiaomi,be7000)
+-	[ -e /etc/config/ubootenv ] && [ -e /etc/fw_env.config ] && \
++	# QWRT-загрузчик (один rootfs, без rootfs_1) хранит env в 256К, сток — в 64К.
++	# Конфиг с 64К, оставшийся от старой версии или перенесённый в настройках,
++	# на QWRT читает env с битым CRC, и fw_setenv затирает его заводским
++	# (bootcmd/loadaddr) — роутер уходит в цикл перезагрузок. Пересоздаём.
++	if [ -z "$(find_mtd_index rootfs_1)" ] && \
++	   [ "$(uci -q get ubootenv.@ubootenv[0].envsize)" = "0x10000" ]; then
++		rm -f /etc/fw_env.config
++		: > /etc/config/ubootenv
++	fi
++	[ -s /etc/config/ubootenv ] && [ -e /etc/fw_env.config ] && \
+ 		[ -e /etc/fw_sys.config ] && exit 0
+ 	;;
+ *)
+@@ -22,8 +31,13 @@ askey,sbe1v1k)
+ 		ubootenv_add_mmc "0:APPSBLENV" "" "0x0" "0x40000" "0x40000"
+ 	;;
+ xiaomi,be7000)
+-	[ -s /etc/config/ubootenv ] || \
+-		ubootenv_add_mtd "0:appsblenv" "0x0" "0x10000" "0x20000"
++	if [ -z "$(find_mtd_index rootfs_1)" ]; then
++		[ -s /etc/config/ubootenv ] || \
++			ubootenv_add_mtd "0:appsblenv" "0x0" "0x40000" "0x20000"
++	else
++		[ -s /etc/config/ubootenv ] || \
++			ubootenv_add_mtd "0:appsblenv" "0x0" "0x10000" "0x20000"
++	fi
+ 	ubootenv_add_sys_mtd "bdata" "0x0" "0x10000" "0x20000"
+ 	;;
+ linksys,ln6001)
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success
+index bfbbe3a3..a570faab 100755
+--- a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success
+@@ -24,6 +24,11 @@ boot() {
+ 
+ 	[ -x /usr/sbin/fw_setenv ] || return 0
+ 
++	# Флаги слотов нужны только стоковому загрузчику с A/B. На QWRT-разметке
++	# (нет rootfs_1) они бесполезны, а любая запись рискует env загрузчика:
++	# при неверном envsize fw_setenv сохраняет заводской env поверх bootcmd.
++	[ -n "$(find_mtd_index rootfs_1)" ] || return 0
++
+ 	if [ ! -e /etc/fw_env.config ]; then
+ 		local mtdnum
+ 
+@@ -44,6 +49,12 @@ boot() {
+ 	done
+ 	[ -n "$slot" ] || { logger -t boot_success "no ubi.mtd=rootfs* on cmdline, flags left alone"; return 0; }
+ 
++	# Битый CRC = env прочитан не тем размером; запись затрёт его заводским.
++	if fw_printenv 2>&1 >/dev/null | grep -qi 'bad crc'; then
++		logger -t boot_success "fw_printenv: bad CRC, check /etc/fw_env.config; flags left alone"
++		return 0
++	fi
++
+ 	for f in flag_boot_rootfs:$slot flag_last_success:$slot flag_boot_success:1 \
+ 		flag_try_sys1_failed:0 flag_try_sys2_failed:0 flag_ota_reboot:0; do
+ 		local k="${f%%:*}" v="${f#*:}"
+-- 
+2.43.0
+
