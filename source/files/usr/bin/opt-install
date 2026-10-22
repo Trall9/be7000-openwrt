@@ -23,7 +23,12 @@
 # Данные (закачки qbt, конфиги) НЕ удаляются при remove — только бинарь+сервис.
 
 APPS_ALL="qbittorrent xray tailscale docker jackett entware"
-BASE_DIR="/mnt/sda1/opt"
+# Диск под приложения: по умолчанию NTFS-раздел /mnt/sda1. Если на диске есть
+# отдельный ext4-раздел — DISK_MP=/mnt/data в /etc/opt-install.conf: тогда /opt
+# делается bind-ом $BASE_DIR/ext без loop-образа (переживает USB-ресеты).
+DISK_MP="/mnt/sda1"
+[ -r /etc/opt-install.conf ] && . /etc/opt-install.conf
+BASE_DIR="$DISK_MP/opt"
 APPS_DIR="$BASE_DIR/apps"
 LOG_FILE="${OPT_LOG_FILE:-$BASE_DIR/install.log}"
 AUTOSTART_OFF="$BASE_DIR/autostart.off"  # приложения, у которых владелец выключил автозапуск (на диске — переживает перепрошивку)
@@ -44,10 +49,10 @@ log() { echo "$(date '+%H:%M:%S') $*" >> "$LOG_FILE"; }
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
-mounted() { grep -q " /mnt/sda1 " /proc/mounts; }
+mounted() { grep -q " $DISK_MP " /proc/mounts; }
 
 ensure_dirs() {
-	mounted || die "Диск не смонтирован (/mnt/sda1). Вставьте диск, подождите 10 сек (usb-watchdog)."
+	mounted || die "Диск не смонтирован ($DISK_MP). Вставьте диск, подождите 10 сек (usb-watchdog)."
 	mkdir -p "$APPS_DIR"
 }
 
@@ -55,10 +60,10 @@ ensure_dirs() {
 
 ext_mounted() { grep -q " $EXT_MP " /proc/mounts; }
 
-disk_fstype() { awk '$2=="/mnt/sda1"{t=$3} END{print t}' /proc/mounts; }
+disk_fstype() { awk -v m="$DISK_MP" '$2==m{t=$3} END{print t}' /proc/mounts; }
 
 disk_writable() {
-	{ echo > /mnt/sda1/.opt-probe.$$ && rm -f /mnt/sda1/.opt-probe.$$; } 2>/dev/null
+	{ echo > "$DISK_MP/.opt-probe.$$" && rm -f "$DISK_MP/.opt-probe.$$"; } 2>/dev/null
 }
 
 # mount_ext4 [create] — подключить /opt; с create — создать образ, если его нет.
@@ -111,7 +116,7 @@ mount_ext4_locked() {
 	if [ ! -f "$EXT_IMG" ]; then
 		[ "$1" = create ] || return 1
 		local avail
-		avail=$(df -m /mnt/sda1 | awk 'NR==2{print $4}')
+		avail=$(df -m "$DISK_MP" | awk 'NR==2{print $4}')
 		[ -n "$avail" ] && [ "$avail" -gt $((EXT_MB + 2048)) ] || {
 			log "ext4: мало места на диске (${avail:-?} МБ, нужно > $((EXT_MB + 2048)))"; return 1; }
 		log "ext4: создание тома $EXT_IMG (${EXT_MB} МБ, sparse)…"
@@ -199,6 +204,20 @@ qbt_bind_wan() {
 	log "qBittorrent: сетевой интерфейс для торрентов — $dev (wan; сменить: Настройки → Дополнительно)"
 }
 
+# Недокачанные файлы — с расширением .!qB: иначе minidlna по inotify сканирует
+# дырявые mkv (нули в начале) и сыплет тысячами ошибок ffmpeg (22.10).
+# Не трогаем, если пользователь уже задал опцию.
+qbt_incomplete_ext() {
+	local conf="$APPS_DIR/qbittorrent/qBittorrent/config/qBittorrent.conf"
+	mkdir -p "${conf%/*}"
+	grep -qs '^Session\\AddExtensionToIncompleteFiles=' "$conf" && return 0
+	if grep -qs '^\[BitTorrent\]' "$conf"; then
+		sed -i "/^\[BitTorrent\]/a Session\\\\AddExtensionToIncompleteFiles=true" "$conf"
+	else
+		printf '[BitTorrent]\nSession\\AddExtensionToIncompleteFiles=true\n\n' >> "$conf"
+	fi
+}
+
 do_install_qbittorrent() {
 	command -v unzip >/dev/null 2>&1 || { log "qBittorrent: ОШИБКА: нет unzip"; return 1; }
 	# qBittorrent Enhanced Edition (c0re100), статическая musl-сборка: в сборке
@@ -215,13 +234,14 @@ do_install_qbittorrent() {
 	chmod +x "$APPS_DIR/qbittorrent/qbittorrent-nox" || return 1
 	log "qBittorrent: $(bin_version qbittorrent)"
 	qbt_bind_wan
+	qbt_incomplete_ext
 	log "qBittorrent: создание procd-сервиса…"
 	cat > /etc/init.d/qbittorrent <<'EOF'
 #!/bin/sh /etc/rc.common
 USE_PROCD=1
 START=99
 STOP=10
-APPDIR=/mnt/sda1/opt/apps/qbittorrent
+APPDIR=@APPS_DIR@/qbittorrent
 start_service() {
 	[ -x "$APPDIR/qbittorrent-nox" ] || { logger -t qbittorrent "нет бинаря (диск не смонтирован?)"; exit 0; }
 	procd_open_instance
@@ -233,6 +253,7 @@ start_service() {
 	procd_close_instance
 }
 EOF
+	sed -i "s|@APPS_DIR@|$APPS_DIR|" /etc/init.d/qbittorrent
 	chmod +x /etc/init.d/qbittorrent
 	/etc/init.d/qbittorrent enable
 	/etc/init.d/qbittorrent start
@@ -272,7 +293,7 @@ EOF
 USE_PROCD=1
 START=99
 STOP=10
-APPDIR=/mnt/sda1/opt/apps/xray
+APPDIR=@APPS_DIR@/xray
 start_service() {
 	[ -x "$APPDIR/xray" ] || { logger -t xray "нет бинаря (диск не смонтирован?)"; exit 0; }
 	procd_open_instance
@@ -283,6 +304,7 @@ start_service() {
 	procd_close_instance
 }
 EOF
+	sed -i "s|@APPS_DIR@|$APPS_DIR|" /etc/init.d/xray
 	chmod +x /etc/init.d/xray
 	/etc/init.d/xray enable
 	/etc/init.d/xray start
@@ -313,7 +335,7 @@ do_install_tailscale() {
 USE_PROCD=1
 START=99
 STOP=10
-APPDIR=/mnt/sda1/opt/apps/tailscale
+APPDIR=@APPS_DIR@/tailscale
 start_service() {
 	[ -x "$APPDIR/tailscaled" ] || { logger -t tailscale "нет бинаря (диск не смонтирован?)"; exit 0; }
 	procd_open_instance
@@ -327,6 +349,7 @@ start_service() {
 	procd_close_instance
 }
 EOF
+	sed -i "s|@APPS_DIR@|$APPS_DIR|" /etc/init.d/tailscale
 	chmod +x /etc/init.d/tailscale
 	/etc/init.d/tailscale enable
 	/etc/init.d/tailscale start
@@ -776,7 +799,7 @@ autostart() {
 show_status() {
 	local b disk free json_first=1
 	disk=0; mounted && disk=1
-	free=$(df -h /mnt/sda1 2>/dev/null | awk 'NR==2{print $4}')
+	free=$(df -h "$DISK_MP" 2>/dev/null | awk 'NR==2{print $4}')
 	local ext=0; ext_mounted && ext=1
 	printf '{"disk":%s,"disk_free":"%s","ext4":%s,' "$disk" "$free" "$ext"
 	b=$(busy_app)

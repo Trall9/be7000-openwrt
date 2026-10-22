@@ -7,3 +7,4 @@
 /etc/init.d/jackett
 /etc/crontabs/
 /etc/be7000-rc.state
+/etc/opt-install.conf

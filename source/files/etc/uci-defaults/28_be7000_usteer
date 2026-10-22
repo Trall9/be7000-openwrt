@@ -1,0 +1,24 @@
+#!/bin/sh
+# Band steering 2.4 → 5 ГГц (usteer, 802.11v BSS Transition). До 22.10 были только
+# флаги 802.11k/v (23_be7000_roaming) — телефон умел переезжать, но команду ему
+# никто не слал: подключившись у входа на 2.4, оставался там навсегда.
+# Стоковая Xiaomi делает это закрытым демоном Qualcomm; Beam WRT и Quarx2k — никак.
+# Замер 22.10: HONOR на 2.4 (-30 dBm, ~300 Мбит) → по запросу за ~10 с на 5 ГГц (2.9 Гбит).
+# Одна точка: local_mode. Порог -55 dBm на 2.4 — запас против пинг-понга на краю зоны.
+# Повторно (после sysupgrade с сохранением) не перетираем ручные правки — маркер be7000.
+[ -f /etc/config/usteer ] || exit 0
+[ "$(uci -q get usteer.@usteer[0].be7000)" = "1" ] && exit 0
+
+uci -q batch <<'UCI'
+set usteer.@usteer[0].be7000='1'
+set usteer.@usteer[0].local_mode='1'
+set usteer.@usteer[0].debug_level='1'
+set usteer.@usteer[0].band_steering_interval='30000'
+set usteer.@usteer[0].band_steering_min_snr='-55'
+set usteer.@usteer[0].band_steering_signal_threshold='0'
+set usteer.@usteer[0].aggressiveness='3'
+set usteer.@usteer[0].link_measurement_interval='30000'
+commit usteer
+UCI
+/etc/init.d/usteer enable 2>/dev/null
+exit 0

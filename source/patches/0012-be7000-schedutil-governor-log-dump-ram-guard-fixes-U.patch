@@ -1,0 +1,406 @@
+From 41da1cba0b3fe3474e765ff1a56bb6115ec239ad Mon Sep 17 00:00:00 2001
+From: Trall9 <tralllll9@gmail.com>
+Date: Thu, 22 Oct 2026 15:21:42 +0200
+Subject: [PATCH] be7000: schedutil governor, log-dump/ram-guard fixes, USB PHY
+ reset
+
+- cpu_perf: schedutil instead of performance (22.10 A/B: same Wi-Fi/WAN
+  throughput, CPU-bound load ramps to 1488 MHz instantly, idle 936 MHz,
+  -1 C); drops the old performance line from a kept rc.local.
+- wifi-check: expect schedutil.
+- log-dump: join the ring by the last written line instead of the first;
+  with a full 2 MB ring the first line changed every tick and every run
+  appended a full dump (rotation every ~45 min, history lost).
+- ram-guard: top-3 by RSS+swap from /proc (ps w prints large VSZ as
+  "108m", which broke the sort).
+- usb-watchdog: full dwc3 + USB PHY reset once when the disk does not come
+  back after a cold boot (17.10); usb-hangwatch init and 05-usb-disk-guard
+  hotplug (08.10).
+- health-check: services with autostart disabled are INFO, not WARN.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01QwnEsRTxW1M7XMasPGxfRD
+---
+ .../etc/hotplug.d/block/05-usb-disk-guard     |   9 ++
+ .../base-files/etc/init.d/usb-hangwatch       |  11 ++
+ .../etc/uci-defaults/20_be7000_cpu_perf       |  13 +-
+ .../ipq95xx/base-files/sbin/be7000-wifi-check |   6 +-
+ .../base-files/usr/bin/be7000-health-check    |   2 +-
+ .../base-files/usr/bin/be7000-log-dump        |  40 ++---
+ .../base-files/usr/bin/be7000-ram-guard       |   8 +-
+ .../base-files/usr/bin/usb-watchdog.sh        | 143 +++++++++++++++---
+ 8 files changed, 184 insertions(+), 48 deletions(-)
+ create mode 100644 target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/block/05-usb-disk-guard
+ create mode 100755 target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/usb-hangwatch
+
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/block/05-usb-disk-guard b/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/block/05-usb-disk-guard
+new file mode 100644
+index 00000000..6aab8369
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/block/05-usb-disk-guard
+@@ -0,0 +1,9 @@
++# USB-диск: мгновенная реакция на отключение/возврат (08.10.2026), см. usb-watchdog.sh
++[ -e /etc/usb-watchdog.seen ] || exit 0
++case "$ACTION:$DEVTYPE:$DEVNAME" in
++remove:disk:sd[a-z])
++	logger -t usb-watchdog "событие: $DEVNAME отключён"
++	/usr/bin/usb-watchdog.sh lost </dev/null >/dev/null 2>&1 & ;;
++add:partition:sd[a-z][0-9]*)
++	/usr/bin/usb-watchdog.sh settle </dev/null >/dev/null 2>&1 & ;;
++esac
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/usb-hangwatch b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/usb-hangwatch
+new file mode 100755
+index 00000000..78ff33a7
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/usb-hangwatch
+@@ -0,0 +1,11 @@
++#!/bin/sh /etc/rc.common
++# Зависание USB-моста без отключения устройства → снять диск (usb-watchdog.sh hangwatch)
++START=99
++USE_PROCD=1
++
++start_service() {
++	procd_open_instance
++	procd_set_param command /usr/bin/usb-watchdog.sh hangwatch
++	procd_set_param respawn 3600 5 0
++	procd_close_instance
++}
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/20_be7000_cpu_perf b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/20_be7000_cpu_perf
+index 371678a6..1b8982b0 100644
+--- a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/20_be7000_cpu_perf
++++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/20_be7000_cpu_perf
+@@ -1,13 +1,18 @@
+ #!/bin/sh
+-# BE7000: CPU governor = performance (+ автоприменение на каждом буте).
+-# Замер 26.09: schedutil держал ядра на 936-1104 МГц под гигабитным трафиком.
++# BE7000: CPU governor = schedutil (+ автоприменение на каждом буте).
++# 26.09 стоял performance: schedutil держал 936-1104 МГц под гигабитом.
++# 22.10 A/B: под ~1 Гбит Wi-Fi→WAN schedutil на 936 МГц, скорость та же
++# (482/979 vs 445/1055 Мбит/с, PPE-offload снимает форвардинг с CPU); CPU-bound
++# (openssl aes-gcm) одинаково 1.02 ГБ/с — разгон до 1488 мгновенный; idle -1 °C.
+ # Аппаратный потолок экземпляра = 1488 МГц (speedbin=1, фьюз qfprom 0x15, биты 7-8).
+ [ "$(board_name)" = "xiaomi,be7000" ] || exit 0
+ 
+ for c in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+-	[ -e "$c" ] && echo performance > "$c" 2>/dev/null
++	[ -e "$c" ] && echo schedutil > "$c" 2>/dev/null
+ done
+ 
+-LINE='for c in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > $c; done'
++# старая строка performance (≤22.10) из сохранённого rc.local — убрать
++sed -i '/scaling_governor; do echo performance > \$c; done/d' /etc/rc.local
++LINE='for c in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo schedutil > $c; done'
+ grep -qsF "$LINE" /etc/rc.local || sed -i "/^exit 0/i $LINE" /etc/rc.local
+ exit 0
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
+index 15a8df66..aa55afcb 100755
+--- a/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
++++ b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
+@@ -13,9 +13,9 @@ grep -q "^uapsd_advertisement_enabled=0" /var/run/hostapd-phy1.conf 2>/dev/null
+ grep -q "^BE	1000000" /sys/kernel/debug/ieee80211/phy1/aql_txq_limit 2>/dev/null \
+ 	&& ok "AQL 1000000/1000000 (phy1)" || bad "AQL дефолты! rc.local-блок не отработал"
+ 
+-# 3. CPU governor performance (иначе ядра спят на 936МГц)
+-[ "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null)" = "performance" ] \
+-	&& ok "governor=performance" || bad "governor!=performance — проверь rc.local"
++# 3. CPU governor schedutil (22.10: A/B — скорость как у performance, idle 936 МГц)
++[ "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null)" = "schedutil" ] \
++	&& ok "governor=schedutil" || bad "governor!=schedutil — проверь rc.local"
+ 
+ # 4. Flow offload
+ nft list flowtables 2>/dev/null | grep -q "flowtable" \
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-health-check b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-health-check
+index 4daa17ce..57b3ab77 100755
+--- a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-health-check
++++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-health-check
+@@ -59,7 +59,7 @@ done
+ DISK_SV="qbittorrent xray tailscale dockerd"
+ if mount | grep -qs " /mnt/sda1 "; then
+ 	for s in $DISK_SV; do
+-		[ -x /etc/init.d/$s ] && { /etc/init.d/$s running >/dev/null 2>&1 && echo "[OK] $s running" || echo "[WARN] $s не running (переустановить через opt-install?)"; }
++		[ -x /etc/init.d/$s ] && ! /etc/init.d/$s enabled && { echo "[INFO] $s отключён (автозапуск выкл)"; continue; }; [ -x /etc/init.d/$s ] && { /etc/init.d/$s running >/dev/null 2>&1 && echo "[OK] $s running" || echo "[WARN] $s не running (переустановить через opt-install?)"; }
+ 	done
+ fi
+ 
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-log-dump b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-log-dump
+index 230347a2..235189af 100755
+--- a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-log-dump
++++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-log-dump
+@@ -1,33 +1,35 @@
+ #!/bin/sh
+ # Персистентный лог: дамп logread в /mnt/sda1/logs/ (кольцо logd живёт в RAM и
+-# умирает при ребуте — постмортемы были недиагностируемы). Дедуп через первую
+-# строку кольца (детект wrap), ротация 5МБ. Нет диска — тихо выходим
+-# (usb-watchdog вернёт диск, со следующим тиком дамп продолжится).
++# умирает при ребуте — постмортемы были недиагностируемы). Дедуп по последней
++# записанной строке: ищем её в текущем кольце и дописываем только то, что после.
++# Не нашли (ребут / кольцо провернулось дальше) — полный дамп с маркером.
++# Ротация 5МБ. Нет диска — тихо выходим (usb-watchdog вернёт диск, со
++# следующим тиком дамп продолжится).
+ LOGDIR=/mnt/sda1/logs
+ CUR=$LOGDIR/router-current.log
+ PREV=$LOGDIR/router-prev.log
+-F=/tmp/log-dump-first
+-CNT=/tmp/log-dump-count
++L=/tmp/log-dump-last
++SNAP=/tmp/log-dump-snap
+ 
+ mount | grep -qs " /mnt/sda1 " || exit 0
+ mkdir -p "$LOGDIR" || exit 0
+ 
+-FIRST=$(logread 2>/dev/null | head -n 1)
+-TOTAL=$(logread 2>/dev/null | wc -l)
+-[ -n "$FIRST" ] || exit 0
+-OLD_FIRST=$(cat $F 2>/dev/null)
+-OLD_N=$(cat $CNT 2>/dev/null); [ -n "$OLD_N" ] || OLD_N=0
++logread > $SNAP 2>/dev/null
++LAST=$(tail -n 1 $SNAP)
++[ -n "$LAST" ] || { rm -f $SNAP; exit 0; }
++OLD_LAST=$(cat $L 2>/dev/null)
+ 
+-if [ "$FIRST" = "$OLD_FIRST" ] && [ "$TOTAL" -gt "$OLD_N" ]; then
+-	# обычный случай: кольцо стоит на месте, дописываем только новых
+-	logread | tail -n $((TOTAL - OLD_N)) >> $CUR
+-elif [ "$FIRST" != "$OLD_FIRST" ]; then
+-	# ребут (или редкое совпадение) / кольцо провернулось — полный дамп с маркером
+-	echo "=== кольцо провернулось/ребут $(date '+%d.%m %H:%M:%S'), полный дамп ($TOTAL строк) ===" >> $CUR
+-	logread >> $CUR
++N=
++[ -n "$OLD_LAST" ] && N=$(grep -nxF -- "$OLD_LAST" $SNAP | tail -n 1 | cut -d: -f1)
++if [ -n "$N" ]; then
++	# обычный случай: дописываем только новые строки после прошлой последней
++	tail -n +$((N + 1)) $SNAP >> $CUR
++else
++	echo "=== ребут/потеря стыка $(date '+%d.%m %H:%M:%S'), полный дамп ($(wc -l < $SNAP) строк) ===" >> $CUR
++	cat $SNAP >> $CUR
+ fi
+-echo "$FIRST" > $F
+-echo "$TOTAL" > $CNT
++echo "$LAST" > $L
++rm -f $SNAP
+ 
+ # ротация: 5МБ → current становится prev
+ if [ -f $CUR ] && [ "$(wc -c < $CUR)" -gt 5242880 ]; then
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-ram-guard b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-ram-guard
+index 907a6895..cd8e115e 100755
+--- a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-ram-guard
++++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-ram-guard
+@@ -5,11 +5,17 @@
+ # только сигнал (убийство сервисов по решению владельца).
+ AV=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)
+ ST=/tmp/ram-guard-state
++# топ-3 по RSS+swap из /proc (ps w пишет большие VSZ как «108m» — сортировка ломалась)
++top3() {
++	for p in /proc/[0-9]*; do
++		awk '/^Name:/{n=$2} /^VmRSS:/{r=$2} /^VmSwap:/{s=$2} END{if (r != "") print int((r+s)/1024), n}' $p/status 2>/dev/null
++	done | sort -rn | head -3 | awk '{printf "%sMB(%s) ", $1, $2}'
++}
+ if [ "$AV" -lt 200 ]; then
+ 	NOW=$(date +%s)
+ 	LAST=$(cat $ST 2>/dev/null); [ -n "$LAST" ] || LAST=0
+ 	if [ $((NOW - LAST)) -ge 1800 ]; then
+-		logger -t ram-guard "ALERT: available ${AV}MB < 200MB; топ по VSZ: $(ps w | awk 'NR>1{print $3, $6}' | sort -rn | head -3 | awk '{printf "%sKB(%s) ", $1, $2}')"
++		logger -t ram-guard "ALERT: available ${AV}MB < 200MB; топ по RSS+swap: $(top3)"
+ 		echo $NOW > $ST
+ 	fi
+ 	exit 0
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/usb-watchdog.sh b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/usb-watchdog.sh
+index 681a626c..5d6a0ffd 100755
+--- a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/usb-watchdog.sh
++++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/usb-watchdog.sh
+@@ -1,5 +1,8 @@
+ #!/bin/sh
+-# USB watchdog v6 (30.09.2026) — само-восстановление USB-диска. Cron: каждую минуту.
++# USB watchdog v7 (08.10.2026) — само-восстановление USB-диска.
++# Запуск: по событию из /etc/hotplug.d/block/05-usb-disk-guard (режимы lost/settle,
++# см. ниже) + cron раз в 10 мин как подстраховка (сбой при холодном старте,
++# пропущенное событие).
+ # Лог: logger -t usb-watchdog. Настройки (необязательно): /etc/usb-watchdog.conf
+ #
+ # Эскалация при пропаже диска работает, только если диск на этом роутере уже
+@@ -33,10 +36,12 @@ HUB_PORT=
+ SEEN=/etc/usb-watchdog.seen
+ CNT=/tmp/usb-wd-count
+ VCNT=/tmp/usb-wd-vcnt
++PCNT=/tmp/usb-wd-pcnt
+ ALERT=/tmp/usb-wd-alert
+ AUTOSTARTED=/tmp/usb-wd-autostarted  # приложения поднимаем один раз на каждое монтирование
+ # сервисы, держащие файлы на диске: глушим перед перемонтированием
+ DISK_SERVICES="jackett dockerd qbittorrent xray tailscale minidlna samba4"
++OPT_DISK=$( DISK_MP=; [ -r /etc/opt-install.conf ] && . /etc/opt-install.conf; echo "$DISK_MP" )
+ 
+ is_ntfs() { [ "$(dd if=$1 bs=1 skip=3 count=8 2>/dev/null)" = "NTFS    " ]; }
+ 
+@@ -62,6 +67,18 @@ stop_disk_services() {
+ 	done
+ }
+ 
++usb_phy_reset() {
++	local P=/sys/bus/platform/drivers
++	echo 8af8800.usb > $P/dwc3-qcom-legacy/unbind 2>/dev/null
++	echo 7b000.usb-phy > $P/qcom-qusb2-phy/unbind 2>/dev/null
++	echo 7d000.usb-phy > $P/qcom-qmp-usb-phy/unbind 2>/dev/null
++	sleep 5
++	echo 7b000.usb-phy > $P/qcom-qusb2-phy/bind 2>/dev/null
++	echo 7d000.usb-phy > $P/qcom-qmp-usb-phy/bind 2>/dev/null
++	sleep 1
++	echo 8af8800.usb > $P/dwc3-qcom-legacy/bind 2>/dev/null
++}
++
+ no_disk() {
+ 	local N V now last x
+ 	[ -e "$SEEN" ] || exit 0
+@@ -85,35 +102,118 @@ no_disk() {
+ 		echo $((V+1)) > $VCNT
+ 		exit 0
+ 	fi
++	# PHY завис после холодного старта: xHCI rebind не помогает, порт не видит
++	# даже перетык кабеля. Полный сброс dwc3 + обоих PHY (17.10) — после него
++	# перетык работает. Док, уже воткнутый в момент сброса, не переподключается.
++	if [ ! -e "$PCNT" ]; then
++		logger -t usb-watchdog "сброс dwc3 + USB PHY (после него перетык кабеля сработает)"
++		usb_phy_reset
++		echo 1 > $PCNT
++		exit 0
++	fi
+ 	now=$(date +%s); last=$(cat $ALERT 2>/dev/null); [ -n "$last" ] || last=0
+ 	if [ $((now-last)) -ge 600 ]; then
+-		logger -t usb-watchdog "ALERT: USB-диск пропал и не вернулся после автоматических попыток. Переподключите диск или обесточьте его бокс на 30 сек. Если диск убран насовсем: rm $SEEN"
++		logger -t usb-watchdog "ALERT: USB-диск пропал и не вернулся после автоматических попыток. USB PHY уже сброшен — выньте и воткните USB-кабель дока в роутер. Если диск убран насовсем: rm $SEEN"
+ 		echo $now > $ALERT
+ 	fi
+ 	exit 0
+ }
+ 
++# мёртвый маунт: нет source-ноды или ext4 в shutdown после I/O-ошибок
++# (нода могла появиться снова под тем же именем). /opt — bind с ext4-раздела.
++dead_mount() {
++	local src mp fs opts rest
++	grep '^/dev/sd' /proc/mounts | while read src mp fs opts rest; do
++		case "$mp" in /mnt/*|/opt) ;; *) continue ;; esac
++		case ",$opts," in *,shutdown,*) echo "$src $mp"; break ;; esac
++		[ -b "$src" ] || { echo "$src $mp"; break; }
++	done
++}
++umount_dead() {
++	local M
++	while M=$(dead_mount) && [ -n "$M" ]; do
++		set -- $M
++		logger -t usb-watchdog "мёртвый маунт $1 на $2 — снимаю (lazy)"
++		# /mnt/sda1, ext4-раздел приложений (DISK_MP из /etc/opt-install.conf), /opt
++		case "$2" in /mnt/sda1|"$OPT_DISK"|/opt) stop_disk_services ;; esac
++		umount -l "$2" 2>/dev/null
++		grep -q "^$1 $2 " /proc/mounts && break
++	done
++}
++
++# ---------- режимы из hotplug ----------
++# lost   — диск только что пропал: сразу глушим приложения (иначе пишут в мёртвый
++#          том; block hotplug перемонтирует раздел за секунды, и плановый проход
++#          мёртвого маунта уже не видит), снимаем мёртвые маунты, затем каждые
++#          LOST_STEP_SEC — обычный цикл (rebind/VBUS), пока диск не вернётся.
++# hangwatch — служба: зависание моста без remove-события → снять диск (→ lost).
++# settle — появился раздел: ждём, пока block/30-usb-disk-mount смонтирует все
++#          разделы, и делаем обычный цикл (канонизация, samba, автозапуск).
++LOST_STEP_SEC=15
++LOCK=/var/lock/usb-watchdog.lock
++case "$1" in
++lost)
++	exec 7>/var/lock/usb-wd-lost.lock
++	flock -n 7 || exit 0
++	exec 8>$LOCK
++	flock 8 || exit 0
++	logger -t usb-watchdog "диск отключился — останавливаю приложения"
++	stop_disk_services
++	umount_dead
++	flock -u 8
++	n=0
++	while [ $n -lt $((RETRY_REBIND + RETRY_VBUS + 1)) ]; do
++		sleep $LOST_STEP_SEC
++		ls /dev/sd[a-z] >/dev/null 2>&1 && break
++		/usr/bin/usb-watchdog.sh
++		n=$((n+1))
++	done
++	# диск вернулся быстро (событие add могло прийти, пока приложения ещё
++	# останавливались) — подъём сервисов здесь же
++	exec 7>&-
++	ls /dev/sd[a-z] >/dev/null 2>&1 && exec /usr/bin/usb-watchdog.sh
++	exit 0 ;;
++hangwatch)
++	# служба /etc/init.d/usb-hangwatch. Мост RTL9210B может зависнуть, не пропав
++	# с шины: UAS-команды висят, reset не проходит, sdX остаётся, remove-события
++	# нет. По этим строкам ядра снимаем диск сами — дальше обычный путь lost.
++	# logread -e понимает только базовый regex — фильтр в case
++	logread -f | while read -r l; do
++		case "$l" in
++		*"uas_eh_device_reset_handler FAILED"*|*-port[0-9]*": Cannot enable"*) ;;
++		*) continue ;;
++		esac
++		now=$(date +%s)
++		[ $((now - ${last:-0})) -ge 60 ] || continue
++		for d in /sys/block/sd[a-z]; do
++			[ -e "$d/device/delete" ] || continue
++			case "$(readlink -f $d)" in */usb[0-9]*) ;; *) continue ;; esac
++			last=$now
++			logger -t usb-watchdog "мост завис (${l##*kernel: }) — снимаю ${d##*/}"
++			echo 1 > $d/device/delete
++		done
++	done
++	exit 0 ;;
++settle)
++	exec 7>/var/lock/usb-wd-settle.lock
++	flock -n 7 || exit 0
++	sleep 8
++	exec 7>&-
++	exec /usr/bin/usb-watchdog.sh ;;
++esac
++
++exec 8>$LOCK
++flock 8 || exit 0
++
+ # ---------- нет ни одного sd*? ----------
+ if ! ls /dev/sd[a-z] >/dev/null 2>&1; then
+ 	no_disk
+ fi
+ 
+-rm -f $CNT $VCNT $ALERT
++rm -f $CNT $VCNT $PCNT $ALERT
+ 
+-# ---------- 1) мёртвые маунты: source-ноды не существует ----------
+-dead_mount() {
+-	local src mp rest
+-	grep '^/dev/sd' /proc/mounts | while read src mp rest; do
+-		case "$mp" in /mnt/*) ;; *) continue ;; esac
+-		[ -b "$src" ] || { echo "$src $mp"; break; }
+-	done
+-}
+-while M=$(dead_mount) && [ -n "$M" ]; do
+-	set -- $M
+-	logger -t usb-watchdog "мёртвый маунт $1 на $2 — снимаю (lazy)"
+-	[ "$2" = /mnt/sda1 ] && stop_disk_services
+-	umount -l "$2" 2>/dev/null || break
+-done
++# ---------- 1) мёртвые маунты ----------
++umount_dead
+ 
+ # ---------- 2) канонизация /mnt/sda1 ----------
+ PART=""
+@@ -179,9 +279,12 @@ fi
+ 
+ # ---------- 4) подъём сервисов ----------
+ if ls /mnt/sda1/ >/dev/null 2>&1; then
+-	if [ -x /etc/init.d/samba4 ] && /etc/init.d/samba4 enabled && ! pgrep smbd >/dev/null; then
+-		/etc/init.d/samba4 start >/dev/null 2>&1 && logger -t usb-watchdog "samba4 запущена"
+-	fi
++	# сервисы прошивки с файлами на диске (stop_disk_services их глушит)
++	for s in samba4:smbd minidlna:minidlnad; do
++		if [ -x /etc/init.d/${s%:*} ] && /etc/init.d/${s%:*} enabled && ! pgrep ${s#*:} >/dev/null; then
++			/etc/init.d/${s%:*} start >/dev/null 2>&1 && logger -t usb-watchdog "${s%:*} запущена"
++		fi
++	done
+ 	# один раз после (пере)монтирования: «Стоп» из LuCI не перебиваем каждую минуту
+ 	if [ ! -e $AUTOSTARTED ] && [ -x /usr/bin/opt-install ]; then
+ 		touch $AUTOSTARTED
+-- 
+2.43.0
+

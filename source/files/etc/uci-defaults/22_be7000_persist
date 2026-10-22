@@ -31,10 +31,12 @@ if [ "$(uci -q get fstab.@global[0].anon_mount)" != "1" ] && ! uci -q show fstab
 	uci -q set fstab.@global[0].anon_mount='1'
 	uci -q commit fstab
 fi
-# 4. cron: usb-watchdog (каждую минуту), лог-дамп, страж RAM, ночной бэкап
+# 4. cron: usb-watchdog (подстраховка раз в 10 мин; основной запуск — по событию
+#    из /etc/hotplug.d/block/05-usb-disk-guard), лог-дамп, страж RAM, ночной бэкап
 CR=/etc/crontabs/root
 touch $CR
-grep -qs 'usb-watchdog.sh' $CR    || echo '* * * * * /usr/bin/usb-watchdog.sh' >> $CR
+sed -i 's#^\* \* \* \* \* /usr/bin/usb-watchdog.sh#*/10 * * * * /usr/bin/usb-watchdog.sh#' $CR
+grep -qs 'usb-watchdog.sh' $CR    || echo '*/10 * * * * /usr/bin/usb-watchdog.sh' >> $CR
 grep -qs 'be7000-log-dump' $CR    || echo '*/15 * * * * /usr/bin/be7000-log-dump' >> $CR
 grep -qs 'be7000-ram-guard' $CR   || echo '*/5 * * * * /usr/bin/be7000-ram-guard' >> $CR
 grep -qs 'be7000-config-backup' $CR || echo '7 4 * * * /usr/bin/be7000-config-backup' >> $CR

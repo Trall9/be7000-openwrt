@@ -18,6 +18,9 @@ while uci -q get wireless.@wifi-iface[$i] >/dev/null 2>&1; do
 	[ "$(uci -q get wireless.@wifi-iface[$i].mode)" = "ap" ] && {
 		uci -q set wireless.@wifi-iface[$i].bss_transition='1'
 		uci -q set wireless.@wifi-iface[$i].ieee80211k='1'
+		# GTK rekey раз в сутки: часть клиентов (ноутбук Killer, MacBook, телефон)
+		# не отвечала на group key handshake → hostapd кикал их (22.10)
+		uci -q set wireless.@wifi-iface[$i].wpa_group_rekey='0'
 	}
 	i=$((i + 1))
 done
