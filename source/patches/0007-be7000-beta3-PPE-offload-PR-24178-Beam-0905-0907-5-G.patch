@@ -1,12 +1,13 @@
-From 2914f65040c64dfb0da03b9887b333482a1b59e8 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Trall9 <tralllll9@gmail.com>
 Date: Fri, 2 Oct 2026 03:15:54 +0200
-Subject: [PATCH] be7000 beta3: PPE offload (PR #24178 + Beam 0905-0907), 5 GHz
- split (Beam ath12k 308-311), DTS reserved memory, Quarx2k 9511/9518/0374, NSS
- hooks dropped
+Subject: [PATCH 07/18] be7000 beta3: PPE offload (PR #24178 + Beam 0905-0907),
+ 5 GHz split (Beam ath12k 308-311), DTS reserved memory, Quarx2k
+ 9511/9518/0374, NSS hooks dropped
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01KVjjsvZKZfHpcTdFRmGaAY
+(cherry picked from commit 2914f65040c64dfb0da03b9887b333482a1b59e8)
 ---
  ...i-ath12k-dt-board-id-selects-dualmac.patch |   39 +
  ...h12k-pci-fixed-mem-keep-all-segments.patch |   86 ++
@@ -1137,10 +1138,10 @@ index b7883532..fba8d74a 100644
   obj-y += netdev_rx_queue.o
  --- a/net/core/sock.c
 diff --git a/target/linux/qualcommbe/config-6.18 b/target/linux/qualcommbe/config-6.18
-index 98f814ec..c92348e7 100644
+index 534da07f..28b9f359 100644
 --- a/target/linux/qualcommbe/config-6.18
 +++ b/target/linux/qualcommbe/config-6.18
-@@ -649,10 +649,21 @@ CONFIG_ZSTD_DECOMPRESS=y
+@@ -650,10 +650,21 @@ CONFIG_ZSTD_DECOMPRESS=y
  CONFIG_NETCONSOLE=y
  CONFIG_NET_POLL_CONTROLLER=y
  CONFIG_MTD_OOPS=y

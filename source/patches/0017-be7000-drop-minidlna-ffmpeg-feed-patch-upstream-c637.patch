@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Trall9 <tralllll9@gmail.com>
+Date: Fri, 23 Oct 2026 01:40:54 +0200
+Subject: [PATCH 17/18] be7000: drop minidlna ffmpeg feed patch (upstream
+ c637ea9 fixes it)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01QwnEsRTxW1M7XMasPGxfRD
+---
+ .../minidlna/patches/080-ffmpeg-ch-layout.patch    | 14 --------------
+ 1 file changed, 14 deletions(-)
+ delete mode 100644 feed-patches/packages/multimedia/minidlna/patches/080-ffmpeg-ch-layout.patch
+
+diff --git a/feed-patches/packages/multimedia/minidlna/patches/080-ffmpeg-ch-layout.patch b/feed-patches/packages/multimedia/minidlna/patches/080-ffmpeg-ch-layout.patch
+deleted file mode 100644
+index c412f961..00000000
+--- a/feed-patches/packages/multimedia/minidlna/patches/080-ffmpeg-ch-layout.patch
++++ /dev/null
+@@ -1,14 +0,0 @@
+---- a/libav.h
+-+++ b/libav.h
+-@@ -174,7 +174,11 @@ lav_get_interlaced(AVStream *s)
+- #define lav_codec_tag(s) s->codecpar->codec_tag
+- #define lav_sample_rate(s) s->codecpar->sample_rate
+- #define lav_bit_rate(s) s->codecpar->bit_rate
+-+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 24, 100)
+-+#define lav_channels(s) s->codecpar->ch_layout.nb_channels
+-+#else
+- #define lav_channels(s) s->codecpar->channels
+-+#endif
+- #define lav_width(s) s->codecpar->width
+- #define lav_height(s) s->codecpar->height
+- #define lav_profile(s) s->codecpar->profile
+-- 
+2.43.0
+

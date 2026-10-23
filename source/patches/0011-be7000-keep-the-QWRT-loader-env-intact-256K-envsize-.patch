@@ -1,8 +1,8 @@
-From 2a6e29f24e619aaaabbb38d309e22169b215847f Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Trall9 <tralllll9@gmail.com>
 Date: Wed, 7 Oct 2026 00:18:33 +0200
-Subject: [PATCH] be7000: keep the QWRT loader env intact (256K envsize, no
- slot flags)
+Subject: [PATCH 11/18] be7000: keep the QWRT loader env intact (256K envsize,
+ no slot flags)
 
 On the QWRT layout (single rootfs, no rootfs_1) the loader keeps its env
 in 256K, but the board file set 64K. fw_printenv then hit a bad CRC and
@@ -16,6 +16,7 @@ loadaddr, leaving bootipq to boot-loop the router (steady orange LED).
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01Q4KpSAUmJKo8wk8dN2H5zD
+(cherry picked from commit 2a6e29f24e619aaaabbb38d309e22169b215847f)
 ---
  .../uboot-envtools/files/qualcommbe_ipq95xx   | 20 ++++++++++++++++---
  .../base-files/etc/init.d/be7000_boot_success | 11 ++++++++++

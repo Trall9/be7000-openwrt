@@ -1,0 +1,84 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Trall9 <tralllll9@gmail.com>
+Date: Fri, 23 Oct 2026 10:17:50 +0200
+Subject: [PATCH 18/18] be7000: restore 2.4 GHz and 5 GHz after the rebase onto
+ main
+
+The rebase onto main 2026-10-22 broke both radios:
+
+- upstream config-6.18 switched to CONFIG_QCOM_Q6V5_WCSS_SEC and unset
+  CONFIG_QCOM_Q6V5_WCSS, while the BE7000 DTS keeps the non-secure
+  qcom,ipq9574-wcss-pil loader. remoteproc@cd00000 stayed unbound and
+  ath11k deferred forever ("failed to get rproc"): no 2.4 GHz. Enable
+  CONFIG_QCOM_Q6V5_WCSS again (the secure driver matches only
+  qcom,ipq9574-wcss-sec-pil, no conflict).
+
+- files/usr/share/ucode/wifi/ap.uc (and the wifi-iface schema) were old
+  copies carrying wpa_group_update_count/wpa_pairwise_update_count. They
+  shadowed the new upstream files and hostapd.uc failed with
+  "ap.owe_transition is not a function": no 5 GHz. Move the two options
+  into the package files; the overrides are removed from files/.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01NuHun6cS6NuGXaAQBymtTo
+---
+ .../files-ucode/usr/share/schema/wireless.wifi-iface.json | 8 ++++++++
+ .../wifi-scripts/files-ucode/usr/share/ucode/wifi/ap.uc   | 2 +-
+ target/linux/qualcommbe/config-6.18                       | 2 +-
+ 3 files changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/package/network/config/wifi-scripts/files-ucode/usr/share/schema/wireless.wifi-iface.json b/package/network/config/wifi-scripts/files-ucode/usr/share/schema/wireless.wifi-iface.json
+index c23b8021..bf48808f 100644
+--- a/package/network/config/wifi-scripts/files-ucode/usr/share/schema/wireless.wifi-iface.json
++++ b/package/network/config/wifi-scripts/files-ucode/usr/share/schema/wireless.wifi-iface.json
+@@ -1206,6 +1206,10 @@
+ 			"description": "Time interval for rekeying GTK (broadcast/multicast encryption keys)",
+ 			"type": "number"
+ 		},
++		"wpa_group_update_count": {
++			"description": "Number of tries to send GTK rekey EAPOL-group message 1 frames",
++			"type": "number"
++		},
+ 		"wpa_master_rekey": {
+ 			"type": "alias",
+ 			"default": "wpa_gmk_rekey"
+@@ -1214,6 +1218,10 @@
+ 			"type": "alias",
+ 			"default": "wpa_ptk_rekey"
+ 		},
++		"wpa_pairwise_update_count": {
++			"description": "Number of tries to send PTK rekey EAPOL pairwise message 1 frames",
++			"type": "number"
++		},
+ 		"wpa_psk_file": {
+ 			"description": "External file conatining VLAN PSK MAC address triplets",
+ 			"type": "string"
+diff --git a/package/network/config/wifi-scripts/files-ucode/usr/share/ucode/wifi/ap.uc b/package/network/config/wifi-scripts/files-ucode/usr/share/ucode/wifi/ap.uc
+index bebf95cb..92eefcea 100644
+--- a/package/network/config/wifi-scripts/files-ucode/usr/share/ucode/wifi/ap.uc
++++ b/package/network/config/wifi-scripts/files-ucode/usr/share/ucode/wifi/ap.uc
+@@ -348,7 +348,7 @@ function iface_auth_type(config, band, eht) {
+ 
+ 	append_vars(config, [
+ 		'sae_require_mfp', 'sae_password_file', 'sae_pwe', 'sae_groups', 'sae_track_password', 'time_advertisement', 'time_zone',
+-		'wpa_group_rekey', 'wpa_ptk_rekey', 'wpa_gmk_rekey', 'wpa_strict_rekey',
++		'wpa_group_rekey', 'wpa_ptk_rekey', 'wpa_gmk_rekey', 'wpa_strict_rekey', 'wpa_group_update_count', 'wpa_pairwise_update_count',
+ 		'macaddr_acl', 'wpa_psk_radius', 'wpa_psk', 'wpa_passphrase', 'wpa_psk_file',
+ 		'eapol_version', 'dynamic_vlan', 'radius_request_cui', 'eap_reauth_period',
+ 		'radius_das_client', 'radius_das_port', 'owe_groups', 'owe_ptk_workaround', 'own_ip_addr', 'dynamic_own_ip_addr',
+diff --git a/target/linux/qualcommbe/config-6.18 b/target/linux/qualcommbe/config-6.18
+index 28b9f359..22a56f7f 100644
+--- a/target/linux/qualcommbe/config-6.18
++++ b/target/linux/qualcommbe/config-6.18
+@@ -438,7 +438,7 @@ CONFIG_QCOM_Q6V5_COMMON=y
+ CONFIG_QCOM_Q6V5_MPD=y
+ # CONFIG_QCOM_Q6V5_MSS is not set
+ # CONFIG_QCOM_Q6V5_PAS is not set
+-# CONFIG_QCOM_Q6V5_WCSS is not set
++CONFIG_QCOM_Q6V5_WCSS=y
+ CONFIG_QCOM_Q6V5_WCSS_SEC=y
+ # CONFIG_QCOM_QSEECOM is not set
+ # CONFIG_QCOM_RAMP_CTRL is not set
+-- 
+2.43.0
+

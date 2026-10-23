@@ -1,0 +1,139 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Trall9 <tralllll9@gmail.com>
+Date: Fri, 23 Oct 2026 01:24:36 +0200
+Subject: [PATCH 15/18] be7000: mount USB disk only after 5 GHz is up; usteer
+ signal_threshold fix
+
+22.10: warm reboot -> disk ready at 8 s, ext4 recovery and page cache
+fragmented RAM, ath12k at 32 s failed an order-5 DMA allocation
+(reo_dst_ring, -ENOMEM) and 5 GHz stayed down until the next reboot.
+Rebinding the driver on a live system hangs the router, so prevent it:
+fstab boot, block hotplug, 30-usb-disk-mount and usb-watchdog wait (in
+background) for phy1, an ath12k start failure or 120 s of uptime.
+
+usteer: register band_steering_signal_threshold in the ubus config list
+(feed patch), otherwise uci value is ignored and the default 5 dB rule
+never steers a nearby client to 5 GHz.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01QwnEsRTxW1M7XMasPGxfRD
+---
+ ...ister-band_steering_signal_threshold.patch | 31 +++++++++++++++++++
+ package/system/fstools/files/fstab.init       |  5 +++
+ package/system/fstools/files/mount.hotplug    |  8 ++++-
+ .../base-files/usr/bin/usb-watchdog.sh        |  3 ++
+ .../base-files/usr/libexec/be7000-wait-5g     | 21 +++++++++++++
+ 5 files changed, 67 insertions(+), 1 deletion(-)
+ create mode 100644 feed-patches/packages/net/usteer/patches/001-ubus-register-band_steering_signal_threshold.patch
+ create mode 100755 target/linux/qualcommbe/ipq95xx/base-files/usr/libexec/be7000-wait-5g
+
+diff --git a/feed-patches/packages/net/usteer/patches/001-ubus-register-band_steering_signal_threshold.patch b/feed-patches/packages/net/usteer/patches/001-ubus-register-band_steering_signal_threshold.patch
+new file mode 100644
+index 00000000..eedfdbcb
+--- /dev/null
++++ b/feed-patches/packages/net/usteer/patches/001-ubus-register-band_steering_signal_threshold.patch
+@@ -0,0 +1,31 @@
++From c2bad1f469382b9cafc76a60c2a85461d62f3eb7 Mon Sep 17 00:00:00 2001
++From: Trall9 <tralllll9@gmail.com>
++Date: Thu, 22 Oct 2026 16:58:50 +0200
++Subject: [PATCH] ubus: register band_steering_signal_threshold
++
++7b1379a added the band_steering_signal_threshold option (default 5) but
++not its config entry, so the uci value was dropped by set_config and the
++default always applied. With it, a station is only steered once its
++signal is 5 dB better than when it associated: a phone next to the AP
++(-30 dBm) never qualifies and stays on 2.4 GHz.
++
++Signed-off-by: Trall9 <tralllll9@gmail.com>
++---
++ ubus.c | 1 +
++ 1 file changed, 1 insertion(+)
++
++diff --git a/ubus.c b/ubus.c
++index dca6f9a..c182d6a 100644
++--- a/ubus.c
+++++ b/ubus.c
++@@ -186,6 +186,7 @@ struct cfg_item {
++ 	_cfg(U32, load_kick_reason_code), \
++ 	_cfg(U32, band_steering_interval), \
++ 	_cfg(I32, band_steering_min_snr), \
+++	_cfg(U32, band_steering_signal_threshold), \
++ 	_cfg(U32, link_measurement_interval), \
++ 	_cfg(ARRAY_CB, interfaces), \
++ 	_cfg(STRING_CB, node_up_script), \
++-- 
++2.43.0
++
+diff --git a/package/system/fstools/files/fstab.init b/package/system/fstools/files/fstab.init
+index 03a39934..623de25f 100644
+--- a/package/system/fstools/files/fstab.init
++++ b/package/system/fstools/files/fstab.init
+@@ -6,6 +6,11 @@
+ START=11
+ 
+ boot() {
++	# BE7000: монтирование после подъёма 5 ГГц, см. /usr/libexec/be7000-wait-5g
++	if [ -x /usr/libexec/be7000-wait-5g ] && /usr/libexec/be7000-wait-5g check; then
++		( /usr/libexec/be7000-wait-5g; /sbin/block mount ) </dev/null >/dev/null 2>&1 &
++		return 0
++	fi
+ 	/sbin/block mount
+ }
+ 
+diff --git a/package/system/fstools/files/mount.hotplug b/package/system/fstools/files/mount.hotplug
+index 550e57c7..e9a5f85e 100644
+--- a/package/system/fstools/files/mount.hotplug
++++ b/package/system/fstools/files/mount.hotplug
+@@ -1 +1,7 @@
+-[ "$ACTION" = "add" -o "$ACTION" = "remove" ] && /sbin/block hotplug
++[ "$ACTION" = "add" -o "$ACTION" = "remove" ] || exit 0
++# BE7000: при загрузке add ждёт подъёма 5 ГГц в фоне (очередь hotplug не держим)
++if [ "$ACTION" = "add" ] && [ -x /usr/libexec/be7000-wait-5g ] && /usr/libexec/be7000-wait-5g check; then
++	( /usr/libexec/be7000-wait-5g; /sbin/block hotplug ) </dev/null >/dev/null 2>&1 &
++	exit 0
++fi
++/sbin/block hotplug
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/usb-watchdog.sh b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/usb-watchdog.sh
+index 5d6a0ffd..bbc84dc2 100755
+--- a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/usb-watchdog.sh
++++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/usb-watchdog.sh
+@@ -25,6 +25,9 @@
+ #
+ # NTFS dirty: чистый mount → scanvol clear → чистый → force.
+ 
++# при загрузке — не трогать диск до подъёма 5 ГГц (см. /usr/libexec/be7000-wait-5g)
++[ -x /usr/libexec/be7000-wait-5g ] && /usr/libexec/be7000-wait-5g
++
+ RETRY_REBIND=3
+ RETRY_VBUS=2
+ VBUS_OFF_SEC=12
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/libexec/be7000-wait-5g b/target/linux/qualcommbe/ipq95xx/base-files/usr/libexec/be7000-wait-5g
+new file mode 100755
+index 00000000..841d607e
+--- /dev/null
++++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/libexec/be7000-wait-5g
+@@ -0,0 +1,21 @@
++#!/bin/sh
++# BE7000: при загрузке USB-диск монтируется только после подъёма 5 ГГц (ath12k).
++# 22.10: тёплый ребут — диск готов уже на 8 с, ext4-recovery + кэш раздробили RAM,
++# и ath12k на 32 с не получил order-5 DMA-блок (reo_dst_ring, -ENOMEM) → 5 ГГц
++# нет до следующего ребута. Перепривязка драйвера на живой системе вешает
++# роутер, поэтому только профилактика. При холодном старте диск и так
++# появляется через минуты — задержка ничего не стоит.
++# без аргументов: ждать; check: код 0 = ждать нужно (вызывающий уходит в фон)
++need() {
++	[ "$(cat /tmp/sysinfo/board_name 2>/dev/null)" = "xiaomi,be7000" ] || return 1
++	[ -e /sys/class/ieee80211/phy1 ] && return 1
++	[ "$(cut -d. -f1 /proc/uptime)" -lt 120 ] || return 1
++	dmesg | grep -q "ath12k.*failed to start core" && return 1
++	return 0
++}
++[ "$1" = check ] && { need; exit; }
++need || exit 0
++logger -t be7000-wait-5g "USB-диск ждёт подъёма 5 ГГц"
++while need; do sleep 2; done
++logger -t be7000-wait-5g "ожидание закончено, монтирую"
++exit 0
+-- 
+2.43.0
+

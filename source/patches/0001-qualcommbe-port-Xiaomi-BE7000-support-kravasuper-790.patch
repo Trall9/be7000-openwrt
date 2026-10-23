@@ -1,19 +1,18 @@
-From f29e41cd4fbb1cdb36769d80534e4a6567448e0a Mon Sep 17 00:00:00 2001
-From: Trall9 <Trall9@users.noreply.github.com>
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: logan <tralllll9@gmail.com>
 Date: Thu, 1 Oct 2026 15:36:14 +0200
-Subject: [PATCH 1/6] qualcommbe: port Xiaomi BE7000 support (kravasuper
+Subject: [PATCH 01/18] qualcommbe: port Xiaomi BE7000 support (kravasuper
  790d036) to main
 
+(cherry picked from commit f29e41cd4fbb1cdb36769d80534e4a6567448e0a)
 ---
  include/target.mk                             |   1 +
  package/be7000-nfc-i2ctransfer/Makefile       |  41 +
  .../src/be7000-nfc-i2ctransfer.c              | 186 ++++
  .../uboot-envtools/files/fw_defaults          |   4 +-
  .../uboot-envtools/files/qualcommbe_ipq95xx   |  22 +-
- package/firmware/ath11k-firmware/Makefile     |  37 +-
+ package/firmware/ath11k-firmware/Makefile     |  36 +-
  package/firmware/ipq-wifi/Makefile            |  12 +-
- package/kernel/linux/modules/netsupport.mk    |   2 +-
- package/kernel/mac80211/ath.mk                |   2 +-
  .../950-wifi-ath11k-add-ipq9574-support.patch | 213 ++++
  ...1k-use-iommu-paging-domain-allocator.patch |  19 +
  ...drop-pcie-pme-capability-for-ipq9574.patch |  19 +
@@ -57,7 +56,7 @@ Subject: [PATCH 1/6] qualcommbe: port Xiaomi BE7000 support (kravasuper
  ...-qcom-gcc-ipq9574-add-wcss-q6-clocks.patch | 490 +++++++++
  ...c-qcom-q6v5-wcss-add-ipq9574-support.patch | 538 ++++++++++
  ...ca808x-disable-EEE-on-QCA8084-QXGMII.patch |  35 +
- 52 files changed, 4529 insertions(+), 21 deletions(-)
+ 50 files changed, 4516 insertions(+), 29 deletions(-)
  create mode 100644 package/be7000-nfc-i2ctransfer/Makefile
  create mode 100644 package/be7000-nfc-i2ctransfer/src/be7000-nfc-i2ctransfer.c
  create mode 100644 package/kernel/mac80211/patches/ath11k/950-wifi-ath11k-add-ipq9574-support.patch
@@ -98,13 +97,13 @@ Subject: [PATCH 1/6] qualcommbe: port Xiaomi BE7000 support (kravasuper
  create mode 100644 target/linux/qualcommbe/patches-6.18/0707-net-phy-qca808x-disable-EEE-on-QCA8084-QXGMII.patch
 
 diff --git a/include/target.mk b/include/target.mk
-index 0f6258ee..9bbca879 100644
+index c17c56d4..04721dd0 100644
 --- a/include/target.mk
 +++ b/include/target.mk
-@@ -265,6 +265,7 @@ ifeq ($(DUMP),1)
-     CPU_TYPE ?= generic
-     CPU_CFLAGS_generic = -mcpu=generic
+@@ -272,6 +272,7 @@ ifeq ($(DUMP),1)
      CPU_CFLAGS_cortex-a53 = -mcpu=cortex-a53
+     CPU_CFLAGS_cortex-a72 = -mcpu=cortex-a72
+     CPU_CFLAGS_cortex-a76 = -mcpu=cortex-a76
 +    CPU_CFLAGS_cortex-a73 = -mcpu=cortex-a73
    endif
    ifeq ($(ARCH),riscv64)
@@ -402,12 +401,12 @@ index cf89850f..1eefa40d 100644
  linksys,ln6001)
  	ubootenv_add_mmc "u_env" "" "0x0" "0x40000" "0x40000"
 diff --git a/package/firmware/ath11k-firmware/Makefile b/package/firmware/ath11k-firmware/Makefile
-index 18d7bac0..3edd7c9e 100644
+index 32ec67ea..01a278eb 100644
 --- a/package/firmware/ath11k-firmware/Makefile
 +++ b/package/firmware/ath11k-firmware/Makefile
-@@ -31,6 +31,12 @@ ATH11K_LEGACY_FW_RELEASE:=795809c7
- ATH11K_LEGACY_FW_SUBDIR:=$(ATH11K_LEGACY_FW_NAME)-$(ATH11K_LEGACY_FW_DATE)~$(ATH11K_LEGACY_FW_RELEASE)
+@@ -32,6 +32,12 @@ ATH11K_LEGACY_FW_SUBDIR:=$(ATH11K_LEGACY_FW_NAME)-$(ATH11K_LEGACY_FW_DATE)~$(ATH
  ATH11K_LEGACY_FW_SOURCE=$(ATH11K_LEGACY_FW_SUBDIR).tar.zst
+ ATH11K_IPQ9574_SUBDIR:=ath11k-firmware/IPQ9574/hw1.0/2.9.0.1/WLAN.HK.2.9.0.1-01890-QCAHKSWPL_SILICONZ-1
  
 +ATH11K_IPQ9574_FW_NAME:=ath11k-firmware-ipq9574-board
 +ATH11K_IPQ9574_FW_DATE:=2026.03.24
@@ -418,7 +417,7 @@ index 18d7bac0..3edd7c9e 100644
  define Download/$(ATH11K_LEGACY_FW_NAME)
  	FILE:=$(ATH11K_LEGACY_FW_SOURCE)
  	PROTO:=git
-@@ -41,6 +47,16 @@ define Download/$(ATH11K_LEGACY_FW_NAME)
+@@ -42,6 +48,16 @@ define Download/$(ATH11K_LEGACY_FW_NAME)
  endef
  $(eval $(call Download,$(ATH11K_LEGACY_FW_NAME)))
  
@@ -435,16 +434,13 @@ index 18d7bac0..3edd7c9e 100644
  define Package/ath11k-firmware-default
    SECTION:=firmware
    CATEGORY:=Firmware
-@@ -58,17 +74,25 @@ $(Package/ath11k-firmware-default)
-   TITLE:=IPQ6018 ath11k firmware
+@@ -65,19 +81,22 @@ $(Package/ath11k-firmware-default)
+   URL:=https://github.com/quic/upstream-wifi-fw
+   LICENSE:=LicenseRef-QuIC
+   LICENSE_FILES:=../$(ATH11K_LEGACY_FW_SUBDIR)/ath11k-firmware/LICENSE.md
++  VERSION:=$(ATH11K_IPQ9574_FW_DATE)~$(ATH11K_IPQ9574_FW_RELEASE)-r$(PKG_RELEASE)
  endef
  
-+define Package/ath11k-firmware-ipq9574
-+$(Package/ath11k-firmware-default)
-+  TITLE:=IPQ9574 ath11k firmware
-+  VERSION:=$(ATH11K_IPQ9574_FW_DATE)~$(ATH11K_IPQ9574_FW_RELEASE)-r$(PKG_RELEASE)
-+endef
-+
  define Build/Clean
  	$(call Build/Clean/Default,)
  
@@ -462,25 +458,32 @@ index 18d7bac0..3edd7c9e 100644
  endef
  
  define Build/Compile
-@@ -93,5 +117,16 @@ define Package/ath11k-firmware-ipq6018/install
- 		$(1)/lib/firmware/IPQ6018/
+@@ -103,18 +122,13 @@ define Package/ath11k-firmware-ipq6018/install
  endef
  
-+define Package/ath11k-firmware-ipq9574/install
+ define Package/ath11k-firmware-ipq9574/install
+-	$(INSTALL_DIR) $(1)/lib/firmware/IPQ9574
 +	$(INSTALL_DIR) $(1)/lib/firmware/ath11k/IPQ9574/hw1.0
-+	$(INSTALL_DATA) \
+ 	$(INSTALL_DATA) \
+-		$(BUILD_DIR)/$(ATH11K_LEGACY_FW_SUBDIR)/$(ATH11K_IPQ9574_SUBDIR)/q6_fw.mdt \
+-		$(BUILD_DIR)/$(ATH11K_LEGACY_FW_SUBDIR)/$(ATH11K_IPQ9574_SUBDIR)/q6_fw.b?? \
+-		$(BUILD_DIR)/$(ATH11K_LEGACY_FW_SUBDIR)/$(ATH11K_IPQ9574_SUBDIR)/m3_fw.mdt \
+-		$(BUILD_DIR)/$(ATH11K_LEGACY_FW_SUBDIR)/$(ATH11K_IPQ9574_SUBDIR)/m3_fw.b?? \
+-		$(1)/lib/firmware/IPQ9574/
+-	$(INSTALL_DIR) $(1)/usr/share/licenses/ath11k-firmware-ipq9574
 +		$(BUILD_DIR)/$(ATH11K_LEGACY_FW_SUBDIR)/ath11k-firmware/IPQ9574/hw1.0/2.11.0.1/WLAN.HK.2.11.0.1-01491-QCAHKSWPL_SILICONZ-1/*.* \
 +		$(1)/lib/firmware/ath11k/IPQ9574/hw1.0/
-+	$(INSTALL_DATA) \
+ 	$(INSTALL_DATA) \
+-		$(BUILD_DIR)/$(ATH11K_LEGACY_FW_SUBDIR)/ath11k-firmware/LICENSE.md \
+-		$(BUILD_DIR)/$(ATH11K_LEGACY_FW_SUBDIR)/$(ATH11K_IPQ9574_SUBDIR)/Notice.txt \
+-		$(1)/usr/share/licenses/ath11k-firmware-ipq9574/
 +		$(BUILD_DIR)/$(ATH11K_IPQ9574_FW_SUBDIR)/IPQ9574/hw1.0/board-2.bin \
 +		$(1)/lib/firmware/ath11k/IPQ9574/hw1.0/
-+endef
-+
+ endef
+ 
  $(eval $(call BuildPackage,ath11k-firmware-ipq5018-qcn6122))
- $(eval $(call BuildPackage,ath11k-firmware-ipq6018))
-+$(eval $(call BuildPackage,ath11k-firmware-ipq9574))
 diff --git a/package/firmware/ipq-wifi/Makefile b/package/firmware/ipq-wifi/Makefile
-index de25103d..074bc09d 100644
+index 3bd3e48f..1cac059f 100644
 --- a/package/firmware/ipq-wifi/Makefile
 +++ b/package/firmware/ipq-wifi/Makefile
 @@ -5,10 +5,10 @@ PKG_NAME:=ipq-wifi
@@ -488,9 +491,9 @@ index de25103d..074bc09d 100644
  
  PKG_SOURCE_PROTO:=git
 -PKG_SOURCE_URL=$(PROJECT_GIT)/project/firmware/qca-wireless.git
--PKG_SOURCE_DATE:=2026-09-27
--PKG_SOURCE_VERSION:=3eba07d9b5c9b78f2533eea2ce10727140ae16d9
--PKG_MIRROR_HASH:=1c1a2940c005b0d4547f1f436d57beb951417d251359e3d03c507939791a9e2e
+-PKG_SOURCE_DATE:=2026-10-18
+-PKG_SOURCE_VERSION:=0f8eb5d74be32befb4d8bfc8e48cb98080cc86f1
+-PKG_MIRROR_HASH:=4ad228d157e14c680b3300a350d22c982b7698cb2c2f692be8834bdf246af819
 +PKG_SOURCE_URL=https://github.com/kravasuper/firmware_qca-wireless.git
 +PKG_SOURCE_DATE:=2026-06-13
 +PKG_SOURCE_VERSION:=f6128066e7496aa0fb4beb32355c26b95d2d2381
@@ -498,15 +501,15 @@ index de25103d..074bc09d 100644
  PKG_FLAGS:=nonshared
  
  include $(INCLUDE_DIR)/package.mk
-@@ -114,6 +114,7 @@ ALLWIFIBOARDS:= \
+@@ -118,6 +118,7 @@ ALLWIFIBOARDS:= \
  	xiaomi_ax3600 \
  	xiaomi_ax6000 \
  	xiaomi_ax9000 \
 +	xiaomi_be7000 \
  	xiaomi_redmi-ax5400 \
+ 	xunison_exigo-hub-d50-5g \
  	yuncore_ax830 \
- 	yuncore_ax850 \
-@@ -230,7 +231,7 @@ endef
+@@ -238,7 +239,7 @@ endef
  # 2. Add $(eval $(call generate-ipq-wifi-package,<devicename>,<display name>))
  #
  # Board files should follow this name structure:
@@ -515,40 +518,14 @@ index de25103d..074bc09d 100644
  
  $(eval $(call generate-ipq-wifi-package,8devices_kiwi,8devices Kiwi))
  $(eval $(call generate-ipq-wifi-package,8devices_mango,8devices Mango))
-@@ -319,6 +320,7 @@ $(eval $(call generate-ipq-wifi-package,xiaomi_aiot-ac2350,Xiaomi AIoT AC2350))
+@@ -331,6 +332,7 @@ $(eval $(call generate-ipq-wifi-package,xiaomi_aiot-ac2350,Xiaomi AIoT AC2350))
  $(eval $(call generate-ipq-wifi-package,xiaomi_ax3600,Xiaomi AX3600))
  $(eval $(call generate-ipq-wifi-package,xiaomi_ax6000,Xiaomi AX6000))
  $(eval $(call generate-ipq-wifi-package,xiaomi_ax9000,Xiaomi AX9000))
 +$(eval $(call generate-ipq-wifi-package,xiaomi_be7000,Xiaomi BE7000))
  $(eval $(call generate-ipq-wifi-package,xiaomi_redmi-ax5400,Xiaomi Redmi AX5400))
+ $(eval $(call generate-ipq-wifi-package,xunison_exigo-hub-d50-5g,Xunison Exigo Hub D50 5G))
  $(eval $(call generate-ipq-wifi-package,yuncore_ax830,Yuncore AX830))
- $(eval $(call generate-ipq-wifi-package,yuncore_ax850,Yuncore AX850))
-diff --git a/package/kernel/linux/modules/netsupport.mk b/package/kernel/linux/modules/netsupport.mk
-index 7f68f333..b3bd8e3b 100644
---- a/package/kernel/linux/modules/netsupport.mk
-+++ b/package/kernel/linux/modules/netsupport.mk
-@@ -1585,7 +1585,7 @@ $(eval $(call KernelPackage,qrtr-tun))
- define KernelPackage/qrtr-smd
-   SUBMENU:=$(NETWORK_SUPPORT_MENU)
-   TITLE:=SMD IPC Router channels
--  DEPENDS:=+kmod-qrtr @TARGET_qualcommax
-+  DEPENDS:=+kmod-qrtr @(TARGET_qualcommax||TARGET_qualcommbe)
-   KCONFIG:=CONFIG_QRTR_SMD
-   FILES:= $(LINUX_DIR)/net/qrtr/qrtr-smd.ko
-   AUTOLOAD:=$(call AutoProbe,qrtr-smd)
-diff --git a/package/kernel/mac80211/ath.mk b/package/kernel/mac80211/ath.mk
-index f1c041e7..9b50c6a8 100644
---- a/package/kernel/mac80211/ath.mk
-+++ b/package/kernel/mac80211/ath.mk
-@@ -340,7 +340,7 @@ define KernelPackage/ath11k-ahb
-   $(call KernelPackage/mac80211/Default)
-   TITLE:=Qualcomm 802.11ax AHB wireless chipset support
-   URL:=https://wireless.wiki.kernel.org/en/users/drivers/ath11k
--  DEPENDS+= @TARGET_qualcommax +kmod-ath11k +kmod-qrtr-smd
-+  DEPENDS+= @(TARGET_qualcommax||TARGET_qualcommbe) +kmod-ath11k +kmod-qrtr-smd
-   FILES:=$(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath11k/ath11k_ahb.ko
-   AUTOLOAD:=$(call AutoProbe,ath11k_ahb)
- endef
 diff --git a/package/kernel/mac80211/patches/ath11k/950-wifi-ath11k-add-ipq9574-support.patch b/package/kernel/mac80211/patches/ath11k/950-wifi-ath11k-add-ipq9574-support.patch
 new file mode 100644
 index 00000000..3e45f58b
@@ -1525,7 +1502,7 @@ index cb6fbada..385ed9fc 100644
  
  $(eval $(call BuildTarget))
 diff --git a/target/linux/qualcommbe/config-6.18 b/target/linux/qualcommbe/config-6.18
-index a2b34848..855e32e8 100644
+index 0659c6dd..63950f29 100644
 --- a/target/linux/qualcommbe/config-6.18
 +++ b/target/linux/qualcommbe/config-6.18
 @@ -435,6 +435,7 @@ CONFIG_QCOM_PIL_INFO=y
@@ -1535,8 +1512,8 @@ index a2b34848..855e32e8 100644
 +CONFIG_QCOM_Q6V5_MPD=y
  # CONFIG_QCOM_Q6V5_MSS is not set
  # CONFIG_QCOM_Q6V5_PAS is not set
- CONFIG_QCOM_Q6V5_WCSS=y
-@@ -461,6 +462,8 @@ CONFIG_QCOM_TZMEM_MODE_GENERIC=y
+ # CONFIG_QCOM_Q6V5_WCSS is not set
+@@ -462,6 +463,8 @@ CONFIG_QCOM_TZMEM_MODE_GENERIC=y
  # CONFIG_QCOM_WCNSS_CTRL is not set
  # CONFIG_QCOM_WCNSS_PIL is not set
  CONFIG_QCOM_WDT=y
@@ -2534,7 +2511,7 @@ index 00000000..872e3d35
 +	status = "disabled";
 +};
 diff --git a/target/linux/qualcommbe/image/ipq95xx.mk b/target/linux/qualcommbe/image/ipq95xx.mk
-index 3adaeaad..80b2eb63 100644
+index ae404d92..862a065f 100644
 --- a/target/linux/qualcommbe/image/ipq95xx.mk
 +++ b/target/linux/qualcommbe/image/ipq95xx.mk
 @@ -1,5 +1,45 @@

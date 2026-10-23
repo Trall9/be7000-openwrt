@@ -1,7 +1,7 @@
-From d050ef3088020aeb55d4a0e3945bbb4611a339e6 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Trall9 <tralllll9@gmail.com>
 Date: Fri, 2 Oct 2026 12:25:51 +0200
-Subject: [PATCH] fstools: block: find_dev matches block devices only
+Subject: [PATCH 10/18] fstools: block: find_dev matches block devices only
 
 On Xiaomi BE7000 the squashfs root /dev/ubiblock0_1 and the character
 device /dev/gpiochip0 are both 254:0. find_dev() compared st_rdev of any
@@ -10,6 +10,7 @@ with etc/.extroot-default ("unable to lookup root device /dev/gpiochip0").
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_013s2VZi5nRhTzdeeLSd7jmt
+(cherry picked from commit d050ef3088020aeb55d4a0e3945bbb4611a339e6)
 ---
  package/system/fstools/Makefile               |  2 +-
  ...ck-find_dev-match-block-devices-only.patch | 25 +++++++++++++++++++
@@ -17,7 +18,7 @@ Claude-Session: https://claude.ai/code/session_013s2VZi5nRhTzdeeLSd7jmt
  create mode 100644 package/system/fstools/patches/100-block-find_dev-match-block-devices-only.patch
 
 diff --git a/package/system/fstools/Makefile b/package/system/fstools/Makefile
-index 8f9321fb..2a6405bb 100644
+index 18ff62fa..24e5e8ec 100644
 --- a/package/system/fstools/Makefile
 +++ b/package/system/fstools/Makefile
 @@ -8,7 +8,7 @@

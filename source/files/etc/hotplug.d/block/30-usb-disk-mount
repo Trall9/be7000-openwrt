@@ -6,6 +6,11 @@ case "$DEVNAME" in
   sd[a-z][0-9]) ;;
   *) exit 0;;
 esac
+# BE7000: при загрузке — после подъёма 5 ГГц, в фоне (см. /usr/libexec/be7000-wait-5g)
+if [ -z "$WAITED_5G" ] && [ -x /usr/libexec/be7000-wait-5g ] && /usr/libexec/be7000-wait-5g check; then
+	( /usr/libexec/be7000-wait-5g; WAITED_5G=1 sh /etc/hotplug.d/block/30-usb-disk-mount ) </dev/null >/dev/null 2>&1 &
+	exit 0
+fi
 sleep 2
 TYPE=$(blkid -o value -s TYPE /dev/$DEVNAME 2>/dev/null)
 # уже смонтирован (например, это /overlay на диске) — не трогаем

@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Trall9 <tralllll9@gmail.com>
+Date: Fri, 23 Oct 2026 01:27:38 +0200
+Subject: [PATCH 16/18] be7000: wifi-check reads speedbin fuse in 4-byte words
+ (qfprom EINVAL on bs=1)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01QwnEsRTxW1M7XMasPGxfRD
+---
+ .../linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
+index aa55afcb..d69ac114 100755
+--- a/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
++++ b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
+@@ -45,7 +45,8 @@ case "$aff" in
+ esac
+ 
+ # 8. Справочно: speedbin фьюз (инфо, не ошибка)
+-b=$(hexdump -v -s 21 -n 2 /sys/bus/nvmem/devices/qfprom0/nvmem 2>/dev/null | awk 'NR==1{gsub(/ /,""); print substr($0,5,2)$0}' >/dev/null 2>&1; dd if=/sys/bus/nvmem/devices/qfprom0/nvmem bs=1 skip=20 count=2 2>/dev/null | hexdump -v -e "/1 \"%02x\"" 2>/dev/null)
++# qfprom читается только словами по 4 байта (bs=1 → EINVAL), 0x14 = 5-е слово
++b=$(dd if=/sys/bus/nvmem/devices/qfprom0/nvmem bs=4 skip=5 count=1 2>/dev/null | hexdump -v -n 2 -e '/1 "%02x"' 2>/dev/null)
+ echo "[INFO] speedbin raw(0x14..0x15): $b (ожидаемо 0080 = bin 1, потолок 1488МГц)"
+ 
+ echo "-------------------------------------"
+-- 
+2.43.0
+

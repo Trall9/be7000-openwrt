@@ -1,7 +1,7 @@
-From 410532be5f72530338fd7c574b8eb4ce7edb4b2c Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Trall9 <tralllll9@gmail.com>
 Date: Fri, 2 Oct 2026 03:36:43 +0200
-Subject: [PATCH 8/9] be7000: enable sysupgrade on the QWRT single-UBI layout
+Subject: [PATCH 08/18] be7000: enable sysupgrade on the QWRT single-UBI layout
 
 Two causes made sysupgrade unusable on the 1x80 MB QWRT layout:
 - the opt-install overlayfs at /tmp/run/opt-rootfs moves into the stage2
@@ -20,6 +20,7 @@ Tested on hardware: beta3 -> beta3 with settings kept.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_016s4ZCYE4HWyW97D5LRd25E
+(cherry picked from commit 410532be5f72530338fd7c574b8eb4ce7edb4b2c)
 ---
  .../base-files/lib/upgrade/platform.sh        | 182 ++++++++++++++++--
  1 file changed, 161 insertions(+), 21 deletions(-)

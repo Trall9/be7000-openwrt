@@ -1,8 +1,8 @@
-From 41da1cba0b3fe3474e765ff1a56bb6115ec239ad Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Trall9 <tralllll9@gmail.com>
 Date: Thu, 22 Oct 2026 15:21:42 +0200
-Subject: [PATCH] be7000: schedutil governor, log-dump/ram-guard fixes, USB PHY
- reset
+Subject: [PATCH 12/18] be7000: schedutil governor, log-dump/ram-guard fixes,
+ USB PHY reset
 
 - cpu_perf: schedutil instead of performance (22.10 A/B: same Wi-Fi/WAN
   throughput, CPU-bound load ramps to 1488 MHz instantly, idle 936 MHz,
@@ -20,6 +20,7 @@ Subject: [PATCH] be7000: schedutil governor, log-dump/ram-guard fixes, USB PHY
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01QwnEsRTxW1M7XMasPGxfRD
+(cherry picked from commit 41da1cba0b3fe3474e765ff1a56bb6115ec239ad)
 ---
  .../etc/hotplug.d/block/05-usb-disk-guard     |   9 ++
  .../base-files/etc/init.d/usb-hangwatch       |  11 ++
