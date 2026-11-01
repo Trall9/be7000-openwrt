@@ -1,8 +1,8 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Trall9 <tralllll9@gmail.com>
 Date: Fri, 23 Oct 2026 01:40:54 +0200
-Subject: [PATCH 17/18] be7000: drop minidlna ffmpeg feed patch (upstream
- c637ea9 fixes it)
+Subject: [PATCH] be7000: drop minidlna ffmpeg feed patch (upstream c637ea9
+ fixes it)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01QwnEsRTxW1M7XMasPGxfRD

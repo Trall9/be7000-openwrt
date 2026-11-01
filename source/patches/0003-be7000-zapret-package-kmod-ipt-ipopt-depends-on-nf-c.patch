@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: logan <tralllll9@gmail.com>
 Date: Thu, 1 Oct 2026 20:07:50 +0200
-Subject: [PATCH 03/18] be7000: zapret package; kmod-ipt-ipopt depends on
+Subject: [PATCH] be7000: zapret package; kmod-ipt-ipopt depends on
  nf-conntrack (ECM DSCPREMARK)
 
 (cherry picked from commit 8f0f3a3fb4a9357da5d6487d2b2931c18493a3cb)
@@ -84,10 +84,10 @@ Subject: [PATCH 03/18] be7000: zapret package; kmod-ipt-ipopt depends on
  create mode 100755 package/zapret-openwrt/zapret/update-pkg.sh
 
 diff --git a/package/kernel/linux/modules/netfilter.mk b/package/kernel/linux/modules/netfilter.mk
-index cd1fd002..bdce0804 100644
+index debc2a5a..870f427b 100644
 --- a/package/kernel/linux/modules/netfilter.mk
 +++ b/package/kernel/linux/modules/netfilter.mk
-@@ -338,6 +338,8 @@ define KernelPackage/ipt-ipopt
+@@ -311,6 +311,8 @@ define KernelPackage/ipt-ipopt
    KCONFIG:=$(KCONFIG_IPT_IPOPT)
    FILES:=$(foreach mod,$(IPT_IPOPT-m),$(LINUX_DIR)/net/$(mod).ko)
    AUTOLOAD:=$(call AutoProbe,$(notdir $(IPT_IPOPT-m)))

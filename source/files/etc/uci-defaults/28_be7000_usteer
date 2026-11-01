@@ -9,7 +9,12 @@
 # link_measurement_interval=0: запросы Link Measurement давали в hostapd
 # «Unexpected Link measurement report» ~3.5 тыс. строк/сутки, для band steering
 # не нужны. Миграция с 22.10 (было 30000) — до проверки маркера.
+# 24.10 usteer ВЫКЛЮЧЕН по умолчанию: aggressiveness=3 → BTM с disassoc imminent,
+# hostapd кикал ТВ (только 2.4 ГГц, -32 dBm) каждые ~124 с (reason 12), ~24 с без сети.
+# Пакет и конфиг остаются, включать вручную: /etc/init.d/usteer enable && start.
 [ -f /etc/config/usteer ] || exit 0
+/etc/init.d/usteer disable 2>/dev/null
+/etc/init.d/usteer stop 2>/dev/null
 if [ "$(uci -q get usteer.@usteer[0].be7000)" = "1" ]; then
 	if [ "$(uci -q get usteer.@usteer[0].link_measurement_interval)" = "30000" ]; then
 		uci set usteer.@usteer[0].link_measurement_interval='0'
@@ -29,5 +34,4 @@ set usteer.@usteer[0].aggressiveness='3'
 set usteer.@usteer[0].link_measurement_interval='0'
 commit usteer
 UCI
-/etc/init.d/usteer enable 2>/dev/null
 exit 0

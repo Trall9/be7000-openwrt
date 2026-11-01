@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: logan <tralllll9@gmail.com>
 Date: Thu, 1 Oct 2026 20:45:51 +0200
-Subject: [PATCH 04/18] be7000: feed patch minidlna for ffmpeg 9 (ch_layout)
+Subject: [PATCH] be7000: feed patch minidlna for ffmpeg 9 (ch_layout)
 
 (cherry picked from commit 6ddf7e66988e4ffac3e376fea4eeca53ff190b44)
 ---

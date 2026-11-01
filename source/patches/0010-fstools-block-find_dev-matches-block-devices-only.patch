@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Trall9 <tralllll9@gmail.com>
 Date: Fri, 2 Oct 2026 12:25:51 +0200
-Subject: [PATCH 10/18] fstools: block: find_dev matches block devices only
+Subject: [PATCH] fstools: block: find_dev matches block devices only
 
 On Xiaomi BE7000 the squashfs root /dev/ubiblock0_1 and the character
 device /dev/gpiochip0 are both 254:0. find_dev() compared st_rdev of any

@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Trall9 <tralllll9@gmail.com>
 Date: Thu, 22 Oct 2026 15:52:38 +0200
-Subject: [PATCH 13/18] be7000: rebase onto main 2026-10-22
+Subject: [PATCH] be7000: rebase onto main 2026-10-22
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit

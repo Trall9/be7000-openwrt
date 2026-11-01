@@ -1,8 +1,8 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Trall9 <tralllll9@gmail.com>
 Date: Thu, 22 Oct 2026 15:21:42 +0200
-Subject: [PATCH 12/18] be7000: schedutil governor, log-dump/ram-guard fixes,
- USB PHY reset
+Subject: [PATCH] be7000: schedutil governor, log-dump/ram-guard fixes, USB PHY
+ reset
 
 - cpu_perf: schedutil instead of performance (22.10 A/B: same Wi-Fi/WAN
   throughput, CPU-bound load ramps to 1488 MHz instantly, idle 936 MHz,

@@ -1,0 +1,60 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Trall9 <tralllll9@gmail.com>
+Date: Sun, 1 Nov 2026 16:02:23 +0100
+Subject: [PATCH] be7000: ppe: adapt to dev_fill_forward_path(ctx) from the
+ 706-01 backport
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01F55aWzRSTFrSN8kqrKnPGN
+---
+ ...alcomm-ppe-dev_fill_forward_path-ctx.patch | 38 +++++++++++++++++++
+ 1 file changed, 38 insertions(+)
+ create mode 100644 target/linux/qualcommbe/patches-6.18/0599-net-ethernet-qualcomm-ppe-dev_fill_forward_path-ctx.patch
+
+diff --git a/target/linux/qualcommbe/patches-6.18/0599-net-ethernet-qualcomm-ppe-dev_fill_forward_path-ctx.patch b/target/linux/qualcommbe/patches-6.18/0599-net-ethernet-qualcomm-ppe-dev_fill_forward_path-ctx.patch
+new file mode 100644
+index 00000000..43170d85
+--- /dev/null
++++ b/target/linux/qualcommbe/patches-6.18/0599-net-ethernet-qualcomm-ppe-dev_fill_forward_path-ctx.patch
+@@ -0,0 +1,38 @@
++From: Trall9 <Trall9@users.noreply.github.com>
++Subject: [PATCH] net: ethernet: qualcomm: ppe: use net_device_path_ctx for dev_fill_forward_path
++
++The 706-01 backport (Linux 7.3) changed dev_fill_forward_path() to take a
++struct net_device_path_ctx. Build the context at both call sites. The
++ieee80211 flag stays unset like in mtk_ppe and airoha: these lookups
++resolve the wired underlay of a PPPoE or tunnel device.
++
++--- a/drivers/net/ethernet/qualcomm/ppe/ppe_flowtable.c
+++++ b/drivers/net/ethernet/qualcomm/ppe/ppe_flowtable.c
++@@ -571,7 +571,12 @@
++ 	topo->vlan_mtu = ppp_dev->mtu;
++ 
++ 	rcu_read_lock();
++-	ret = dev_fill_forward_path(ppp_dev, daddr, &stack);
+++	{
+++		struct net_device_path_ctx ctx = { .dev = ppp_dev };
+++
+++		ether_addr_copy(ctx.daddr, daddr);
+++		ret = dev_fill_forward_path(&ctx, &stack);
+++	}
++ 	if (ret)
++ 		goto out_unlock;
++ 
++@@ -1309,7 +1314,12 @@
++ 		goto out_dst;
++ 	}
++ 	rcu_read_lock();
++-	ret = dev_fill_forward_path(dst->dev, daddr, &stack);
+++	{
+++		struct net_device_path_ctx ctx = { .dev = dst->dev };
+++
+++		ether_addr_copy(ctx.daddr, daddr);
+++		ret = dev_fill_forward_path(&ctx, &stack);
+++	}
++ 	if (ret)
++ 		goto out_unlock;
++ 
+-- 
+2.43.0
+

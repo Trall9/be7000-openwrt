@@ -1,8 +1,8 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: logan <tralllll9@gmail.com>
 Date: Thu, 1 Oct 2026 21:34:35 +0200
-Subject: [PATCH 05/18] mac80211: port BE7000 patches to backports 7.2 (drop
- 961/307 merged upstream, 960 without max_tx_ring)
+Subject: [PATCH] mac80211: port BE7000 patches to backports 7.2 (drop 961/307
+ merged upstream, 960 without max_tx_ring)
 
 (cherry picked from commit c57b7f971af91a691d22c0321f112648094930fd)
 ---

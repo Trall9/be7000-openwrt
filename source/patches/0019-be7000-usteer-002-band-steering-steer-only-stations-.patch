@@ -1,0 +1,142 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Trall9 <tralllll9@gmail.com>
+Date: Sun, 1 Nov 2026 15:29:30 +0100
+Subject: [PATCH] be7000: usteer 002 band steering (steer only stations seen on
+ 5 GHz)
+
+Beam WRT 0909 (qpic-snand stale ECC context) is not needed: Linux 6.18.60
+already sets qspi->ecc at ECC init and clears it on cleanup.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01F55aWzRSTFrSN8kqrKnPGN
+---
+ ...-band-steering-skip-2g-only-stations.patch | 117 ++++++++++++++++++
+ 1 file changed, 117 insertions(+)
+ create mode 100644 feed-patches/packages/net/usteer/patches/002-band-steering-skip-2g-only-stations.patch
+
+diff --git a/feed-patches/packages/net/usteer/patches/002-band-steering-skip-2g-only-stations.patch b/feed-patches/packages/net/usteer/patches/002-band-steering-skip-2g-only-stations.patch
+new file mode 100644
+index 00000000..08f66372
+--- /dev/null
++++ b/feed-patches/packages/net/usteer/patches/002-band-steering-skip-2g-only-stations.patch
+@@ -0,0 +1,117 @@
++From: Trall9 <Trall9@users.noreply.github.com>
++Subject: [PATCH] band-steering: only steer stations that can use 5 GHz
++
++A 2.4 GHz-only client (TV) accepted BSS transition, could not associate on
++5 GHz and was kicked (reason 12) every ~2 min.
++
++- Steer only stations seen on 5 GHz (probe request or association), as
++  vendor band steering does: 2.4 GHz-only clients never probe there.
++- If a station comes back to 2.4 GHz within 2 min of a request without a
++  5 GHz association, stop steering it.
++
++--- a/usteer.h
+++++ b/usteer.h
++@@ -303,6 +303,11 @@
++ 
++ 	uint32_t aggressiveness;
++ 
+++	/* Band steering: time of the last request and whether this STA failed
+++	 * to associate on 5 GHz after one. */
+++	uint64_t band_steering_request;
+++	bool band_steering_disabled;
+++
++ 	uint8_t addr[6];
++ };
++ 
++--- a/band_steering.c
+++++ b/band_steering.c
++@@ -79,6 +79,57 @@
++ 	return false;
++ }
++ 
+++static bool usteer_band_steering_sta_on_5ghz_since(struct sta *sta, uint64_t since)
+++{
+++	struct sta_info *si;
+++
+++	list_for_each_entry(si, &sta->nodes, list) {
+++		if (si->node->freq < 4000)
+++			continue;
+++
+++		if (si->connected == STA_CONNECTED || si->last_connected >= since)
+++			return true;
+++	}
+++
+++	return false;
+++}
+++
+++/* Reconnect to 2.4 GHz this long after a request counts as its result */
+++#define BAND_STEERING_RESULT_WINDOW	(2 * 60 * 1000)
+++
+++/* STA reconnected to 2.4 GHz shortly after a steering request and was never
+++ * associated on 5 GHz in between: it can't use 5 GHz, stop steering it. */
+++static bool usteer_band_steering_sta_failed(struct sta_info *si)
+++{
+++	struct sta *sta = si->sta;
+++
+++	if (sta->band_steering_disabled)
+++		return true;
+++
+++	if (!sta->band_steering_request || si->connected != STA_CONNECTED)
+++		return false;
+++
+++	if (usteer_band_steering_sta_on_5ghz_since(sta, sta->band_steering_request)) {
+++		sta->band_steering_request = 0;
+++		return false;
+++	}
+++
+++	if (si->connected_since <= sta->band_steering_request)
+++		return false;
+++
+++	if (si->connected_since > sta->band_steering_request + BAND_STEERING_RESULT_WINDOW) {
+++		sta->band_steering_request = 0;
+++		return false;
+++	}
+++
+++	sta->band_steering_disabled = true;
+++	si->kick_time = 0;
+++	MSG(INFO, "band steering disabled for station " MAC_ADDR_FMT ": back on 2.4 GHz without 5 GHz association\n",
+++	    MAC_ADDR_DATA(sta->addr));
+++
+++	return true;
+++}
+++
++ void usteer_band_steering_perform_steer(struct usteer_local_node *ln)
++ {
++ 	unsigned int min_count = DIV_ROUND_UP(config.band_steering_interval, config.local_sta_update);
++@@ -106,6 +157,13 @@
++ 	ln->band_steering_interval = 0;
++ 
++ 	list_for_each_entry(si, &ln->node.sta_info, node_list) {
+++		/* Only steer clients seen on 5 GHz (probe or association) */
+++		if (!si->sta->seen_5ghz)
+++			continue;
+++
+++		if (usteer_band_steering_sta_failed(si))
+++			continue;
+++
++ 		/* Check if client is eligable to be steerd */
++ 		if (!usteer_policy_can_perform_roam(si))
++ 			continue;
++@@ -121,6 +179,7 @@
++ 			continue;
++ 
++ 		if (si->bss_transition) {
+++			si->sta->band_steering_request = current_time;
++ 			si->roam_transition_request_validity_end = current_time + 10000;
++ 			validity_period = 10000 / usteer_local_node_get_beacon_interval(ln); /* ~ 10 seconds */
++ 			if (si->sta->aggressiveness >= 2) {
++--- a/ubus.c
+++++ b/ubus.c
++@@ -106,6 +106,7 @@
++ 	blob_buf_init(&b, 0);
++ 	blobmsg_add_u8(&b, "2ghz", sta->seen_2ghz);
++ 	blobmsg_add_u8(&b, "5ghz", sta->seen_5ghz);
+++	blobmsg_add_u8(&b, "band_steering_disabled", sta->band_steering_disabled);
++ 	_n = blobmsg_open_table(&b, "nodes");
++ 	list_for_each_entry(si, &sta->nodes, list) {
++ 		_cur_n = blobmsg_open_table(&b, usteer_node_name(si->node));
+-- 
+2.43.0
+

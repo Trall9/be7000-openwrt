@@ -1,8 +1,8 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Trall9 <tralllll9@gmail.com>
 Date: Fri, 2 Oct 2026 03:42:58 +0200
-Subject: [PATCH 09/18] be7000: repeat image checks in stage2 so --force cannot
- skip them
+Subject: [PATCH] be7000: repeat image checks in stage2 so --force cannot skip
+ them
 
 LuCI "Force upgrade" (sysupgrade --force) skips platform_check_image.
 On the QWRT single-UBI layout a kernel FIT without config@al02-c6 means

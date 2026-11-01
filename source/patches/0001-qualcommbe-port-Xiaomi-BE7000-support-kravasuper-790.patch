@@ -1,8 +1,8 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: logan <tralllll9@gmail.com>
 Date: Thu, 1 Oct 2026 15:36:14 +0200
-Subject: [PATCH 01/18] qualcommbe: port Xiaomi BE7000 support (kravasuper
- 790d036) to main
+Subject: [PATCH] qualcommbe: port Xiaomi BE7000 support (kravasuper 790d036)
+ to main
 
 (cherry picked from commit f29e41cd4fbb1cdb36769d80534e4a6567448e0a)
 ---
@@ -483,7 +483,7 @@ index 32ec67ea..01a278eb 100644
  
  $(eval $(call BuildPackage,ath11k-firmware-ipq5018-qcn6122))
 diff --git a/package/firmware/ipq-wifi/Makefile b/package/firmware/ipq-wifi/Makefile
-index 3bd3e48f..1cac059f 100644
+index a1eb14e7..b168a405 100644
 --- a/package/firmware/ipq-wifi/Makefile
 +++ b/package/firmware/ipq-wifi/Makefile
 @@ -5,10 +5,10 @@ PKG_NAME:=ipq-wifi
@@ -491,9 +491,9 @@ index 3bd3e48f..1cac059f 100644
  
  PKG_SOURCE_PROTO:=git
 -PKG_SOURCE_URL=$(PROJECT_GIT)/project/firmware/qca-wireless.git
--PKG_SOURCE_DATE:=2026-10-18
--PKG_SOURCE_VERSION:=0f8eb5d74be32befb4d8bfc8e48cb98080cc86f1
--PKG_MIRROR_HASH:=4ad228d157e14c680b3300a350d22c982b7698cb2c2f692be8834bdf246af819
+-PKG_SOURCE_DATE:=2026-10-25
+-PKG_SOURCE_VERSION:=49ce14c099b16044b7062df54bdabeb495b804ad
+-PKG_MIRROR_HASH:=b9c6723021af9267035b7e25762b80c06887a5ea9c524b2649b0b27ea58b121c
 +PKG_SOURCE_URL=https://github.com/kravasuper/firmware_qca-wireless.git
 +PKG_SOURCE_DATE:=2026-06-13
 +PKG_SOURCE_VERSION:=f6128066e7496aa0fb4beb32355c26b95d2d2381
@@ -501,7 +501,7 @@ index 3bd3e48f..1cac059f 100644
  PKG_FLAGS:=nonshared
  
  include $(INCLUDE_DIR)/package.mk
-@@ -118,6 +118,7 @@ ALLWIFIBOARDS:= \
+@@ -120,6 +120,7 @@ ALLWIFIBOARDS:= \
  	xiaomi_ax3600 \
  	xiaomi_ax6000 \
  	xiaomi_ax9000 \
@@ -509,7 +509,7 @@ index 3bd3e48f..1cac059f 100644
  	xiaomi_redmi-ax5400 \
  	xunison_exigo-hub-d50-5g \
  	yuncore_ax830 \
-@@ -238,7 +239,7 @@ endef
+@@ -240,7 +241,7 @@ endef
  # 2. Add $(eval $(call generate-ipq-wifi-package,<devicename>,<display name>))
  #
  # Board files should follow this name structure:
@@ -518,7 +518,7 @@ index 3bd3e48f..1cac059f 100644
  
  $(eval $(call generate-ipq-wifi-package,8devices_kiwi,8devices Kiwi))
  $(eval $(call generate-ipq-wifi-package,8devices_mango,8devices Mango))
-@@ -331,6 +332,7 @@ $(eval $(call generate-ipq-wifi-package,xiaomi_aiot-ac2350,Xiaomi AIoT AC2350))
+@@ -335,6 +336,7 @@ $(eval $(call generate-ipq-wifi-package,xiaomi_aiot-ac2350,Xiaomi AIoT AC2350))
  $(eval $(call generate-ipq-wifi-package,xiaomi_ax3600,Xiaomi AX3600))
  $(eval $(call generate-ipq-wifi-package,xiaomi_ax6000,Xiaomi AX6000))
  $(eval $(call generate-ipq-wifi-package,xiaomi_ax9000,Xiaomi AX9000))
