@@ -8,18 +8,24 @@
 # полных wpad (mbedtls/openssl/wolfssl). На wpad-basic-* hostapd отвечает
 # "unknown configuration item 'bss_transition'" и add_iface FAILED — ОБА AP
 # не поднимаются. Проверяем установленный wpad; basic — выходим не трогая wifi.
-if ! grep -qs "^P:wpad-mbedtls$\|^P:wpad-openssl$\|^P:wpad-wolfssl$" /lib/apk/db/installed 2>/dev/null; then
+full_wpad=0
+if grep -qs "^P:wpad-mbedtls$\|^P:wpad-openssl$\|^P:wpad-wolfssl$" /lib/apk/db/installed 2>/dev/null; then
+	full_wpad=1
+else
 	logger -t uci-defaults "23_be7000_roaming: wpad без 802.11v — bss_transition НЕ применён (см. инцидент 27.09)"
-	exit 0
 fi
 
 i=0
 while uci -q get wireless.@wifi-iface[$i] >/dev/null 2>&1; do
 	[ "$(uci -q get wireless.@wifi-iface[$i].mode)" = "ap" ] && {
-		uci -q set wireless.@wifi-iface[$i].bss_transition='1'
-		uci -q set wireless.@wifi-iface[$i].ieee80211k='1'
+		[ "$full_wpad" = 1 ] && {
+			uci -q set wireless.@wifi-iface[$i].bss_transition='1'
+			uci -q set wireless.@wifi-iface[$i].ieee80211k='1'
+		}
 		# GTK rekey раз в сутки: часть клиентов (ноутбук Killer, MacBook, телефон)
-		# не отвечала на group key handshake → hostapd кикал их (22.10)
+		# не отвечала на group key handshake → hostapd кикал их (22.10).
+		# Вне проверки wpad: wpad-basic опцию понимает, а на mini IoT отваливались
+		# раз в сутки (жалоба 24.11).
 		uci -q set wireless.@wifi-iface[$i].wpa_group_rekey='0'
 	}
 	i=$((i + 1))
