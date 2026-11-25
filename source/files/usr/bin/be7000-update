@@ -3,6 +3,8 @@
 # сборки, качает sysupgrade-образ в /tmp, проверяет sha256 и sysupgrade -T,
 # затем прошивает с сохранением настроек и списка пакетов (как LuCI с галками).
 # check | status | download | install
+# latest.json: {full|mini: {version, url, sha256, notes, min}}; min — с какой версии
+# можно обновляться кнопкой (ниже — только вручную, например через recovery).
 
 URL=https://trall9.github.io/be7000-openwrt/latest.json
 D=/tmp/be7000-update
@@ -15,11 +17,16 @@ VAR=full; case $CUR in *-mini) VAR=mini; CUR=${CUR%-mini} ;; esac
 
 field() { jsonfilter -i $D/latest.json -e "@.$VAR.$1" 2>/dev/null; }
 state() { cat $D/state 2>/dev/null || echo idle; }
+# older A B: версия A (beta5.2, beta5.10…) младше B
+older() { awk -v a="${1#beta}" -v b="${2#beta}" 'BEGIN { n = split(a, x, "."); m = split(b, y, ".")
+	for (i = 1; i <= (n > m ? n : m); i++) if (x[i] + 0 != y[i] + 0) exit !(x[i] + 0 < y[i] + 0); exit 1 }'; }
 status() {
 	NEW=$(field version)
+	MIN=$(field min)
 	AV=false; [ -n "$NEW" ] && [ "$NEW" != "$CUR" ] && AV=true
-	printf '{"current":"%s","variant":"%s","latest":"%s","available":%s,"notes":"%s","state":"%s","msg":"%s"}\n' \
-		"$CUR" "$VAR" "$NEW" "$AV" "$(field notes)" "$(state)" "$(cat $D/msg 2>/dev/null | tr -d '"\\\n')"
+	BL=false; [ $AV = true ] && [ -n "$MIN" ] && older "$CUR" "$MIN" && BL=true
+	printf '{"current":"%s","variant":"%s","latest":"%s","available":%s,"blocked":%s,"min":"%s","notes":"%s","state":"%s","msg":"%s"}\n' \
+		"$CUR" "$VAR" "$NEW" "$AV" "$BL" "$MIN" "$(field notes)" "$(state)" "$(cat $D/msg 2>/dev/null | tr -d '"\\\n')"
 }
 
 case "$1" in
@@ -36,6 +43,7 @@ download)
 	[ "$2" = bg ] || {
 		case $(state) in downloading|flashing) exit 0 ;; esac
 		[ -f $D/latest.json ] || { echo "сначала check" >&2; exit 1; }
+		status | grep -q '"blocked":true' && { echo "с этой версии обновление кнопкой невозможно" >&2; exit 1; }
 		echo downloading > $D/state; : > $D/msg
 		# rpcd file exec ждёт потомков от «&»; start-stop-daemon -b отцепляется полностью
 		start-stop-daemon -S -b -m -p $D/pid -x "$0" -- download bg
@@ -53,6 +61,9 @@ download)
 install)
 	[ "$(state)" = ready ] || { echo "образ не скачан" >&2; exit 1; }
 	echo flashing > $D/state
+	# бэкап настроек на USB-диск, если подключён (как ночной be7000-config-backup)
+	M=$(awk '$2 ~ "^/mnt/" && $4 ~ "^rw" { print $2; exit }' /proc/mounts)
+	[ -n "$M" ] && mkdir -p $M/backups && sysupgrade -b $M/backups/config-before-update-$(date +%Y%m%d-%H%M).tar.gz 2>/dev/null
 	# пауза, чтобы LuCI успела получить ответ до обрыва связи
 	start-stop-daemon -S -b -m -p $D/pid -x /bin/sh -- -c "sleep 2; sysupgrade -k $IMG"
 	;;

@@ -3,13 +3,26 @@
 		"description": "Обновление прошивки BE7000 в один клик",
 		"read": {
 			"file": {
-				"/usr/bin/be7000-update": [ "exec" ]
+				"/usr/bin/be7000-update": [
+					"exec"
+				]
 			}
 		},
 		"write": {
 			"file": {
-				"/usr/bin/be7000-update": [ "exec" ]
-			}
+				"/usr/bin/be7000-update": [
+					"exec"
+				],
+				"/usr/bin/be7000-report": [
+					"exec"
+				],
+				"/tmp/be7000-report.tar.gz": [
+					"read"
+				]
+			},
+			"cgi-io": [
+				"download"
+			]
 		}
 	}
 }

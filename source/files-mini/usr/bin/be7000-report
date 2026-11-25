@@ -1,0 +1,62 @@
+#!/bin/sh
+# Отчёт для автора сборки: состояние роутера, журналы, Wi-Fi-клиенты, usteer,
+# постмортем паник (pstore) — одним архивом /tmp/be7000-report.tar.gz.
+# Пароли и ключи вырезаются, MAC и публичные IP маскируются.
+D=/tmp/be7000-report
+OUT=/tmp/be7000-report.tar.gz
+rm -rf $D $OUT; mkdir -p $D
+
+c() { f=$1; shift; { echo "# $*"; "$@" 2>&1; echo; } >> $D/$f; }
+
+c system.txt cat /etc/openwrt_release
+c system.txt uname -a
+c system.txt uptime
+c system.txt free
+c system.txt df -h
+c system.txt cat /proc/cmdline
+c system.txt sh -c 'cat /sys/class/thermal/thermal_zone*/temp'
+c system.txt sh -c 'apk list -I 2>/dev/null || opkg list-installed'
+c log.txt logread
+c dmesg.txt dmesg
+c usb.txt sh -c 'ls -l /sys/bus/usb/devices/; cat /sys/kernel/debug/usb/devices 2>/dev/null'
+c usb.txt block info
+c usb.txt cat /proc/mounts
+c network.txt ip -br addr
+c network.txt ip route
+c network.txt ip -6 route
+c network.txt ubus call network.interface dump
+c wifi.txt iwinfo
+for i in $(iwinfo 2>/dev/null | awk '/ESSID/ { print $1 }'); do c wifi.txt iwinfo $i assoclist; done
+c wifi.txt ubus call usteer local_info
+c wifi.txt ubus call usteer connected_clients
+c wifi.txt ubus call usteer get_config
+# конфиги: только нужные, без секретов (см. фильтр ниже)
+for f in network wireless dhcp firewall system fstab usteer; do
+	[ -f /etc/config/$f ] && c config.txt cat /etc/config/$f
+done
+mkdir -p $D/pstore
+grep -qs " /sys/fs/pstore " /proc/mounts || mount -t pstore pstore /sys/fs/pstore 2>/dev/null
+cp /sys/fs/pstore/* $D/pstore/ 2>/dev/null
+for p in $(ls -d /mnt/*/logs/pstore-* 2>/dev/null | tail -3); do cp -r $p $D/pstore/ 2>/dev/null; done
+LOG=$(ls /mnt/*/logs/router-prev.log 2>/dev/null | head -1)
+[ -n "$LOG" ] && tail -n 3000 "$LOG" > $D/log-prev-boot.txt
+
+# секреты: значения ключей/паролей; MAC: оставляем последние 2 байта (различать устройства);
+# IPv4 кроме частных/служебных и глобальные IPv6 — маска
+find $D -type f | while read -r f; do
+	sed -i -E \
+		-e "s/((key|password|passwd|psk|sae_password|private_key|preshared_key|secret|token|auth_secret|wpa_passphrase|username)['\" ]*[ =:]+['\"]?)[^'\" ,}]+/\1***/Ig" \
+		-e 's/([0-9A-Fa-f]{2}:){4}([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})/xx:xx:xx:xx:\2/g' \
+		-e 's/(^|[^0-9a-fA-F:])([23][0-9a-fA-F]{3}):[0-9a-fA-F]{1,4}:[0-9a-fA-F]{1,4}/\1\2:xxxx:xxxx/g' "$f" 2>/dev/null
+	awk '{ o = ""
+		while (match($0, /[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/)) {
+			ip = substr($0, RSTART, RLENGTH); split(ip, a, ".")
+			if (!(a[1] == 10 || a[1] == 127 || a[1] == 0 || a[1] >= 224 || (a[1] == 192 && a[2] == 168) ||
+			      (a[1] == 172 && a[2] >= 16 && a[2] <= 31) || (a[1] == 100 && a[2] >= 64 && a[2] <= 127) ||
+			      (a[1] == 169 && a[2] == 254))) ip = "x.x.x.x"
+			o = o substr($0, 1, RSTART - 1) ip; $0 = substr($0, RSTART + RLENGTH)
+		}
+		print o $0 }' "$f" > "$f.m" && mv "$f.m" "$f"
+done
+tar -czf $OUT -C /tmp be7000-report && rm -rf $D
+echo $OUT

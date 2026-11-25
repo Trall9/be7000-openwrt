@@ -1,0 +1,6 @@
+#!/bin/sh
+# Проверка новой версии раз в сутки (случайная минута — не все роутеры разом),
+# результат — уведомление на главной LuCI. Только проверка, без установки.
+CR=/etc/crontabs/root
+grep -qs 'be7000-update check' $CR || echo "$(awk 'BEGIN{srand(); print int(rand()*60)}') $(awk 'BEGIN{srand(); print 10+int(rand()*10)}') * * * /usr/bin/be7000-update check >/dev/null" >> $CR
+exit 0
