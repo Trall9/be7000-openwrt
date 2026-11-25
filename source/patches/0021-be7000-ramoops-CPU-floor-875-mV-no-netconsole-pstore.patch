@@ -1,0 +1,169 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Trall9 <tralllll9@gmail.com>
+Date: Wed, 25 Nov 2026 00:21:03 +0100
+Subject: [PATCH] be7000: ramoops, CPU floor 875 mV, no netconsole, pstore in
+ log-dump, quieter USB mount
+
+- DTS: ramoops@5f000000 (mtdoops cannot write on SPI NAND), netconsole off,
+  CPU OPP floor 875 mV like stock CPR (Beam WRT 016)
+- log-dump copies pstore to disk, health-check/crashlog know about ramoops
+- block hotplug waits for 5 GHz only for sd*/nvme*, logs once
+
+Claude-Session: https://claude.ai/code/session_01F55aX2seqR8MdAoMzYRsjG
+---
+ package/system/fstools/files/mount.hotplug    |  4 +-
+ .../linux/qualcommbe/dts/ipq9574-be7000.dts   | 39 ++++++++++++++++++-
+ .../base-files/usr/bin/be7000-crashlog        |  5 +++
+ .../base-files/usr/bin/be7000-health-check    |  5 ++-
+ .../base-files/usr/bin/be7000-log-dump        |  8 ++++
+ .../base-files/usr/libexec/be7000-wait-5g     |  5 ++-
+ 6 files changed, 59 insertions(+), 7 deletions(-)
+
+diff --git a/package/system/fstools/files/mount.hotplug b/package/system/fstools/files/mount.hotplug
+index e9a5f85e785..e5f28231c60 100644
+--- a/package/system/fstools/files/mount.hotplug
++++ b/package/system/fstools/files/mount.hotplug
+@@ -1,6 +1,8 @@
+ [ "$ACTION" = "add" -o "$ACTION" = "remove" ] || exit 0
+ # BE7000: при загрузке add ждёт подъёма 5 ГГц в фоне (очередь hotplug не держим)
+-if [ "$ACTION" = "add" ] && [ -x /usr/libexec/be7000-wait-5g ] && /usr/libexec/be7000-wait-5g check; then
++# mtdblock/ubiblock — не диск: не ждём (иначе десятки фоновых ожиданий на каждый раздел)
++case "$DEVNAME" in sd*|nvme*) USB_DISK=1;; esac
++if [ "$ACTION" = "add" ] && [ -n "$USB_DISK" ] && [ -x /usr/libexec/be7000-wait-5g ] && /usr/libexec/be7000-wait-5g check; then
+ 	( /usr/libexec/be7000-wait-5g; /sbin/block hotplug ) </dev/null >/dev/null 2>&1 &
+ 	exit 0
+ fi
+diff --git a/target/linux/qualcommbe/dts/ipq9574-be7000.dts b/target/linux/qualcommbe/dts/ipq9574-be7000.dts
+index af2f274c041..eee41bf8e9c 100644
+--- a/target/linux/qualcommbe/dts/ipq9574-be7000.dts
++++ b/target/linux/qualcommbe/dts/ipq9574-be7000.dts
+@@ -45,7 +45,7 @@
+ 		 * Create a UBI block device for the stock root volume name and
+ 		 * make the later root= override win.
+ 		 */
+-		bootargs-append = " ubi.block=0,ubi_rootfs root=/dev/ubiblock0_1 netconsole=6666@192.168.1.2/lan1,6666@192.168.1.100/ff:ff:ff:ff:ff:ff netconsole=6666@192.168.1.2/lan2,6666@192.168.1.100/ff:ff:ff:ff:ff:ff netconsole=6666@192.168.1.2/lan3,6666@192.168.1.100/ff:ff:ff:ff:ff:ff netconsole=6666@192.168.1.2/wan,6666@192.168.1.100/ff:ff:ff:ff:ff:ff mtdoops.mtddev=25 oops=panic panic=15 usbcore.autosuspend=-1";
++		bootargs-append = " ubi.block=0,ubi_rootfs root=/dev/ubiblock0_1 mtdoops.mtddev=25 oops=panic panic=15 usbcore.autosuspend=-1";
+ 	};
+ 
+ 	regulator_fixed_1p8: s1800 {
+@@ -153,6 +153,16 @@
+ 		/* Same as stock: TrustZone applications and two regions of the
+ 		 * boot chain. Without them Linux hands this memory out as normal
+ 		 * RAM although the secure side may still write to it. */
++		/* Panic/console log kept in RAM across a warm reset: mtdoops cannot
++		 * write from panic on SPI NAND (no mtd panic_write). */
++		ramoops@5f000000 {
++			compatible = "ramoops";
++			reg = <0x0 0x5f000000 0x0 0x100000>;
++			no-map;
++			record-size = <0x20000>;
++			console-size = <0x20000>;
++		};
++
+ 		tzapp@49b00000 {
+ 			no-map;
+ 			reg = <0x0 0x49b00000 0x0 0x600000>;
+@@ -352,7 +362,8 @@
+ 			 * the regulators are brought up with 725mV which is sufficient for all the
+ 			 * corner parts to operate at 800MHz
+ 			 */
+-			regulator-min-microvolt = <725000>;
++			/* BE7000: floor 875 mV like stock CPR (Beam WRT 016) */
++			regulator-min-microvolt = <875000>;
+ 			regulator-max-microvolt = <1075000>;
+ 		};
+ 	};
+@@ -1048,3 +1059,27 @@
+ &pcs2 {
+ 	status = "disabled";
+ };
++
++/*
++ * From Beam WRT (Timofey Maykov), patches/tree/016: the SoC table runs 936 MHz
++ * to 1.416 GHz at 725 to 862.5 mV, while stock CPR never takes the rail below
++ * the 875 mV the bootloader sets. Random silent hangs were reported below it.
++ * Same frequencies, stock floor.
++ */
++&cpu_opp_table {
++	opp-936000000 {
++		opp-microvolt = <875000>;
++	};
++
++	opp-1104000000 {
++		opp-microvolt = <875000>;
++	};
++
++	opp-1200000000 {
++		opp-microvolt = <875000>;
++	};
++
++	opp-1416000000 {
++		opp-microvolt = <875000>;
++	};
++};
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-crashlog b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-crashlog
+index e9bac6d2af0..eaf7578e641 100755
+--- a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-crashlog
++++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-crashlog
+@@ -4,6 +4,11 @@
+ # be7000-crashlog        — последние ~80 строк из партиции
+ # be7000-crashlog raw    — сырой дамп (для сохранения на ПК)
+ # be7000-crashlog clear  — пометить: читать заново (пометка в /tmp; NAND mtdoops кольцевой)
++# ВНИМАНИЕ: на SPI NAND нет mtd panic_write — при панике mtdoops НЕ пишет, пустой mtd25
++# НЕ значит «паники не было». Рабочий канал — pstore/ramoops (log-dump копирует на диск).
++grep -qs " /sys/fs/pstore " /proc/mounts || mount -t pstore pstore /sys/fs/pstore 2>/dev/null
++ls /sys/fs/pstore/* >/dev/null 2>&1 && { echo "--- pstore (не скопирован на диск): ---"; ls -la /sys/fs/pstore; }
++ls -d /mnt/sda1/logs/pstore-* 2>/dev/null | tail -5
+ D=/dev/mtd25ro
+ [ -c "$D" ] || { echo "нет $D (партиция crash)"; exit 1; }
+ case "$1" in
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-health-check b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-health-check
+index 57b3ab77a45..f8ac6c786d2 100755
+--- a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-health-check
++++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-health-check
+@@ -12,8 +12,9 @@ WC=/sbin/be7000-wifi-check
+ W=$(cat /sys/class/watchdog/watchdog0/state 2>/dev/null)
+ [ "$W" = "active" ] && echo "[OK] hw watchdog qcom_wdt active" || echo "[FAIL] watchdog state=${W:-нет}!"
+ 
+-# --- канал постмортема (mtdoops → NAND "crash") ---
+-grep -qs "mtdoops.mtddev=25" /proc/cmdline && echo "[OK] mtdoops -> mtd25 (be7000-crashlog после паники)" || echo "[WARN] mtdoops нет в cmdline (старый образ)"
++
++# --- pstore: журнал ядра через тёплый сброс ---
++[ -d /sys/module/ramoops ] && echo "[OK] ramoops загружен (постмортем: /mnt/sda1/logs/pstore-*)" || echo "[WARN] ramoops не загружен"
+ 
+ # --- диск ---
+ if mount | grep -qs " /mnt/sda1 "; then
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-log-dump b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-log-dump
+index 235189af2d4..f37eefb58f6 100755
+--- a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-log-dump
++++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-log-dump
+@@ -14,6 +14,14 @@ SNAP=/tmp/log-dump-snap
+ mount | grep -qs " /mnt/sda1 " || exit 0
+ mkdir -p "$LOGDIR" || exit 0
+ 
++# pstore (ramoops): хвост журнала ядра и паники прошлой загрузки, переживает тёплый сброс
++grep -qs " /sys/fs/pstore " /proc/mounts || mount -t pstore pstore /sys/fs/pstore 2>/dev/null
++if [ -n "$(ls /sys/fs/pstore 2>/dev/null)" ]; then
++	PS=$LOGDIR/pstore-$(date +%Y%m%d-%H%M)
++	mkdir -p "$PS" && cp /sys/fs/pstore/* "$PS"/ && rm -f /sys/fs/pstore/* &&
++		logger -t log-dump "pstore прошлой загрузки сохранён: $PS"
++fi
++
+ logread > $SNAP 2>/dev/null
+ LAST=$(tail -n 1 $SNAP)
+ [ -n "$LAST" ] || { rm -f $SNAP; exit 0; }
+diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/libexec/be7000-wait-5g b/target/linux/qualcommbe/ipq95xx/base-files/usr/libexec/be7000-wait-5g
+index 841d607e81a..b01108f994e 100755
+--- a/target/linux/qualcommbe/ipq95xx/base-files/usr/libexec/be7000-wait-5g
++++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/libexec/be7000-wait-5g
+@@ -15,7 +15,8 @@ need() {
+ }
+ [ "$1" = check ] && { need; exit; }
+ need || exit 0
+-logger -t be7000-wait-5g "USB-диск ждёт подъёма 5 ГГц"
++# скрипт зовут на каждый раздел параллельно — в лог пишет только первый
++mkdir /tmp/.be7000-wait-5g-a 2>/dev/null && logger -t be7000-wait-5g "USB-диск ждёт подъёма 5 ГГц"
+ while need; do sleep 2; done
+-logger -t be7000-wait-5g "ожидание закончено, монтирую"
++mkdir /tmp/.be7000-wait-5g-b 2>/dev/null && logger -t be7000-wait-5g "ожидание закончено, монтирую"
+ exit 0

@@ -18,7 +18,7 @@ Claude-Session: https://claude.ai/code/session_013s2VZi5nRhTzdeeLSd7jmt
  create mode 100644 package/system/fstools/patches/100-block-find_dev-match-block-devices-only.patch
 
 diff --git a/package/system/fstools/Makefile b/package/system/fstools/Makefile
-index 18ff62fa..24e5e8ec 100644
+index e7f905fce2e..c9e52457cb4 100644
 --- a/package/system/fstools/Makefile
 +++ b/package/system/fstools/Makefile
 @@ -8,7 +8,7 @@
@@ -32,7 +32,7 @@ index 18ff62fa..24e5e8ec 100644
  PKG_SOURCE_URL=$(PROJECT_GIT)/project/fstools.git
 diff --git a/package/system/fstools/patches/100-block-find_dev-match-block-devices-only.patch b/package/system/fstools/patches/100-block-find_dev-match-block-devices-only.patch
 new file mode 100644
-index 00000000..e2b5cc43
+index 00000000000..e2b5cc43860
 --- /dev/null
 +++ b/package/system/fstools/patches/100-block-find_dev-match-block-devices-only.patch
 @@ -0,0 +1,25 @@
@@ -61,6 +61,3 @@ index 00000000..e2b5cc43
 + 			continue;
 + 
 + 		closedir(d);
--- 
-2.43.0
-

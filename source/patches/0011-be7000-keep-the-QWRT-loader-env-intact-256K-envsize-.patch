@@ -23,7 +23,7 @@ Claude-Session: https://claude.ai/code/session_01Q4KpSAUmJKo8wk8dN2H5zD
  2 files changed, 28 insertions(+), 3 deletions(-)
 
 diff --git a/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx b/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx
-index 1eefa40d..48f7c93e 100644
+index 1eefa40dfb1..48f7c93e8b2 100644
 --- a/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx
 +++ b/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx
 @@ -7,7 +7,16 @@ board=$(board_name)
@@ -61,7 +61,7 @@ index 1eefa40d..48f7c93e 100644
  	;;
  linksys,ln6001)
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success
-index bfbbe3a3..a570faab 100755
+index bfbbe3a384a..a570faabc0b 100755
 --- a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success
 @@ -24,6 +24,11 @@ boot() {
@@ -89,6 +89,3 @@ index bfbbe3a3..a570faab 100755
  	for f in flag_boot_rootfs:$slot flag_last_success:$slot flag_boot_success:1 \
  		flag_try_sys1_failed:0 flag_try_sys2_failed:0 flag_ota_reboot:0; do
  		local k="${f%%:*}" v="${f#*:}"
--- 
-2.43.0
-

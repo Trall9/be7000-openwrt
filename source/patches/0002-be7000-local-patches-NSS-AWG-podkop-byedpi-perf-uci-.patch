@@ -420,7 +420,7 @@ Subject: [PATCH] be7000: local patches (NSS, AWG, podkop, byedpi,
 
 diff --git a/package/amnezia-openwrt/amneziawg-tools/Makefile b/package/amnezia-openwrt/amneziawg-tools/Makefile
 new file mode 100644
-index 00000000..4d0aa82e
+index 00000000000..4d0aa82ef40
 --- /dev/null
 +++ b/package/amnezia-openwrt/amneziawg-tools/Makefile
 @@ -0,0 +1,50 @@
@@ -476,7 +476,7 @@ index 00000000..4d0aa82e
 +$(eval $(call BuildPackage,amneziawg-tools))
 diff --git a/package/amnezia-openwrt/amneziawg-tools/files/amneziawg.sh b/package/amnezia-openwrt/amneziawg-tools/files/amneziawg.sh
 new file mode 100755
-index 00000000..120a1702
+index 00000000000..120a1702f2d
 --- /dev/null
 +++ b/package/amnezia-openwrt/amneziawg-tools/files/amneziawg.sh
 @@ -0,0 +1,351 @@
@@ -833,7 +833,7 @@ index 00000000..120a1702
 +}
 diff --git a/package/amnezia-openwrt/amneziawg-tools/files/amneziawg_watchdog b/package/amnezia-openwrt/amneziawg-tools/files/amneziawg_watchdog
 new file mode 100755
-index 00000000..d8969f14
+index 00000000000..d8969f14811
 --- /dev/null
 +++ b/package/amnezia-openwrt/amneziawg-tools/files/amneziawg_watchdog
 @@ -0,0 +1,70 @@
@@ -909,7 +909,7 @@ index 00000000..d8969f14
 +done
 diff --git a/package/amnezia-openwrt/kmod-amneziawg/Makefile b/package/amnezia-openwrt/kmod-amneziawg/Makefile
 new file mode 100644
-index 00000000..c7f8b641
+index 00000000000..c7f8b641565
 --- /dev/null
 +++ b/package/amnezia-openwrt/kmod-amneziawg/Makefile
 @@ -0,0 +1,45 @@
@@ -960,7 +960,7 @@ index 00000000..c7f8b641
 +$(eval $(call KernelPackage,amneziawg))
 diff --git a/package/amnezia-openwrt/luci-proto-amneziawg/Makefile b/package/amnezia-openwrt/luci-proto-amneziawg/Makefile
 new file mode 100644
-index 00000000..ca0e65a1
+index 00000000000..ca0e65a1798
 --- /dev/null
 +++ b/package/amnezia-openwrt/luci-proto-amneziawg/Makefile
 @@ -0,0 +1,13 @@
@@ -979,7 +979,7 @@ index 00000000..ca0e65a1
 +# call BuildPackage - OpenWrt buildroot signature
 diff --git a/package/amnezia-openwrt/luci-proto-amneziawg/htdocs/luci-static/resources/icons/amneziawg.svg b/package/amnezia-openwrt/luci-proto-amneziawg/htdocs/luci-static/resources/icons/amneziawg.svg
 new file mode 100644
-index 00000000..5bf7f010
+index 00000000000..5bf7f010733
 --- /dev/null
 +++ b/package/amnezia-openwrt/luci-proto-amneziawg/htdocs/luci-static/resources/icons/amneziawg.svg
 @@ -0,0 +1,130 @@
@@ -1116,7 +1116,7 @@ index 00000000..5bf7f010
 \ No newline at end of file
 diff --git a/package/amnezia-openwrt/luci-proto-amneziawg/htdocs/luci-static/resources/protocol/amneziawg.js b/package/amnezia-openwrt/luci-proto-amneziawg/htdocs/luci-static/resources/protocol/amneziawg.js
 new file mode 100644
-index 00000000..944da5e6
+index 00000000000..944da5e6536
 --- /dev/null
 +++ b/package/amnezia-openwrt/luci-proto-amneziawg/htdocs/luci-static/resources/protocol/amneziawg.js
 @@ -0,0 +1,1133 @@
@@ -2255,7 +2255,7 @@ index 00000000..944da5e6
 +});
 diff --git a/package/amnezia-openwrt/luci-proto-amneziawg/htdocs/luci-static/resources/view/amneziawg/status.js b/package/amnezia-openwrt/luci-proto-amneziawg/htdocs/luci-static/resources/view/amneziawg/status.js
 new file mode 100644
-index 00000000..71ae348c
+index 00000000000..71ae348c2d8
 --- /dev/null
 +++ b/package/amnezia-openwrt/luci-proto-amneziawg/htdocs/luci-static/resources/view/amneziawg/status.js
 @@ -0,0 +1,201 @@
@@ -2462,7 +2462,7 @@ index 00000000..71ae348c
 +});
 diff --git a/package/amnezia-openwrt/luci-proto-amneziawg/po/ru/amneziawg.po b/package/amnezia-openwrt/luci-proto-amneziawg/po/ru/amneziawg.po
 new file mode 100644
-index 00000000..1955bc1a
+index 00000000000..1955bc1aa3b
 --- /dev/null
 +++ b/package/amnezia-openwrt/luci-proto-amneziawg/po/ru/amneziawg.po
 @@ -0,0 +1,286 @@
@@ -2754,7 +2754,7 @@ index 00000000..1955bc1a
 +"характерный тип пакетов. Предполагается включение на обеих сторонах туннеля."
 diff --git a/package/amnezia-openwrt/luci-proto-amneziawg/po/ru/status.po b/package/amnezia-openwrt/luci-proto-amneziawg/po/ru/status.po
 new file mode 100644
-index 00000000..03543384
+index 00000000000..035433846e6
 --- /dev/null
 +++ b/package/amnezia-openwrt/luci-proto-amneziawg/po/ru/status.po
 @@ -0,0 +1,29 @@
@@ -2790,7 +2790,7 @@ index 00000000..03543384
 \ No newline at end of file
 diff --git a/package/amnezia-openwrt/luci-proto-amneziawg/root/usr/share/luci/menu.d/luci-proto-amneziawg.json b/package/amnezia-openwrt/luci-proto-amneziawg/root/usr/share/luci/menu.d/luci-proto-amneziawg.json
 new file mode 100644
-index 00000000..87787e7c
+index 00000000000..87787e7c785
 --- /dev/null
 +++ b/package/amnezia-openwrt/luci-proto-amneziawg/root/usr/share/luci/menu.d/luci-proto-amneziawg.json
 @@ -0,0 +1,14 @@
@@ -2810,7 +2810,7 @@ index 00000000..87787e7c
 +}
 diff --git a/package/amnezia-openwrt/luci-proto-amneziawg/root/usr/share/rpcd/acl.d/luci-amneziawg.json b/package/amnezia-openwrt/luci-proto-amneziawg/root/usr/share/rpcd/acl.d/luci-amneziawg.json
 new file mode 100644
-index 00000000..5944720f
+index 00000000000..5944720f012
 --- /dev/null
 +++ b/package/amnezia-openwrt/luci-proto-amneziawg/root/usr/share/rpcd/acl.d/luci-amneziawg.json
 @@ -0,0 +1,23 @@
@@ -2839,7 +2839,7 @@ index 00000000..5944720f
 +}
 diff --git a/package/amnezia-openwrt/luci-proto-amneziawg/root/usr/share/rpcd/ucode/luci.amneziawg b/package/amnezia-openwrt/luci-proto-amneziawg/root/usr/share/rpcd/ucode/luci.amneziawg
 new file mode 100644
-index 00000000..547deff3
+index 00000000000..547deff335d
 --- /dev/null
 +++ b/package/amnezia-openwrt/luci-proto-amneziawg/root/usr/share/rpcd/ucode/luci.amneziawg
 @@ -0,0 +1,131 @@
@@ -2975,7 +2975,7 @@ index 00000000..547deff3
 +
 +return { 'luci.amneziawg': methods };
 diff --git a/package/base-files/files/sbin/sysupgrade b/package/base-files/files/sbin/sysupgrade
-index cce3b607..03b76d67 100755
+index cce3b6073af..03b76d67fac 100755
 --- a/package/base-files/files/sbin/sysupgrade
 +++ b/package/base-files/files/sbin/sysupgrade
 @@ -276,6 +276,8 @@ create_backup_archive() {
@@ -2989,7 +2989,7 @@ index cce3b607..03b76d67 100755
  
 diff --git a/package/byedpi/Makefile b/package/byedpi/Makefile
 new file mode 100644
-index 00000000..9d407bda
+index 00000000000..9d407bda1b5
 --- /dev/null
 +++ b/package/byedpi/Makefile
 @@ -0,0 +1,55 @@
@@ -3050,7 +3050,7 @@ index 00000000..9d407bda
 +$(eval $(call BuildPackage,byedpi))
 diff --git a/package/byedpi/files/etc/config/byedpi b/package/byedpi/files/etc/config/byedpi
 new file mode 100644
-index 00000000..ef6f948c
+index 00000000000..ef6f948c87a
 --- /dev/null
 +++ b/package/byedpi/files/etc/config/byedpi
 @@ -0,0 +1,5 @@
@@ -3061,7 +3061,7 @@ index 00000000..ef6f948c
 +	option extra_args ''
 diff --git a/package/byedpi/files/etc/init.d/byedpi b/package/byedpi/files/etc/init.d/byedpi
 new file mode 100644
-index 00000000..2899279d
+index 00000000000..2899279d389
 --- /dev/null
 +++ b/package/byedpi/files/etc/init.d/byedpi
 @@ -0,0 +1,26 @@
@@ -3105,7 +3105,7 @@ rename from package/kernel/mac80211/patches/ath11k/952-wifi-ath11k-drop-pcie-pme
 rename to package/kernel/mac80211/patches/ath11k/962-wifi-ath11k-drop-pcie-pme-capability-for-ipq9574.patch
 diff --git a/package/kernel/qca-ppe-nss/Makefile b/package/kernel/qca-ppe-nss/Makefile
 new file mode 100644
-index 00000000..17b7f9ad
+index 00000000000..17b7f9ad4c0
 --- /dev/null
 +++ b/package/kernel/qca-ppe-nss/Makefile
 @@ -0,0 +1,39 @@
@@ -3150,7 +3150,7 @@ index 00000000..17b7f9ad
 +$(eval $(call KernelPackage,qca-ppe-nss))
 diff --git a/package/kernel/qca-ppe-nss/src/Makefile b/package/kernel/qca-ppe-nss/src/Makefile
 new file mode 100644
-index 00000000..58c76000
+index 00000000000..58c76000f2f
 --- /dev/null
 +++ b/package/kernel/qca-ppe-nss/src/Makefile
 @@ -0,0 +1,5 @@
@@ -3161,7 +3161,7 @@ index 00000000..58c76000
 +qca-ppe-nss-objs += qca_ppe_vsi_shim.o
 diff --git a/package/kernel/qca-ppe-nss/src/exports/nss_dp_api_if.h b/package/kernel/qca-ppe-nss/src/exports/nss_dp_api_if.h
 new file mode 100644
-index 00000000..1c66dbcb
+index 00000000000..1c66dbcb318
 --- /dev/null
 +++ b/package/kernel/qca-ppe-nss/src/exports/nss_dp_api_if.h
 @@ -0,0 +1,118 @@
@@ -3285,7 +3285,7 @@ index 00000000..1c66dbcb
 +				   uint32_t *rxfill_num, uint32_t *rxdesc_num);
 diff --git a/package/kernel/qca-ppe-nss/src/qca_ppe_nss.c b/package/kernel/qca-ppe-nss/src/qca_ppe_nss.c
 new file mode 100644
-index 00000000..df84dd31
+index 00000000000..df84dd31c62
 --- /dev/null
 +++ b/package/kernel/qca-ppe-nss/src/qca_ppe_nss.c
 @@ -0,0 +1,1106 @@
@@ -4397,7 +4397,7 @@ index 00000000..df84dd31
 +MODULE_DESCRIPTION("NSS data-plane glue for the qca_edma/qca_ppe stack");
 diff --git a/package/kernel/qca-ppe-nss/src/qca_ppe_vsi_shim.c b/package/kernel/qca-ppe-nss/src/qca_ppe_vsi_shim.c
 new file mode 100644
-index 00000000..21ae2167
+index 00000000000..21ae2167913
 --- /dev/null
 +++ b/package/kernel/qca-ppe-nss/src/qca_ppe_vsi_shim.c
 @@ -0,0 +1,67 @@
@@ -4470,7 +4470,7 @@ index 00000000..21ae2167
 +MODULE_DESCRIPTION("qca-ppe-nss VSI allocator shim for IPQ95xx");
 diff --git a/package/nss-firmware/Makefile b/package/nss-firmware/Makefile
 new file mode 100644
-index 00000000..c0462917
+index 00000000000..c0462917cb9
 --- /dev/null
 +++ b/package/nss-firmware/Makefile
 @@ -0,0 +1,132 @@
@@ -4608,7 +4608,7 @@ index 00000000..c0462917
 +$(eval $(call BuildPackage,nss-firmware))
 diff --git a/package/nss-userspace-oss/Makefile b/package/nss-userspace-oss/Makefile
 new file mode 100644
-index 00000000..c847eaa6
+index 00000000000..c847eaa6718
 --- /dev/null
 +++ b/package/nss-userspace-oss/Makefile
 @@ -0,0 +1,116 @@
@@ -4730,7 +4730,7 @@ index 00000000..c847eaa6
 +$(eval $(call BuildPackage,libnl-nss))
 diff --git a/package/nss-userspace-oss/patches/000-create-makefile.patch b/package/nss-userspace-oss/patches/000-create-makefile.patch
 new file mode 100644
-index 00000000..bd0d2847
+index 00000000000..bd0d2847f71
 --- /dev/null
 +++ b/package/nss-userspace-oss/patches/000-create-makefile.patch
 @@ -0,0 +1,36 @@
@@ -4772,7 +4772,7 @@ index 00000000..bd0d2847
 +\ No newline at end of file
 diff --git a/package/nss-userspace-oss/patches/002-nss-switch-to-nl-tiny.patch b/package/nss-userspace-oss/patches/002-nss-switch-to-nl-tiny.patch
 new file mode 100644
-index 00000000..483e55de
+index 00000000000..483e55ded03
 --- /dev/null
 +++ b/package/nss-userspace-oss/patches/002-nss-switch-to-nl-tiny.patch
 @@ -0,0 +1,44 @@
@@ -4822,7 +4822,7 @@ index 00000000..483e55de
 + all: release
 diff --git a/package/nss-userspace-oss/patches/0031-nssinfo-bound-the-dynamic-interface-destroy-notification.patch b/package/nss-userspace-oss/patches/0031-nssinfo-bound-the-dynamic-interface-destroy-notification.patch
 new file mode 100644
-index 00000000..ae1a2b18
+index 00000000000..ae1a2b18d06
 --- /dev/null
 +++ b/package/nss-userspace-oss/patches/0031-nssinfo-bound-the-dynamic-interface-destroy-notification.patch
 @@ -0,0 +1,105 @@
@@ -4933,7 +4933,7 @@ index 00000000..ae1a2b18
 + /*
 diff --git a/package/podkop/luci-app-podkop/Makefile b/package/podkop/luci-app-podkop/Makefile
 new file mode 100644
-index 00000000..f6ae3a0d
+index 00000000000..f6ae3a0d379
 --- /dev/null
 +++ b/package/podkop/luci-app-podkop/Makefile
 @@ -0,0 +1,30 @@
@@ -4970,7 +4970,7 @@ index 00000000..f6ae3a0d
 \ No newline at end of file
 diff --git a/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/dashboard.js b/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/dashboard.js
 new file mode 100644
-index 00000000..6fd97cfe
+index 00000000000..6fd97cfe724
 --- /dev/null
 +++ b/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/dashboard.js
 @@ -0,0 +1,22 @@
@@ -4998,7 +4998,7 @@ index 00000000..6fd97cfe
 +return baseclass.extend(EntryPoint);
 diff --git a/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/diagnostic.js b/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/diagnostic.js
 new file mode 100644
-index 00000000..e6ac146d
+index 00000000000..e6ac146dd9a
 --- /dev/null
 +++ b/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/diagnostic.js
 @@ -0,0 +1,22 @@
@@ -5026,7 +5026,7 @@ index 00000000..e6ac146d
 +return baseclass.extend(EntryPoint);
 diff --git a/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/main.js b/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/main.js
 new file mode 100644
-index 00000000..009c1ae3
+index 00000000000..009c1ae3c09
 --- /dev/null
 +++ b/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/main.js
 @@ -0,0 +1,4942 @@
@@ -9974,7 +9974,7 @@ index 00000000..009c1ae3
 +});
 diff --git a/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/podkop.js b/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/podkop.js
 new file mode 100644
-index 00000000..f699e173
+index 00000000000..f699e1738fc
 --- /dev/null
 +++ b/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/podkop.js
 @@ -0,0 +1,98 @@
@@ -10078,7 +10078,7 @@ index 00000000..f699e173
 +return view.extend(EntryPoint);
 diff --git a/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/section.js b/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/section.js
 new file mode 100644
-index 00000000..7dc8ccb9
+index 00000000000..7dc8ccb9b47
 --- /dev/null
 +++ b/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/section.js
 @@ -0,0 +1,703 @@
@@ -10787,7 +10787,7 @@ index 00000000..7dc8ccb9
 +return baseclass.extend(EntryPoint);
 diff --git a/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/settings.js b/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/settings.js
 new file mode 100644
-index 00000000..efe3c29f
+index 00000000000..efe3c29f180
 --- /dev/null
 +++ b/package/podkop/luci-app-podkop/htdocs/luci-static/resources/view/podkop/settings.js
 @@ -0,0 +1,438 @@
@@ -11231,7 +11231,7 @@ index 00000000..efe3c29f
 +return baseclass.extend(EntryPoint);
 diff --git a/package/podkop/luci-app-podkop/msgmerge.sh b/package/podkop/luci-app-podkop/msgmerge.sh
 new file mode 100644
-index 00000000..06e57061
+index 00000000000..06e57061e57
 --- /dev/null
 +++ b/package/podkop/luci-app-podkop/msgmerge.sh
 @@ -0,0 +1,30 @@
@@ -11268,7 +11268,7 @@ index 00000000..06e57061
 \ No newline at end of file
 diff --git a/package/podkop/luci-app-podkop/po/ru/podkop.po b/package/podkop/luci-app-podkop/po/ru/podkop.po
 new file mode 100644
-index 00000000..77a33a4f
+index 00000000000..77a33a4ffb4
 --- /dev/null
 +++ b/package/podkop/luci-app-podkop/po/ru/podkop.po
 @@ -0,0 +1,795 @@
@@ -12069,7 +12069,7 @@ index 00000000..77a33a4f
 +msgstr "Вы можете выбрать выходной сетевой интерфейс, по умолчанию он определяется автоматически."
 diff --git a/package/podkop/luci-app-podkop/po/templates/podkop.pot b/package/podkop/luci-app-podkop/po/templates/podkop.pot
 new file mode 100644
-index 00000000..d96b948e
+index 00000000000..d96b948e8d8
 --- /dev/null
 +++ b/package/podkop/luci-app-podkop/po/templates/podkop.pot
 @@ -0,0 +1,1115 @@
@@ -13190,7 +13190,7 @@ index 00000000..d96b948e
 +msgstr ""
 diff --git a/package/podkop/luci-app-podkop/root/etc/uci-defaults/50_luci-podkop b/package/podkop/luci-app-podkop/root/etc/uci-defaults/50_luci-podkop
 new file mode 100644
-index 00000000..519c3581
+index 00000000000..519c358193e
 --- /dev/null
 +++ b/package/podkop/luci-app-podkop/root/etc/uci-defaults/50_luci-podkop
 @@ -0,0 +1,10 @@
@@ -13207,7 +13207,7 @@ index 00000000..519c3581
 \ No newline at end of file
 diff --git a/package/podkop/luci-app-podkop/root/usr/share/luci/menu.d/luci-app-podkop.json b/package/podkop/luci-app-podkop/root/usr/share/luci/menu.d/luci-app-podkop.json
 new file mode 100644
-index 00000000..e7e6ffaf
+index 00000000000..e7e6ffafeb2
 --- /dev/null
 +++ b/package/podkop/luci-app-podkop/root/usr/share/luci/menu.d/luci-app-podkop.json
 @@ -0,0 +1,14 @@
@@ -13228,7 +13228,7 @@ index 00000000..e7e6ffaf
 \ No newline at end of file
 diff --git a/package/podkop/luci-app-podkop/root/usr/share/rpcd/acl.d/luci-app-podkop.json b/package/podkop/luci-app-podkop/root/usr/share/rpcd/acl.d/luci-app-podkop.json
 new file mode 100644
-index 00000000..6d0eabcb
+index 00000000000..6d0eabcb12c
 --- /dev/null
 +++ b/package/podkop/luci-app-podkop/root/usr/share/rpcd/acl.d/luci-app-podkop.json
 @@ -0,0 +1,28 @@
@@ -13263,7 +13263,7 @@ index 00000000..6d0eabcb
 \ No newline at end of file
 diff --git a/package/podkop/luci-app-podkop/xgettext.sh b/package/podkop/luci-app-podkop/xgettext.sh
 new file mode 100644
-index 00000000..0db78fbd
+index 00000000000..0db78fbde34
 --- /dev/null
 +++ b/package/podkop/luci-app-podkop/xgettext.sh
 @@ -0,0 +1,27 @@
@@ -13297,7 +13297,7 @@ index 00000000..0db78fbd
 \ No newline at end of file
 diff --git a/package/podkop/podkop/Makefile b/package/podkop/podkop/Makefile
 new file mode 100644
-index 00000000..5cef0c1e
+index 00000000000..5cef0c1ea66
 --- /dev/null
 +++ b/package/podkop/podkop/Makefile
 @@ -0,0 +1,64 @@
@@ -13367,7 +13367,7 @@ index 00000000..5cef0c1e
 +$(eval $(call BuildPackage,podkop))
 diff --git a/package/podkop/podkop/files/etc/config/podkop b/package/podkop/podkop/files/etc/config/podkop
 new file mode 100644
-index 00000000..27003cfa
+index 00000000000..27003cfaf88
 --- /dev/null
 +++ b/package/podkop/podkop/files/etc/config/podkop
 @@ -0,0 +1,40 @@
@@ -13414,7 +13414,7 @@ index 00000000..27003cfa
 \ No newline at end of file
 diff --git a/package/podkop/podkop/files/etc/init.d/podkop b/package/podkop/podkop/files/etc/init.d/podkop
 new file mode 100755
-index 00000000..73825efe
+index 00000000000..73825efe804
 --- /dev/null
 +++ b/package/podkop/podkop/files/etc/init.d/podkop
 @@ -0,0 +1,52 @@
@@ -13472,7 +13472,7 @@ index 00000000..73825efe
 +}
 diff --git a/package/podkop/podkop/files/usr/bin/podkop b/package/podkop/podkop/files/usr/bin/podkop
 new file mode 100755
-index 00000000..ba75f1fd
+index 00000000000..ba75f1fd0d0
 --- /dev/null
 +++ b/package/podkop/podkop/files/usr/bin/podkop
 @@ -0,0 +1,2758 @@
@@ -16236,7 +16236,7 @@ index 00000000..ba75f1fd
 +esac
 diff --git a/package/podkop/podkop/files/usr/lib/constants.sh b/package/podkop/podkop/files/usr/lib/constants.sh
 new file mode 100644
-index 00000000..563ad0c5
+index 00000000000..563ad0c58ec
 --- /dev/null
 +++ b/package/podkop/podkop/files/usr/lib/constants.sh
 @@ -0,0 +1,66 @@
@@ -16309,7 +16309,7 @@ index 00000000..563ad0c5
 \ No newline at end of file
 diff --git a/package/podkop/podkop/files/usr/lib/helpers.jq b/package/podkop/podkop/files/usr/lib/helpers.jq
 new file mode 100644
-index 00000000..d914febd
+index 00000000000..d914febd2fc
 --- /dev/null
 +++ b/package/podkop/podkop/files/usr/lib/helpers.jq
 @@ -0,0 +1,14 @@
@@ -16330,7 +16330,7 @@ index 00000000..d914febd
 \ No newline at end of file
 diff --git a/package/podkop/podkop/files/usr/lib/helpers.sh b/package/podkop/podkop/files/usr/lib/helpers.sh
 new file mode 100644
-index 00000000..c25edb89
+index 00000000000..c25edb89315
 --- /dev/null
 +++ b/package/podkop/podkop/files/usr/lib/helpers.sh
 @@ -0,0 +1,356 @@
@@ -16693,7 +16693,7 @@ index 00000000..c25edb89
 \ No newline at end of file
 diff --git a/package/podkop/podkop/files/usr/lib/logging.sh b/package/podkop/podkop/files/usr/lib/logging.sh
 new file mode 100644
-index 00000000..3a529ad5
+index 00000000000..3a529ad5708
 --- /dev/null
 +++ b/package/podkop/podkop/files/usr/lib/logging.sh
 @@ -0,0 +1,32 @@
@@ -16731,7 +16731,7 @@ index 00000000..3a529ad5
 +}
 diff --git a/package/podkop/podkop/files/usr/lib/nft.sh b/package/podkop/podkop/files/usr/lib/nft.sh
 new file mode 100644
-index 00000000..8cbcc6ae
+index 00000000000..8cbcc6ae115
 --- /dev/null
 +++ b/package/podkop/podkop/files/usr/lib/nft.sh
 @@ -0,0 +1,70 @@
@@ -16808,7 +16808,7 @@ index 00000000..8cbcc6ae
 \ No newline at end of file
 diff --git a/package/podkop/podkop/files/usr/lib/rulesets.sh b/package/podkop/podkop/files/usr/lib/rulesets.sh
 new file mode 100644
-index 00000000..ed8c1b47
+index 00000000000..ed8c1b4736a
 --- /dev/null
 +++ b/package/podkop/podkop/files/usr/lib/rulesets.sh
 @@ -0,0 +1,180 @@
@@ -16994,7 +16994,7 @@ index 00000000..ed8c1b47
 +}
 diff --git a/package/podkop/podkop/files/usr/lib/sing_box_config_facade.sh b/package/podkop/podkop/files/usr/lib/sing_box_config_facade.sh
 new file mode 100644
-index 00000000..7641673e
+index 00000000000..7641673e2f2
 --- /dev/null
 +++ b/package/podkop/podkop/files/usr/lib/sing_box_config_facade.sh
 @@ -0,0 +1,335 @@
@@ -17335,7 +17335,7 @@ index 00000000..7641673e
 +}
 diff --git a/package/podkop/podkop/files/usr/lib/sing_box_config_manager.sh b/package/podkop/podkop/files/usr/lib/sing_box_config_manager.sh
 new file mode 100644
-index 00000000..c1a2943b
+index 00000000000..c1a2943b8fa
 --- /dev/null
 +++ b/package/podkop/podkop/files/usr/lib/sing_box_config_manager.sh
 @@ -0,0 +1,1508 @@
@@ -18849,7 +18849,7 @@ index 00000000..c1a2943b
 +}
 diff --git a/package/qca-mcs/Makefile b/package/qca-mcs/Makefile
 new file mode 100644
-index 00000000..a6efa765
+index 00000000000..a6efa765142
 --- /dev/null
 +++ b/package/qca-mcs/Makefile
 @@ -0,0 +1,74 @@
@@ -18929,7 +18929,7 @@ index 00000000..a6efa765
 +$(eval $(call KernelPackage,qca-mcs))
 diff --git a/package/qca-mcs/patches/0001-kernel-6.12-compat.patch b/package/qca-mcs/patches/0001-kernel-6.12-compat.patch
 new file mode 100644
-index 00000000..dd644bfc
+index 00000000000..dd644bfc384
 --- /dev/null
 +++ b/package/qca-mcs/patches/0001-kernel-6.12-compat.patch
 @@ -0,0 +1,36 @@
@@ -18971,7 +18971,7 @@ index 00000000..dd644bfc
 + #include <net/ip.h>
 diff --git a/package/qca-mcs/patches/0003-use-current-timer-api.patch b/package/qca-mcs/patches/0003-use-current-timer-api.patch
 new file mode 100644
-index 00000000..8182cca3
+index 00000000000..8182cca36f5
 --- /dev/null
 +++ b/package/qca-mcs/patches/0003-use-current-timer-api.patch
 @@ -0,0 +1,139 @@
@@ -19116,7 +19116,7 @@ index 00000000..8182cca3
 + #else
 diff --git a/package/qca-mcs/patches/0004-do-not-build-with-Werror.patch b/package/qca-mcs/patches/0004-do-not-build-with-Werror.patch
 new file mode 100644
-index 00000000..d02fb603
+index 00000000000..d02fb603851
 --- /dev/null
 +++ b/package/qca-mcs/patches/0004-do-not-build-with-Werror.patch
 @@ -0,0 +1,25 @@
@@ -19147,7 +19147,7 @@ index 00000000..d02fb603
 + ifneq ($(KERNELRELEASE),)
 diff --git a/package/qca-mcs/patches/0006-use-pr_debug-for-wifi-event-chatter.patch b/package/qca-mcs/patches/0006-use-pr_debug-for-wifi-event-chatter.patch
 new file mode 100644
-index 00000000..d8d0d3fd
+index 00000000000..d8d0d3fd358
 --- /dev/null
 +++ b/package/qca-mcs/patches/0006-use-pr_debug-for-wifi-event-chatter.patch
 @@ -0,0 +1,224 @@
@@ -19377,7 +19377,7 @@ index 00000000..d8d0d3fd
 + }
 diff --git a/package/qca-mcs/patches/0007-mc_netlink-require-CAP_NET_ADMIN-and-bound-the-message.patch b/package/qca-mcs/patches/0007-mc_netlink-require-CAP_NET_ADMIN-and-bound-the-message.patch
 new file mode 100644
-index 00000000..a273e8ef
+index 00000000000..a273e8ef8db
 --- /dev/null
 +++ b/package/qca-mcs/patches/0007-mc_netlink-require-CAP_NET_ADMIN-and-bound-the-message.patch
 @@ -0,0 +1,105 @@
@@ -19488,7 +19488,7 @@ index 00000000..a273e8ef
 + 		 * For global option to set, it needn't specified bridge
 diff --git a/package/qca-mcs/patches/0008-mc_snooping-pull-the-MLD-group-address-before-reading-it.patch b/package/qca-mcs/patches/0008-mc_snooping-pull-the-MLD-group-address-before-reading-it.patch
 new file mode 100644
-index 00000000..600326ea
+index 00000000000..600326ea3d3
 --- /dev/null
 +++ b/package/qca-mcs/patches/0008-mc_snooping-pull-the-MLD-group-address-before-reading-it.patch
 @@ -0,0 +1,60 @@
@@ -19554,7 +19554,7 @@ index 00000000..600326ea
 + 	switch (icmp6h->icmp6_type) {
 diff --git a/package/qca-mcs/patches/0009-mc_snooping-use-memmove-for-the-self-overlapping-shifts.patch b/package/qca-mcs/patches/0009-mc_snooping-use-memmove-for-the-self-overlapping-shifts.patch
 new file mode 100644
-index 00000000..d0e2d1c2
+index 00000000000..d0e2d1c2a95
 --- /dev/null
 +++ b/package/qca-mcs/patches/0009-mc_snooping-use-memmove-for-the-self-overlapping-shifts.patch
 @@ -0,0 +1,115 @@
@@ -19675,7 +19675,7 @@ index 00000000..d0e2d1c2
 + 		}
 diff --git a/package/qca-mcs/patches/0010-mc_snooping-do-not-undo-a-pull-that-never-happened.patch b/package/qca-mcs/patches/0010-mc_snooping-do-not-undo-a-pull-that-never-happened.patch
 new file mode 100644
-index 00000000..93663f51
+index 00000000000..93663f517ba
 --- /dev/null
 +++ b/package/qca-mcs/patches/0010-mc_snooping-do-not-undo-a-pull-that-never-happened.patch
 @@ -0,0 +1,62 @@
@@ -19743,7 +19743,7 @@ index 00000000..93663f51
 + 	return err;
 diff --git a/package/qca-mcs/patches/0011-fix-two-header-guards-whose-define-does-not-match.patch b/package/qca-mcs/patches/0011-fix-two-header-guards-whose-define-does-not-match.patch
 new file mode 100644
-index 00000000..8310f3a2
+index 00000000000..8310f3a2f7a
 --- /dev/null
 +++ b/package/qca-mcs/patches/0011-fix-two-header-guards-whose-define-does-not-match.patch
 @@ -0,0 +1,40 @@
@@ -19789,7 +19789,7 @@ index 00000000..8310f3a2
 + #include <linux/if_ether.h>
 diff --git a/package/qca-nss-clients/Config.in b/package/qca-nss-clients/Config.in
 new file mode 100644
-index 00000000..53d40641
+index 00000000000..53d406417e5
 --- /dev/null
 +++ b/package/qca-nss-clients/Config.in
 @@ -0,0 +1,55 @@
@@ -19850,7 +19850,7 @@ index 00000000..53d40641
 +	  selected when NSS IP LSO RX driver is enabled.
 diff --git a/package/qca-nss-clients/Makefile b/package/qca-nss-clients/Makefile
 new file mode 100644
-index 00000000..78691bc7
+index 00000000000..78691bc7158
 --- /dev/null
 +++ b/package/qca-nss-clients/Makefile
 @@ -0,0 +1,268 @@
@@ -20124,7 +20124,7 @@ index 00000000..78691bc7
 +$(eval $(call KernelPackage,qca-nss-drv-wifi-meshmgr))
 diff --git a/package/qca-nss-clients/patches/0001-kernel-5.15-support-qdisc.patch b/package/qca-nss-clients/patches/0001-kernel-5.15-support-qdisc.patch
 new file mode 100644
-index 00000000..a2f64be3
+index 00000000000..a2f64be3297
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0001-kernel-5.15-support-qdisc.patch
 @@ -0,0 +1,157 @@
@@ -20287,7 +20287,7 @@ index 00000000..a2f64be3
 + 	struct nss_wrr_class_data *cl = (struct nss_wrr_class_data *)arg;
 diff --git a/package/qca-nss-clients/patches/0018-kernel-6.1-support.patch b/package/qca-nss-clients/patches/0018-kernel-6.1-support.patch
 new file mode 100644
-index 00000000..2a885227
+index 00000000000..2a8852272ee
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0018-kernel-6.1-support.patch
 @@ -0,0 +1,110 @@
@@ -20403,7 +20403,7 @@ index 00000000..2a885227
 + 
 diff --git a/package/qca-nss-clients/patches/0030-fixup-compiler-errors.patch b/package/qca-nss-clients/patches/0030-fixup-compiler-errors.patch
 new file mode 100644
-index 00000000..6256edee
+index 00000000000..6256edeefd6
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0030-fixup-compiler-errors.patch
 @@ -0,0 +1,258 @@
@@ -20667,7 +20667,7 @@ index 00000000..6256edee
 + 	 * Copy the contents of the sync message into the NETLINK message
 diff --git a/package/qca-nss-clients/patches/0031-kernel-6.12-support.patch b/package/qca-nss-clients/patches/0031-kernel-6.12-support.patch
 new file mode 100644
-index 00000000..a3cbecdc
+index 00000000000..a3cbecdcf53
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0031-kernel-6.12-support.patch
 @@ -0,0 +1,269 @@
@@ -20942,7 +20942,7 @@ index 00000000..a3cbecdc
 + 	 * Send to userspace
 diff --git a/package/qca-nss-clients/patches/0034-pppoe-drop-werror-and-bonding-support.patch b/package/qca-nss-clients/patches/0034-pppoe-drop-werror-and-bonding-support.patch
 new file mode 100644
-index 00000000..193bfe39
+index 00000000000..193bfe39f48
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0034-pppoe-drop-werror-and-bonding-support.patch
 @@ -0,0 +1,26 @@
@@ -20974,7 +20974,7 @@ index 00000000..193bfe39
 +-endif
 diff --git a/package/qca-nss-clients/patches/0035-nss_qdisc-allow-disabling-PPE-and-bridge-support.patch b/package/qca-nss-clients/patches/0035-nss_qdisc-allow-disabling-PPE-and-bridge-support.patch
 new file mode 100644
-index 00000000..3d91ad9b
+index 00000000000..3d91ad9beee
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0035-nss_qdisc-allow-disabling-PPE-and-bridge-support.patch
 @@ -0,0 +1,30 @@
@@ -21010,7 +21010,7 @@ index 00000000..3d91ad9b
 + obj-$(igs)+= igs/
 diff --git a/package/qca-nss-clients/patches/0036-bridge-mgr-port-to-qca_ppe.patch b/package/qca-nss-clients/patches/0036-bridge-mgr-port-to-qca_ppe.patch
 new file mode 100644
-index 00000000..738eb5e5
+index 00000000000..738eb5e5488
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0036-bridge-mgr-port-to-qca_ppe.patch
 @@ -0,0 +1,1534 @@
@@ -22550,7 +22550,7 @@ index 00000000..738eb5e5
 +-MODULE_PARM_DESC(fdb_disabled, "fdb learning is disabled");
 diff --git a/package/qca-nss-clients/patches/0037-use-current-timer-api.patch b/package/qca-nss-clients/patches/0037-use-current-timer-api.patch
 new file mode 100644
-index 00000000..7e3b2355
+index 00000000000..7e3b2355489
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0037-use-current-timer-api.patch
 @@ -0,0 +1,57 @@
@@ -22613,7 +22613,7 @@ index 00000000..7e3b2355
 + 		 * Therefore we are sure that there are no pending stats request
 diff --git a/package/qca-nss-clients/patches/0038-act_nssmirred-fix-action-list-corruption-on-release.patch b/package/qca-nss-clients/patches/0038-act_nssmirred-fix-action-list-corruption-on-release.patch
 new file mode 100644
-index 00000000..dbe4b837
+index 00000000000..dbe4b8377c7
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0038-act_nssmirred-fix-action-list-corruption-on-release.patch
 @@ -0,0 +1,76 @@
@@ -22695,7 +22695,7 @@ index 00000000..dbe4b837
 + 	tcf_hash_insert(tc_act);
 diff --git a/package/qca-nss-clients/patches/0039-nss_qdisc-guard-stats-attach-detach-against-noop-root.patch b/package/qca-nss-clients/patches/0039-nss_qdisc-guard-stats-attach-detach-against-noop-root.patch
 new file mode 100644
-index 00000000..c213f720
+index 00000000000..c213f720c89
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0039-nss_qdisc-guard-stats-attach-detach-against-noop-root.patch
 @@ -0,0 +1,40 @@
@@ -22741,7 +22741,7 @@ index 00000000..c213f720
 + 		nss_qdisc_warning(" Error, stats wq should be initialized by now for root qdisc:%x\n", rnq?rnq->qos_tag:0);
 diff --git a/package/qca-nss-clients/patches/0040-netlink-modularize-makefile.patch b/package/qca-nss-clients/patches/0040-netlink-modularize-makefile.patch
 new file mode 100644
-index 00000000..babc3930
+index 00000000000..babc3930007
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0040-netlink-modularize-makefile.patch
 @@ -0,0 +1,543 @@
@@ -23290,7 +23290,7 @@ index 00000000..babc3930
 + 		/*
 diff --git a/package/qca-nss-clients/patches/0041-mirror-fix-build-with-kernel-6.18.patch b/package/qca-nss-clients/patches/0041-mirror-fix-build-with-kernel-6.18.patch
 new file mode 100644
-index 00000000..977eabd1
+index 00000000000..977eabd1d76
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0041-mirror-fix-build-with-kernel-6.18.patch
 @@ -0,0 +1,118 @@
@@ -23414,7 +23414,7 @@ index 00000000..977eabd1
 + 		return -1;
 diff --git a/package/qca-nss-clients/patches/0042-netlink-fix-build-with-kernel-6.18.patch b/package/qca-nss-clients/patches/0042-netlink-fix-build-with-kernel-6.18.patch
 new file mode 100644
-index 00000000..5338593a
+index 00000000000..5338593a096
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0042-netlink-fix-build-with-kernel-6.18.patch
 @@ -0,0 +1,32 @@
@@ -23452,7 +23452,7 @@ index 00000000..5338593a
 + 		return NULL;
 diff --git a/package/qca-nss-clients/patches/0043-netlink-require-admin-for-rule-injection.patch b/package/qca-nss-clients/patches/0043-netlink-require-admin-for-rule-injection.patch
 new file mode 100644
-index 00000000..9de2c92c
+index 00000000000..9de2c92c44f
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0043-netlink-require-admin-for-rule-injection.patch
 @@ -0,0 +1,35 @@
@@ -23493,7 +23493,7 @@ index 00000000..9de2c92c
 + /*
 diff --git a/package/qca-nss-clients/patches/0044-act_nssmirred-derive-igs-qos-tags-from-forward-chain-priority.patch b/package/qca-nss-clients/patches/0044-act_nssmirred-derive-igs-qos-tags-from-forward-chain-priority.patch
 new file mode 100644
-index 00000000..64f26c45
+index 00000000000..64f26c45032
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0044-act_nssmirred-derive-igs-qos-tags-from-forward-chain-priority.patch
 @@ -0,0 +1,113 @@
@@ -23612,7 +23612,7 @@ index 00000000..64f26c45
 + #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 diff --git a/package/qca-nss-clients/patches/0045-nss_qdisc-poll-per-node-statistics-on-the-11.4-firmware.patch b/package/qca-nss-clients/patches/0045-nss_qdisc-poll-per-node-statistics-on-the-11.4-firmware.patch
 new file mode 100644
-index 00000000..caa33ca4
+index 00000000000..caa33ca4260
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0045-nss_qdisc-poll-per-node-statistics-on-the-11.4-firmware.patch
 @@ -0,0 +1,204 @@
@@ -23822,7 +23822,7 @@ index 00000000..caa33ca4
 ++#endif /* !NSS_FIRMWARE_VERSION_11_4 */
 diff --git a/package/qca-nss-clients/patches/0046-vlan-mgr-drive-the-ppe-through-qca-ppe.patch b/package/qca-nss-clients/patches/0046-vlan-mgr-drive-the-ppe-through-qca-ppe.patch
 new file mode 100644
-index 00000000..6ef825e5
+index 00000000000..6ef825e58ae
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0046-vlan-mgr-drive-the-ppe-through-qca-ppe.patch
 @@ -0,0 +1,156 @@
@@ -23984,7 +23984,7 @@ index 00000000..6ef825e5
 + 		ret = nss_vlan_mgr_configure_ppe(v, dev, vsi);
 diff --git a/package/qca-nss-clients/patches/0047-igs-arm-the-sync-message-wait-before-ringing-the-doorbell.patch b/package/qca-nss-clients/patches/0047-igs-arm-the-sync-message-wait-before-ringing-the-doorbell.patch
 new file mode 100644
-index 00000000..28c622df
+index 00000000000..28c622df442
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0047-igs-arm-the-sync-message-wait-before-ringing-the-doorbell.patch
 @@ -0,0 +1,72 @@
@@ -24062,7 +24062,7 @@ index 00000000..28c622df
 + 		return -1;
 diff --git a/package/qca-nss-clients/patches/0048-igs-unwind-firmware-state-when-a-redirect-init-fails.patch b/package/qca-nss-clients/patches/0048-igs-unwind-firmware-state-when-a-redirect-init-fails.patch
 new file mode 100644
-index 00000000..0400c770
+index 00000000000..0400c7707c1
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0048-igs-unwind-firmware-state-when-a-redirect-init-fails.patch
 @@ -0,0 +1,78 @@
@@ -24146,7 +24146,7 @@ index 00000000..0400c770
 + 
 diff --git a/package/qca-nss-clients/patches/0049-nss_qdisc-keep-a-codel-leaf-buildable-when-its-flow-queue-memory-is-scarce.patch b/package/qca-nss-clients/patches/0049-nss_qdisc-keep-a-codel-leaf-buildable-when-its-flow-queue-memory-is-scarce.patch
 new file mode 100644
-index 00000000..c3e2e26a
+index 00000000000..c3e2e26a0fa
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0049-nss_qdisc-keep-a-codel-leaf-buildable-when-its-flow-queue-memory-is-scarce.patch
 @@ -0,0 +1,200 @@
@@ -24352,7 +24352,7 @@ index 00000000..c3e2e26a
 + 			nss_qdisc_warning("DMA map failed for virtual address = %lu\n", q->flow_queue_mem);
 diff --git a/package/qca-nss-clients/patches/0050-nss_qdisc-bound-two-unvalidated-indices.patch b/package/qca-nss-clients/patches/0050-nss_qdisc-bound-two-unvalidated-indices.patch
 new file mode 100644
-index 00000000..2dcf373e
+index 00000000000..2dcf373e4f8
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0050-nss_qdisc-bound-two-unvalidated-indices.patch
 @@ -0,0 +1,90 @@
@@ -24448,7 +24448,7 @@ index 00000000..2dcf373e
 + 		q->nwtc[qopt->traffic_id].rap.min = qopt->rap.min;
 diff --git a/package/qca-nss-clients/patches/0051-nss_qdisc-zero-the-dump-structs-before-copying-them-out.patch b/package/qca-nss-clients/patches/0051-nss_qdisc-zero-the-dump-structs-before-copying-them-out.patch
 new file mode 100644
-index 00000000..6fcc702b
+index 00000000000..6fcc702b7b9
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0051-nss_qdisc-zero-the-dump-structs-before-copying-them-out.patch
 @@ -0,0 +1,159 @@
@@ -24613,7 +24613,7 @@ index 00000000..6fcc702b
 + 
 diff --git a/package/qca-nss-clients/patches/0052-wifi-meshmgr-check-dealloc-result-in-if-create-sync.patch b/package/qca-nss-clients/patches/0052-wifi-meshmgr-check-dealloc-result-in-if-create-sync.patch
 new file mode 100644
-index 00000000..1bd90e74
+index 00000000000..1bd90e74bc1
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0052-wifi-meshmgr-check-dealloc-result-in-if-create-sync.patch
 @@ -0,0 +1,56 @@
@@ -24675,7 +24675,7 @@ index 00000000..1bd90e74
 + 	kfree(wmesh_ctx);
 diff --git a/package/qca-nss-clients/patches/0053-wifi-meshmgr-guard-unhandled-mesh-exceptions.patch b/package/qca-nss-clients/patches/0053-wifi-meshmgr-guard-unhandled-mesh-exceptions.patch
 new file mode 100644
-index 00000000..2e7f905f
+index 00000000000..2e7f905ff48
 --- /dev/null
 +++ b/package/qca-nss-clients/patches/0053-wifi-meshmgr-guard-unhandled-mesh-exceptions.patch
 @@ -0,0 +1,45 @@
@@ -24726,7 +24726,7 @@ index 00000000..2e7f905f
 + 	/*
 diff --git a/package/qca-nss-drv/Config.in b/package/qca-nss-drv/Config.in
 new file mode 100644
-index 00000000..63e997a4
+index 00000000000..63e997a4053
 --- /dev/null
 +++ b/package/qca-nss-drv/Config.in
 @@ -0,0 +1,279 @@
@@ -25011,7 +25011,7 @@ index 00000000..63e997a4
 +endmenu
 diff --git a/package/qca-nss-drv/Makefile b/package/qca-nss-drv/Makefile
 new file mode 100644
-index 00000000..4ee12b94
+index 00000000000..4ee12b948f8
 --- /dev/null
 +++ b/package/qca-nss-drv/Makefile
 @@ -0,0 +1,373 @@
@@ -25390,7 +25390,7 @@ index 00000000..4ee12b94
 +$(eval $(call KernelPackage,qca-nss-drv))
 diff --git a/package/qca-nss-drv/files/qca-nss-drv.debug b/package/qca-nss-drv/files/qca-nss-drv.debug
 new file mode 100644
-index 00000000..3e953104
+index 00000000000..3e953104c4c
 --- /dev/null
 +++ b/package/qca-nss-drv/files/qca-nss-drv.debug
 @@ -0,0 +1,89 @@
@@ -25485,7 +25485,7 @@ index 00000000..3e953104
 +sysctl -q dev.nss.stats.non_zero_stats="$current"
 diff --git a/package/qca-nss-drv/files/qca-nss-drv.hotplug b/package/qca-nss-drv/files/qca-nss-drv.hotplug
 new file mode 100644
-index 00000000..31017889
+index 00000000000..31017889b24
 --- /dev/null
 +++ b/package/qca-nss-drv/files/qca-nss-drv.hotplug
 @@ -0,0 +1,70 @@
@@ -25561,7 +25561,7 @@ index 00000000..31017889
 +esac
 diff --git a/package/qca-nss-drv/files/qca-nss-drv.init b/package/qca-nss-drv/files/qca-nss-drv.init
 new file mode 100644
-index 00000000..0f617761
+index 00000000000..0f6177611a4
 --- /dev/null
 +++ b/package/qca-nss-drv/files/qca-nss-drv.init
 @@ -0,0 +1,129 @@
@@ -25696,7 +25696,7 @@ index 00000000..0f617761
 +}
 diff --git a/package/qca-nss-drv/files/qca-nss-drv.uci b/package/qca-nss-drv/files/qca-nss-drv.uci
 new file mode 100644
-index 00000000..4a8b7663
+index 00000000000..4a8b7663ce4
 --- /dev/null
 +++ b/package/qca-nss-drv/files/qca-nss-drv.uci
 @@ -0,0 +1,3 @@
@@ -25705,7 +25705,7 @@ index 00000000..4a8b7663
 +	option enable_log	'1'
 diff --git a/package/qca-nss-drv/patches/0001-nss-drv-replace-ioremap_nocache-with-ioremap.patch b/package/qca-nss-drv/patches/0001-nss-drv-replace-ioremap_nocache-with-ioremap.patch
 new file mode 100644
-index 00000000..d5f0bc71
+index 00000000000..d5f0bc713c1
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0001-nss-drv-replace-ioremap_nocache-with-ioremap.patch
 @@ -0,0 +1,153 @@
@@ -25864,7 +25864,7 @@ index 00000000..d5f0bc71
 + 		return;
 diff --git a/package/qca-nss-drv/patches/0002-nss-drv-add-support-for-kernel-5.15.patch b/package/qca-nss-drv/patches/0002-nss-drv-add-support-for-kernel-5.15.patch
 new file mode 100644
-index 00000000..c462cd19
+index 00000000000..c462cd1937b
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0002-nss-drv-add-support-for-kernel-5.15.patch
 @@ -0,0 +1,49 @@
@@ -25919,7 +25919,7 @@ index 00000000..c462cd19
 + static DEFINE_SPINLOCK(nss_data_plane_gmac_stats_lock);
 diff --git a/package/qca-nss-drv/patches/0003-DMA-Fix-NULL-pointer-exceptions.patch b/package/qca-nss-drv/patches/0003-DMA-Fix-NULL-pointer-exceptions.patch
 new file mode 100644
-index 00000000..09d1039e
+index 00000000000..09d1039ede2
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0003-DMA-Fix-NULL-pointer-exceptions.patch
 @@ -0,0 +1,28 @@
@@ -25953,7 +25953,7 @@ index 00000000..09d1039e
 + 
 diff --git a/package/qca-nss-drv/patches/0004-nss-drv-rework-NSS_CORE_DMA_CACHE_MAINT-ops.patch b/package/qca-nss-drv/patches/0004-nss-drv-rework-NSS_CORE_DMA_CACHE_MAINT-ops.patch
 new file mode 100644
-index 00000000..a8843840
+index 00000000000..a88438408b0
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0004-nss-drv-rework-NSS_CORE_DMA_CACHE_MAINT-ops.patch
 @@ -0,0 +1,564 @@
@@ -26523,7 +26523,7 @@ index 00000000..a8843840
 + }
 diff --git a/package/qca-nss-drv/patches/0005-nss-drv-rework-getting-the-reserved-memory-size.patch b/package/qca-nss-drv/patches/0005-nss-drv-rework-getting-the-reserved-memory-size.patch
 new file mode 100644
-index 00000000..b8e63a6f
+index 00000000000..b8e63a6f2c8
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0005-nss-drv-rework-getting-the-reserved-memory-size.patch
 @@ -0,0 +1,114 @@
@@ -26643,7 +26643,7 @@ index 00000000..b8e63a6f
 + /*
 diff --git a/package/qca-nss-drv/patches/0007-nss-drv-Fix-nss_wifili_if-compilation-error-GCC-13.patch b/package/qca-nss-drv/patches/0007-nss-drv-Fix-nss_wifili_if-compilation-error-GCC-13.patch
 new file mode 100644
-index 00000000..77a18502
+index 00000000000..77a18502247
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0007-nss-drv-Fix-nss_wifili_if-compilation-error-GCC-13.patch
 @@ -0,0 +1,15 @@
@@ -26664,7 +26664,7 @@ index 00000000..77a18502
 +  * nss_wifili_thread_scheme_dealloc
 diff --git a/package/qca-nss-drv/patches/0008-Add-kernel-6.1-support.patch b/package/qca-nss-drv/patches/0008-Add-kernel-6.1-support.patch
 new file mode 100644
-index 00000000..f61fad44
+index 00000000000..f61fad443f0
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0008-Add-kernel-6.1-support.patch
 @@ -0,0 +1,187 @@
@@ -26857,7 +26857,7 @@ index 00000000..f61fad44
 + 
 diff --git a/package/qca-nss-drv/patches/0010-nss-drv-dynamic-interface-desc.patch b/package/qca-nss-drv/patches/0010-nss-drv-dynamic-interface-desc.patch
 new file mode 100644
-index 00000000..d16a3be6
+index 00000000000..d16a3be6fd1
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0010-nss-drv-dynamic-interface-desc.patch
 @@ -0,0 +1,22 @@
@@ -26885,7 +26885,7 @@ index 00000000..d16a3be6
 + /*
 diff --git a/package/qca-nss-drv/patches/0013-nss-drv-remove-legacy-wifi.patch b/package/qca-nss-drv/patches/0013-nss-drv-remove-legacy-wifi.patch
 new file mode 100644
-index 00000000..b9a4604b
+index 00000000000..b9a4604be0c
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0013-nss-drv-remove-legacy-wifi.patch
 @@ -0,0 +1,37 @@
@@ -26928,7 +26928,7 @@ index 00000000..b9a4604b
 + 		nss_wifi_ext_vdev_register_handler();
 diff --git a/package/qca-nss-drv/patches/0016-nss-drv-add-support-for-kernel-6.6.patch b/package/qca-nss-drv/patches/0016-nss-drv-add-support-for-kernel-6.6.patch
 new file mode 100644
-index 00000000..cc6d7f8c
+index 00000000000..cc6d7f8c2bb
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0016-nss-drv-add-support-for-kernel-6.6.patch
 @@ -0,0 +1,255 @@
@@ -27189,7 +27189,7 @@ index 00000000..cc6d7f8c
 + 
 diff --git a/package/qca-nss-drv/patches/0019-nss-drv-mac80211-disable-signal-redirection.patch b/package/qca-nss-drv/patches/0019-nss-drv-mac80211-disable-signal-redirection.patch
 new file mode 100644
-index 00000000..86f8ea36
+index 00000000000..86f8ea368a6
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0019-nss-drv-mac80211-disable-signal-redirection.patch
 @@ -0,0 +1,15 @@
@@ -27210,7 +27210,7 @@ index 00000000..86f8ea36
 + 	 * n2h traffic.
 diff --git a/package/qca-nss-drv/patches/0020-nss-drv-reorg-irq-logic.patch b/package/qca-nss-drv/patches/0020-nss-drv-reorg-irq-logic.patch
 new file mode 100644
-index 00000000..339d6761
+index 00000000000..339d6761e39
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0020-nss-drv-reorg-irq-logic.patch
 @@ -0,0 +1,357 @@
@@ -27573,7 +27573,7 @@ index 00000000..339d6761
 + 
 diff --git a/package/qca-nss-drv/patches/0022-nss-drv-limit-fw-12.2.patch b/package/qca-nss-drv/patches/0022-nss-drv-limit-fw-12.2.patch
 new file mode 100644
-index 00000000..4270f892
+index 00000000000..4270f892bdf
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0022-nss-drv-limit-fw-12.2.patch
 @@ -0,0 +1,266 @@
@@ -27845,7 +27845,7 @@ index 00000000..4270f892
 + /*
 diff --git a/package/qca-nss-drv/patches/0026-nss_rps-fix-procfs-read-write.patch b/package/qca-nss-drv/patches/0026-nss_rps-fix-procfs-read-write.patch
 new file mode 100644
-index 00000000..1805a308
+index 00000000000..1805a308352
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0026-nss_rps-fix-procfs-read-write.patch
 @@ -0,0 +1,199 @@
@@ -28050,7 +28050,7 @@ index 00000000..1805a308
 + 	tokens[count] = strsep(&str, " ");
 diff --git a/package/qca-nss-drv/patches/0027-nss-drv-add-support-for-kernel-6.12.patch b/package/qca-nss-drv/patches/0027-nss-drv-add-support-for-kernel-6.12.patch
 new file mode 100644
-index 00000000..0d455e03
+index 00000000000..0d455e03223
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0027-nss-drv-add-support-for-kernel-6.12.patch
 @@ -0,0 +1,843 @@
@@ -28899,7 +28899,7 @@ index 00000000..0d455e03
 + 						, stats_shadow
 diff --git a/package/qca-nss-drv/patches/0029-treewide-fix-compiler-warnings.patch b/package/qca-nss-drv/patches/0029-treewide-fix-compiler-warnings.patch
 new file mode 100644
-index 00000000..25cf8c36
+index 00000000000..25cf8c36c03
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0029-treewide-fix-compiler-warnings.patch
 @@ -0,0 +1,106 @@
@@ -29011,7 +29011,7 @@ index 00000000..25cf8c36
 + EXPORT_SYMBOL(nss_lag_tx_slave_state);
 diff --git a/package/qca-nss-drv/patches/0030-Makefile-set-rearrange-arch-features.patch b/package/qca-nss-drv/patches/0030-Makefile-set-rearrange-arch-features.patch
 new file mode 100644
-index 00000000..143eeb19
+index 00000000000..143eeb198be
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0030-Makefile-set-rearrange-arch-features.patch
 @@ -0,0 +1,79 @@
@@ -29096,7 +29096,7 @@ index 00000000..143eeb19
 + ccflags-y += -DNSS_DRV_VLAN_ENABLE
 diff --git a/package/qca-nss-drv/patches/0031-nss-drv-fix-null-ptr-log.patch b/package/qca-nss-drv/patches/0031-nss-drv-fix-null-ptr-log.patch
 new file mode 100644
-index 00000000..74f5810a
+index 00000000000..74f5810addb
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0031-nss-drv-fix-null-ptr-log.patch
 @@ -0,0 +1,50 @@
@@ -29152,7 +29152,7 @@ index 00000000..74f5810a
 + 			nss_gre_log_message_types_str[NSS_GRE_LOG_MESSAGE_TYPE_INDEX(ngm->cm.type)],
 diff --git a/package/qca-nss-drv/patches/0032-Makefile-do-not-build-with-Werror.patch b/package/qca-nss-drv/patches/0032-Makefile-do-not-build-with-Werror.patch
 new file mode 100644
-index 00000000..cce2ef80
+index 00000000000..cce2ef807b8
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0032-Makefile-do-not-build-with-Werror.patch
 @@ -0,0 +1,19 @@
@@ -29177,7 +29177,7 @@ index 00000000..cce2ef80
 + 
 diff --git a/package/qca-nss-drv/patches/0033-nss_hal-use-alloc_netdev_dummy.patch b/package/qca-nss-drv/patches/0033-nss_hal-use-alloc_netdev_dummy.patch
 new file mode 100644
-index 00000000..b4fb2cf4
+index 00000000000..b4fb2cf490a
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0033-nss_hal-use-alloc_netdev_dummy.patch
 @@ -0,0 +1,128 @@
@@ -29311,7 +29311,7 @@ index 00000000..b4fb2cf4
 + }
 diff --git a/package/qca-nss-drv/patches/0034-nss_init-terminate-nss_dt_ids.patch b/package/qca-nss-drv/patches/0034-nss_init-terminate-nss_dt_ids.patch
 new file mode 100644
-index 00000000..25337e40
+index 00000000000..25337e4051e
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0034-nss_init-terminate-nss_dt_ids.patch
 @@ -0,0 +1,17 @@
@@ -29334,7 +29334,7 @@ index 00000000..25337e40
 + #endif
 diff --git a/package/qca-nss-drv/patches/0100-Makefile-allow-disabling-ppe-vp-support.patch b/package/qca-nss-drv/patches/0100-Makefile-allow-disabling-ppe-vp-support.patch
 new file mode 100644
-index 00000000..a6af90ac
+index 00000000000..a6af90ace0b
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0100-Makefile-allow-disabling-ppe-vp-support.patch
 @@ -0,0 +1,44 @@
@@ -29384,7 +29384,7 @@ index 00000000..a6af90ac
 + 
 diff --git a/package/qca-nss-drv/patches/0101-nss_data_plane-fix-rmmod-panic-on-double-unregister.patch b/package/qca-nss-drv/patches/0101-nss_data_plane-fix-rmmod-panic-on-double-unregister.patch
 new file mode 100644
-index 00000000..5a04c82f
+index 00000000000..5a04c82fd9b
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0101-nss_data_plane-fix-rmmod-panic-on-double-unregister.patch
 @@ -0,0 +1,39 @@
@@ -29429,7 +29429,7 @@ index 00000000..5a04c82f
 + 		}
 diff --git a/package/qca-nss-drv/patches/0102-nss_init-defer-probe-until-data-plane-armed.patch b/package/qca-nss-drv/patches/0102-nss_init-defer-probe-until-data-plane-armed.patch
 new file mode 100644
-index 00000000..121f7b02
+index 00000000000..121f7b02c64
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0102-nss_init-defer-probe-until-data-plane-armed.patch
 @@ -0,0 +1,40 @@
@@ -29475,7 +29475,7 @@ index 00000000..121f7b02
 + 
 diff --git a/package/qca-nss-drv/patches/0103-nss_core-fix-fraglist-skb-truesize-underaccounting.patch b/package/qca-nss-drv/patches/0103-nss_core-fix-fraglist-skb-truesize-underaccounting.patch
 new file mode 100644
-index 00000000..75584eb6
+index 00000000000..75584eb6855
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0103-nss_core-fix-fraglist-skb-truesize-underaccounting.patch
 @@ -0,0 +1,53 @@
@@ -29534,7 +29534,7 @@ index 00000000..75584eb6
 + 		/*
 diff --git a/package/qca-nss-drv/patches/0104-nss_shaper-add-the-11.4-per-node-stats-wire-format.patch b/package/qca-nss-drv/patches/0104-nss_shaper-add-the-11.4-per-node-stats-wire-format.patch
 new file mode 100644
-index 00000000..e27b1404
+index 00000000000..e27b1404ed3
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0104-nss_shaper-add-the-11.4-per-node-stats-wire-format.patch
 @@ -0,0 +1,62 @@
@@ -29602,7 +29602,7 @@ index 00000000..e27b1404
 + 
 diff --git a/package/qca-nss-drv/patches/0105-nss_core-back-fw-empty-buffer-payloads-with-kmalloc.patch b/package/qca-nss-drv/patches/0105-nss_core-back-fw-empty-buffer-payloads-with-kmalloc.patch
 new file mode 100644
-index 00000000..504ba3de
+index 00000000000..504ba3de3c0
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0105-nss_core-back-fw-empty-buffer-payloads-with-kmalloc.patch
 @@ -0,0 +1,61 @@
@@ -29669,7 +29669,7 @@ index 00000000..504ba3de
 + 		 * Map the skb
 diff --git a/package/qca-nss-drv/patches/0106-nss_init-tear-down-module-global-registrations-on-exit.patch b/package/qca-nss-drv/patches/0106-nss_init-tear-down-module-global-registrations-on-exit.patch
 new file mode 100644
-index 00000000..f44517c9
+index 00000000000..f44517c9c9a
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0106-nss_init-tear-down-module-global-registrations-on-exit.patch
 @@ -0,0 +1,149 @@
@@ -29824,7 +29824,7 @@ index 00000000..f44517c9
 + extern int nss_stats_open(struct inode *inode, struct file *filp);
 diff --git a/package/qca-nss-drv/patches/0107-nss_hal-hold-the-core-in-reset-on-device-remove.patch b/package/qca-nss-drv/patches/0107-nss_hal-hold-the-core-in-reset-on-device-remove.patch
 new file mode 100644
-index 00000000..5685a3ce
+index 00000000000..5685a3ce8b1
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0107-nss_hal-hold-the-core-in-reset-on-device-remove.patch
 @@ -0,0 +1,142 @@
@@ -29972,7 +29972,7 @@ index 00000000..5685a3ce
 + 	nss_stats_clean();
 diff --git a/package/qca-nss-drv/patches/0108-nss_coredump-dump-the-whole-firmware-log-ring.patch b/package/qca-nss-drv/patches/0108-nss_coredump-dump-the-whole-firmware-log-ring.patch
 new file mode 100644
-index 00000000..543a12b0
+index 00000000000..543a12b0923
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0108-nss_coredump-dump-the-whole-firmware-log-ring.patch
 @@ -0,0 +1,284 @@
@@ -30262,7 +30262,7 @@ index 00000000..543a12b0
 + 	uint32_t c2c_start_dma;				/* nss_c2c start physical address */
 diff --git a/package/qca-nss-drv/patches/0109-nss_phys_if-serialise-sync-message-responses.patch b/package/qca-nss-drv/patches/0109-nss_phys_if-serialise-sync-message-responses.patch
 new file mode 100644
-index 00000000..38ae8b7f
+index 00000000000..38ae8b7fb53
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0109-nss_phys_if-serialise-sync-message-responses.patch
 @@ -0,0 +1,119 @@
@@ -30387,7 +30387,7 @@ index 00000000..38ae8b7f
 + 	}
 diff --git a/package/qca-nss-drv/patches/0110-nss_data_plane-do-not-skip-open-after-a-failed-close.patch b/package/qca-nss-drv/patches/0110-nss_data_plane-do-not-skip-open-after-a-failed-close.patch
 new file mode 100644
-index 00000000..c7b0e4df
+index 00000000000..c7b0e4df43b
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0110-nss_data_plane-do-not-skip-open-after-a-failed-close.patch
 @@ -0,0 +1,67 @@
@@ -30460,7 +30460,7 @@ index 00000000..c7b0e4df
 + 	return NSS_DP_FAILURE;
 diff --git a/package/qca-nss-drv/patches/0111-nss_core-bound-the-N2H-descriptor-geometry.patch b/package/qca-nss-drv/patches/0111-nss_core-bound-the-N2H-descriptor-geometry.patch
 new file mode 100644
-index 00000000..e56bf14f
+index 00000000000..e56bf14fd8d
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0111-nss_core-bound-the-N2H-descriptor-geometry.patch
 @@ -0,0 +1,170 @@
@@ -30636,7 +30636,7 @@ index 00000000..e56bf14f
 + 	nbuf->data = nbuf->head + desc->payload_offs;
 diff --git a/package/qca-nss-drv/patches/0112-nss_ipv4-nss_ipv6-bound-the-conn_sync_many-count.patch b/package/qca-nss-drv/patches/0112-nss_ipv4-nss_ipv6-bound-the-conn_sync_many-count.patch
 new file mode 100644
-index 00000000..1187ccfe
+index 00000000000..1187ccfe496
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0112-nss_ipv4-nss_ipv6-bound-the-conn_sync_many-count.patch
 @@ -0,0 +1,188 @@
@@ -30830,7 +30830,7 @@ index 00000000..1187ccfe
 + 					/* Queue decongestion callbacks */
 diff --git a/package/qca-nss-drv/patches/0113-nss-drv-bound-firmware-supplied-indices-in-two-stats-paths.patch b/package/qca-nss-drv/patches/0113-nss-drv-bound-firmware-supplied-indices-in-two-stats-paths.patch
 new file mode 100644
-index 00000000..b7fe2a44
+index 00000000000..b7fe2a44015
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0113-nss-drv-bound-firmware-supplied-indices-in-two-stats-paths.patch
 @@ -0,0 +1,80 @@
@@ -30916,7 +30916,7 @@ index 00000000..b7fe2a44
 + 	/*
 diff --git a/package/qca-nss-drv/patches/0114-nss_core-close-the-N2H-netdev-lifetime-race.patch b/package/qca-nss-drv/patches/0114-nss_core-close-the-N2H-netdev-lifetime-race.patch
 new file mode 100644
-index 00000000..785c2194
+index 00000000000..785c2194bdb
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0114-nss_core-close-the-N2H-netdev-lifetime-race.patch
 @@ -0,0 +1,134 @@
@@ -31056,7 +31056,7 @@ index 00000000..785c2194
 + 	status = nss_virt_if_handle_destroy_sync(handle);
 diff --git a/package/qca-nss-drv/patches/0115-nss_shaper-drain-the-interface-bounce-callback-on-unregister.patch b/package/qca-nss-drv/patches/0115-nss_shaper-drain-the-interface-bounce-callback-on-unregister.patch
 new file mode 100644
-index 00000000..a02285e4
+index 00000000000..a02285e42d5
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0115-nss_shaper-drain-the-interface-bounce-callback-on-unregister.patch
 @@ -0,0 +1,41 @@
@@ -31103,7 +31103,7 @@ index 00000000..a02285e4
 + 	owner = reg->owner;
 diff --git a/package/qca-nss-drv/patches/0116-nss_core-size-the-command-buffer-to-the-message.patch b/package/qca-nss-drv/patches/0116-nss_core-size-the-command-buffer-to-the-message.patch
 new file mode 100644
-index 00000000..83dde388
+index 00000000000..83dde388b20
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0116-nss_core-size-the-command-buffer-to-the-message.patch
 @@ -0,0 +1,43 @@
@@ -31152,7 +31152,7 @@ index 00000000..83dde388
 + 		nss_warning("%px: interface: %d type: %d msg dropped as command allocation failed", nss_ctx, ncm->interface, ncm->type);
 diff --git a/package/qca-nss-drv/patches/0117-nss_rmnet_rx-bind-raw-ip-wan-interfaces-to-the-firmware.patch b/package/qca-nss-drv/patches/0117-nss_rmnet_rx-bind-raw-ip-wan-interfaces-to-the-firmware.patch
 new file mode 100644
-index 00000000..90f590c7
+index 00000000000..90f590c7e7f
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0117-nss_rmnet_rx-bind-raw-ip-wan-interfaces-to-the-firmware.patch
 @@ -0,0 +1,532 @@
@@ -31690,7 +31690,7 @@ index 00000000..90f590c7
 + 		if (ret != NSS_TX_SUCCESS) {
 diff --git a/package/qca-nss-drv/patches/0118-nss_freq-keep-reporting-the-cpu-load-with-scaling-off.patch b/package/qca-nss-drv/patches/0118-nss_freq-keep-reporting-the-cpu-load-with-scaling-off.patch
 new file mode 100644
-index 00000000..245e09f7
+index 00000000000..245e09f7c4c
 --- /dev/null
 +++ b/package/qca-nss-drv/patches/0118-nss_freq-keep-reporting-the-cpu-load-with-scaling-off.patch
 @@ -0,0 +1,71 @@
@@ -31767,7 +31767,7 @@ index 00000000..245e09f7
 + 
 diff --git a/package/qca-nss-drv/tests/phif-completion-reuse.c b/package/qca-nss-drv/tests/phif-completion-reuse.c
 new file mode 100644
-index 00000000..05570b89
+index 00000000000..05570b89adc
 --- /dev/null
 +++ b/package/qca-nss-drv/tests/phif-completion-reuse.c
 @@ -0,0 +1,202 @@
@@ -31975,7 +31975,7 @@ index 00000000..05570b89
 +}
 diff --git a/package/qca-nss-ecm/Makefile b/package/qca-nss-ecm/Makefile
 new file mode 100644
-index 00000000..f9af0bd4
+index 00000000000..f9af0bd417d
 --- /dev/null
 +++ b/package/qca-nss-ecm/Makefile
 @@ -0,0 +1,194 @@
@@ -32175,7 +32175,7 @@ index 00000000..f9af0bd4
 +$(eval $(call KernelPackage,qca-nss-ecm))
 diff --git a/package/qca-nss-ecm/files/disable_offloads.hotplug b/package/qca-nss-ecm/files/disable_offloads.hotplug
 new file mode 100644
-index 00000000..04448823
+index 00000000000..044488236e6
 --- /dev/null
 +++ b/package/qca-nss-ecm/files/disable_offloads.hotplug
 @@ -0,0 +1,17 @@
@@ -32198,7 +32198,7 @@ index 00000000..04448823
 +exit 0
 diff --git a/package/qca-nss-ecm/files/disable_offloads.sh b/package/qca-nss-ecm/files/disable_offloads.sh
 new file mode 100644
-index 00000000..b76f2751
+index 00000000000..b76f27512ad
 --- /dev/null
 +++ b/package/qca-nss-ecm/files/disable_offloads.sh
 @@ -0,0 +1,223 @@
@@ -32427,7 +32427,7 @@ index 00000000..b76f2751
 +}
 diff --git a/package/qca-nss-ecm/files/ecm_dump.sh b/package/qca-nss-ecm/files/ecm_dump.sh
 new file mode 100644
-index 00000000..925ea95d
+index 00000000000..925ea95de42
 --- /dev/null
 +++ b/package/qca-nss-ecm/files/ecm_dump.sh
 @@ -0,0 +1,95 @@
@@ -32528,7 +32528,7 @@ index 00000000..925ea95d
 +exit 2
 diff --git a/package/qca-nss-ecm/files/on-demand-down b/package/qca-nss-ecm/files/on-demand-down
 new file mode 100644
-index 00000000..02d708e0
+index 00000000000..02d708e03ba
 --- /dev/null
 +++ b/package/qca-nss-ecm/files/on-demand-down
 @@ -0,0 +1,6 @@
@@ -32540,7 +32540,7 @@ index 00000000..02d708e0
 +}
 diff --git a/package/qca-nss-ecm/files/qca-nss-ecm.defaults b/package/qca-nss-ecm/files/qca-nss-ecm.defaults
 new file mode 100644
-index 00000000..83f14248
+index 00000000000..83f142483a4
 --- /dev/null
 +++ b/package/qca-nss-ecm/files/qca-nss-ecm.defaults
 @@ -0,0 +1,14 @@
@@ -32560,7 +32560,7 @@ index 00000000..83f14248
 +exit 0
 diff --git a/package/qca-nss-ecm/files/qca-nss-ecm.init b/package/qca-nss-ecm/files/qca-nss-ecm.init
 new file mode 100644
-index 00000000..31db878f
+index 00000000000..31db878f978
 --- /dev/null
 +++ b/package/qca-nss-ecm/files/qca-nss-ecm.init
 @@ -0,0 +1,240 @@
@@ -32806,7 +32806,7 @@ index 00000000..31db878f
 +}
 diff --git a/package/qca-nss-ecm/files/qca-nss-ecm.uci b/package/qca-nss-ecm/files/qca-nss-ecm.uci
 new file mode 100644
-index 00000000..87d4dc09
+index 00000000000..87d4dc095aa
 --- /dev/null
 +++ b/package/qca-nss-ecm/files/qca-nss-ecm.uci
 @@ -0,0 +1,9 @@
@@ -32821,7 +32821,7 @@ index 00000000..87d4dc09
 +	option disable_gro_list '0'
 diff --git a/package/qca-nss-ecm/patches/0001-treewide-componentize-the-module-even-more.patch b/package/qca-nss-ecm/patches/0001-treewide-componentize-the-module-even-more.patch
 new file mode 100644
-index 00000000..4aa09187
+index 00000000000..4aa09187e26
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0001-treewide-componentize-the-module-even-more.patch
 @@ -0,0 +1,266 @@
@@ -33093,7 +33093,7 @@ index 00000000..4aa09187
 + #ifdef ECM_CLASSIFIER_DSCP_ENABLE
 diff --git a/package/qca-nss-ecm/patches/0004-qca-nss-ecm-resolve-the-cpu-high-load-regarding-ecm.patch b/package/qca-nss-ecm/patches/0004-qca-nss-ecm-resolve-the-cpu-high-load-regarding-ecm.patch
 new file mode 100644
-index 00000000..2ce83e89
+index 00000000000..2ce83e89040
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0004-qca-nss-ecm-resolve-the-cpu-high-load-regarding-ecm.patch
 @@ -0,0 +1,70 @@
@@ -33169,7 +33169,7 @@ index 00000000..2ce83e89
 + 		ecm_nss_ipv6_next_req_time = ecm_nss_ipv6_roll_check_jiffies + ECM_NSS_IPV6_STATS_SYNC_PERIOD;
 diff --git a/package/qca-nss-ecm/patches/0009-frontends-drop-udp_get_timeouts-and-use-standard-ups.patch b/package/qca-nss-ecm/patches/0009-frontends-drop-udp_get_timeouts-and-use-standard-ups.patch
 new file mode 100644
-index 00000000..3ff998ab
+index 00000000000..3ff998abdc9
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0009-frontends-drop-udp_get_timeouts-and-use-standard-ups.patch
 @@ -0,0 +1,41 @@
@@ -33216,7 +33216,7 @@ index 00000000..3ff998ab
 + 				spin_lock_bh(&ct->lock);
 diff --git a/package/qca-nss-ecm/patches/0015-ecm-add-support-for-kernel-6.6.patch b/package/qca-nss-ecm/patches/0015-ecm-add-support-for-kernel-6.6.patch
 new file mode 100644
-index 00000000..261fe557
+index 00000000000..261fe5575ef
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0015-ecm-add-support-for-kernel-6.6.patch
 @@ -0,0 +1,18 @@
@@ -33240,7 +33240,7 @@ index 00000000..261fe557
 + 			continue;
 diff --git a/package/qca-nss-ecm/patches/0023-nss-ecm-add-kernel-6.12-support.patch b/package/qca-nss-ecm/patches/0023-nss-ecm-add-kernel-6.12-support.patch
 new file mode 100644
-index 00000000..3c9b4c96
+index 00000000000..3c9b4c96d1e
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0023-nss-ecm-add-kernel-6.12-support.patch
 @@ -0,0 +1,44 @@
@@ -33290,7 +33290,7 @@ index 00000000..3c9b4c96
 ++#endif /* _ASM_UNALIGNED_H */
 diff --git a/package/qca-nss-ecm/patches/0026-treewide-no-skb-int_pri-on-vanilla-kernels.patch b/package/qca-nss-ecm/patches/0026-treewide-no-skb-int_pri-on-vanilla-kernels.patch
 new file mode 100644
-index 00000000..33519bf0
+index 00000000000..33519bf0416
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0026-treewide-no-skb-int_pri-on-vanilla-kernels.patch
 @@ -0,0 +1,182 @@
@@ -33478,7 +33478,7 @@ index 00000000..33519bf0
 + 			dscpcte->return_set_flags = NF_CT_DSCPREMARK_EXT_PRIO | NF_CT_DSCPREMARK_EXT_DSCP | NF_CT_DSCPREMARK_EXT_MARK;
 diff --git a/package/qca-nss-ecm/patches/0030-frontends-accelerate-same-bridge-inter-subnet-routing.patch b/package/qca-nss-ecm/patches/0030-frontends-accelerate-same-bridge-inter-subnet-routing.patch
 new file mode 100644
-index 00000000..4fd8ce11
+index 00000000000..4fd8ce11b09
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0030-frontends-accelerate-same-bridge-inter-subnet-routing.patch
 @@ -0,0 +1,100 @@
@@ -33584,7 +33584,7 @@ index 00000000..4fd8ce11
 + 		goto skip_ipv6_bridge_flow;
 diff --git a/package/qca-nss-ecm/patches/0031-frontends-const-unidir-accel-ctl-table-for-6.12.patch b/package/qca-nss-ecm/patches/0031-frontends-const-unidir-accel-ctl-table-for-6.12.patch
 new file mode 100644
-index 00000000..89047b1d
+index 00000000000..89047b1dac2
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0031-frontends-const-unidir-accel-ctl-table-for-6.12.patch
 @@ -0,0 +1,20 @@
@@ -33610,7 +33610,7 @@ index 00000000..89047b1d
 + 
 diff --git a/package/qca-nss-ecm/patches/0032-frontends-allow-pppoe-ingress-multicast.patch b/package/qca-nss-ecm/patches/0032-frontends-allow-pppoe-ingress-multicast.patch
 new file mode 100644
-index 00000000..fbfd09e4
+index 00000000000..fbfd09e425f
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0032-frontends-allow-pppoe-ingress-multicast.patch
 @@ -0,0 +1,130 @@
@@ -33746,7 +33746,7 @@ index 00000000..fbfd09e4
 + 		}
 diff --git a/package/qca-nss-ecm/patches/0033-frontends-ipv4-ipv6-multicast-parity.patch b/package/qca-nss-ecm/patches/0033-frontends-ipv4-ipv6-multicast-parity.patch
 new file mode 100644
-index 00000000..8caced8b
+index 00000000000..8caced8b92f
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0033-frontends-ipv4-ipv6-multicast-parity.patch
 @@ -0,0 +1,63 @@
@@ -33815,7 +33815,7 @@ index 00000000..8caced8b
 + 	rcu_read_lock();
 diff --git a/package/qca-nss-ecm/patches/0035-frontends-restore-ipv4-ipv6-offload-parity.patch b/package/qca-nss-ecm/patches/0035-frontends-restore-ipv4-ipv6-offload-parity.patch
 new file mode 100644
-index 00000000..e190ce45
+index 00000000000..e190ce45353
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0035-frontends-restore-ipv4-ipv6-offload-parity.patch
 @@ -0,0 +1,105 @@
@@ -33926,7 +33926,7 @@ index 00000000..e190ce45
 + 			/*
 diff --git a/package/qca-nss-ecm/patches/0036-Makefile-do-not-build-with-Werror.patch b/package/qca-nss-ecm/patches/0036-Makefile-do-not-build-with-Werror.patch
 new file mode 100644
-index 00000000..30c64ab3
+index 00000000000..30c64ab3c72
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0036-Makefile-do-not-build-with-Werror.patch
 @@ -0,0 +1,19 @@
@@ -33951,7 +33951,7 @@ index 00000000..30c64ab3
 + ccflags-y += -I$(obj)/compat
 diff --git a/package/qca-nss-ecm/patches/0037-ecm_front_end_common-drop-ctl_table-sentinel.patch b/package/qca-nss-ecm/patches/0037-ecm_front_end_common-drop-ctl_table-sentinel.patch
 new file mode 100644
-index 00000000..412267ab
+index 00000000000..412267ab559
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0037-ecm_front_end_common-drop-ctl_table-sentinel.patch
 @@ -0,0 +1,21 @@
@@ -33978,7 +33978,7 @@ index 00000000..412267ab
 + /*
 diff --git a/package/qca-nss-ecm/patches/0038-frontends-nss-respect-bridge-port-VLAN-tagging-for-vlan-over-bridge.patch b/package/qca-nss-ecm/patches/0038-frontends-nss-respect-bridge-port-VLAN-tagging-for-vlan-over-bridge.patch
 new file mode 100644
-index 00000000..6fc940f8
+index 00000000000..6fc940f89e7
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0038-frontends-nss-respect-bridge-port-VLAN-tagging-for-vlan-over-bridge.patch
 @@ -0,0 +1,478 @@
@@ -34462,7 +34462,7 @@ index 00000000..6fc940f8
 + 			 * If we have not yet got an ethernet mac then take this one (very unlikely as mac should have been propagated to the slave (outer) device
 diff --git a/package/qca-nss-ecm/patches/0039-ecm_db-fix-world-writable-defunct-sysctl-and-its-NULL-deref.patch b/package/qca-nss-ecm/patches/0039-ecm_db-fix-world-writable-defunct-sysctl-and-its-NULL-deref.patch
 new file mode 100644
-index 00000000..7ab75403
+index 00000000000..7ab75403331
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0039-ecm_db-fix-world-writable-defunct-sysctl-and-its-NULL-deref.patch
 @@ -0,0 +1,77 @@
@@ -34545,7 +34545,7 @@ index 00000000..7ab75403
 + };
 diff --git a/package/qca-nss-ecm/patches/0040-ecm_interface-fix-the-multicast-hierarchy-row-bound.patch b/package/qca-nss-ecm/patches/0040-ecm_interface-fix-the-multicast-hierarchy-row-bound.patch
 new file mode 100644
-index 00000000..fc2754cb
+index 00000000000..fc2754cb382
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0040-ecm_interface-fix-the-multicast-hierarchy-row-bound.patch
 @@ -0,0 +1,52 @@
@@ -34603,7 +34603,7 @@ index 00000000..fc2754cb
 + 					goto fail2;
 diff --git a/package/qca-nss-ecm/patches/0041-ecm_sdx-drop-the-world-writable-sysctl-mode.patch b/package/qca-nss-ecm/patches/0041-ecm_sdx-drop-the-world-writable-sysctl-mode.patch
 new file mode 100644
-index 00000000..f1d4ae25
+index 00000000000..f1d4ae25d5d
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0041-ecm_sdx-drop-the-world-writable-sysctl-mode.patch
 @@ -0,0 +1,68 @@
@@ -34677,7 +34677,7 @@ index 00000000..f1d4ae25
 + 	{
 diff --git a/package/qca-nss-ecm/patches/0042-ecm_interface-fix-the-second-multicast-hierarchy-row-bound.patch b/package/qca-nss-ecm/patches/0042-ecm_interface-fix-the-second-multicast-hierarchy-row-bound.patch
 new file mode 100644
-index 00000000..cbf4e908
+index 00000000000..cbf4e9081d1
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0042-ecm_interface-fix-the-second-multicast-hierarchy-row-bound.patch
 @@ -0,0 +1,60 @@
@@ -34743,7 +34743,7 @@ index 00000000..cbf4e908
 + 			/*
 diff --git a/package/qca-nss-ecm/patches/0043-ecm_tracker-reject-a-total-length-below-the-ip-header.patch b/package/qca-nss-ecm/patches/0043-ecm_tracker-reject-a-total-length-below-the-ip-header.patch
 new file mode 100644
-index 00000000..d7397552
+index 00000000000..d7397552c3a
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0043-ecm_tracker-reject-a-total-length-below-the-ip-header.patch
 @@ -0,0 +1,40 @@
@@ -34789,7 +34789,7 @@ index 00000000..d7397552
 + 		/*
 diff --git a/package/qca-nss-ecm/patches/0044-frontends-nss-do-not-window-check-an-accelerated-connection.patch b/package/qca-nss-ecm/patches/0044-frontends-nss-do-not-window-check-an-accelerated-connection.patch
 new file mode 100644
-index 00000000..ad292f76
+index 00000000000..ad292f76ac9
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0044-frontends-nss-do-not-window-check-an-accelerated-connection.patch
 @@ -0,0 +1,112 @@
@@ -34907,7 +34907,7 @@ index 00000000..ad292f76
 + 
 diff --git a/package/qca-nss-ecm/patches/0045-ecm_interface-classify-a-header-less-modem-as-raw-ip.patch b/package/qca-nss-ecm/patches/0045-ecm_interface-classify-a-header-less-modem-as-raw-ip.patch
 new file mode 100644
-index 00000000..2e45a38d
+index 00000000000..2e45a38dab2
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/0045-ecm_interface-classify-a-header-less-modem-as-raw-ip.patch
 @@ -0,0 +1,105 @@
@@ -35018,7 +35018,7 @@ index 00000000..2e45a38d
 + #endif
 diff --git a/package/qca-nss-ecm/patches/300-support-kernel-6.18-bridge-api.patch b/package/qca-nss-ecm/patches/300-support-kernel-6.18-bridge-api.patch
 new file mode 100644
-index 00000000..000543d2
+index 00000000000..000543d211a
 --- /dev/null
 +++ b/package/qca-nss-ecm/patches/300-support-kernel-6.18-bridge-api.patch
 @@ -0,0 +1,63 @@
@@ -35087,7 +35087,7 @@ index 00000000..000543d2
 + #include <net/vxlan.h>
 diff --git a/package/sqm-scripts-nss/Makefile b/package/sqm-scripts-nss/Makefile
 new file mode 100644
-index 00000000..2e639bba
+index 00000000000..2e639bbaa4c
 --- /dev/null
 +++ b/package/sqm-scripts-nss/Makefile
 @@ -0,0 +1,44 @@
@@ -35137,7 +35137,7 @@ index 00000000..2e639bba
 +$(eval $(call BuildPackage,sqm-scripts-nss))
 diff --git a/package/sqm-scripts-nss/files/nss-edma.qos b/package/sqm-scripts-nss/files/nss-edma.qos
 new file mode 100644
-index 00000000..837c400d
+index 00000000000..837c400d8da
 --- /dev/null
 +++ b/package/sqm-scripts-nss/files/nss-edma.qos
 @@ -0,0 +1,832 @@
@@ -35975,7 +35975,7 @@ index 00000000..837c400d
 +}
 diff --git a/package/sqm-scripts-nss/files/nss-edma.qos.help b/package/sqm-scripts-nss/files/nss-edma.qos.help
 new file mode 100644
-index 00000000..927285a9
+index 00000000000..927285a9818
 --- /dev/null
 +++ b/package/sqm-scripts-nss/files/nss-edma.qos.help
 @@ -0,0 +1,12 @@
@@ -35993,7 +35993,7 @@ index 00000000..927285a9
 +Requires kmod-qca-nss-drv-qdisc + kmod-qca-nss-drv-igs and an armed NSS data plane.
 diff --git a/package/sqm-scripts-nss/files/nss-sqm-hotplug b/package/sqm-scripts-nss/files/nss-sqm-hotplug
 new file mode 100644
-index 00000000..4c71ddc2
+index 00000000000..4c71ddc2def
 --- /dev/null
 +++ b/package/sqm-scripts-nss/files/nss-sqm-hotplug
 @@ -0,0 +1,137 @@
@@ -36135,7 +36135,7 @@ index 00000000..4c71ddc2
 +config_load sqm || exit 0
 +config_foreach nss_sqm_converge queue
 diff --git a/target/linux/qualcommbe/config-6.18 b/target/linux/qualcommbe/config-6.18
-index 63950f29..534da07f 100644
+index 63950f29a43..534da07fbc1 100644
 --- a/target/linux/qualcommbe/config-6.18
 +++ b/target/linux/qualcommbe/config-6.18
 @@ -647,3 +647,13 @@ CONFIG_ZONE_DMA32=y
@@ -36153,7 +36153,7 @@ index 63950f29..534da07f 100644
 +CONFIG_BRIDGE_NETFILTER=y
 +CONFIG_NFT_COMPAT=y
 diff --git a/target/linux/qualcommbe/dts/ipq9574-be7000.dts b/target/linux/qualcommbe/dts/ipq9574-be7000.dts
-index 872e3d35..70b93d4e 100644
+index 872e3d35404..70b93d4e559 100644
 --- a/target/linux/qualcommbe/dts/ipq9574-be7000.dts
 +++ b/target/linux/qualcommbe/dts/ipq9574-be7000.dts
 @@ -35,7 +35,16 @@
@@ -36232,7 +36232,7 @@ index 872e3d35..70b93d4e 100644
  	status = "okay";
 diff --git a/target/linux/qualcommbe/files/drivers/net/ethernet/qualcomm/qca_edma.h b/target/linux/qualcommbe/files/drivers/net/ethernet/qualcomm/qca_edma.h
 new file mode 100644
-index 00000000..5704b802
+index 00000000000..5704b8022b9
 --- /dev/null
 +++ b/target/linux/qualcommbe/files/drivers/net/ethernet/qualcomm/qca_edma.h
 @@ -0,0 +1,353 @@
@@ -36591,7 +36591,7 @@ index 00000000..5704b802
 +#endif /* __QCA_EDMA_H__ */
 diff --git a/target/linux/qualcommbe/files/include/linux/soc/qcom/qca_edma.h b/target/linux/qualcommbe/files/include/linux/soc/qcom/qca_edma.h
 new file mode 100644
-index 00000000..cab56bbc
+index 00000000000..cab56bbc050
 --- /dev/null
 +++ b/target/linux/qualcommbe/files/include/linux/soc/qcom/qca_edma.h
 @@ -0,0 +1,109 @@
@@ -36706,7 +36706,7 @@ index 00000000..cab56bbc
 +#endif /* __LINUX_SOC_QCOM_QCA_EDMA_H__ */
 diff --git a/target/linux/qualcommbe/files/include/linux/soc/qcom/qca_ppe.h b/target/linux/qualcommbe/files/include/linux/soc/qcom/qca_ppe.h
 new file mode 100644
-index 00000000..1a765072
+index 00000000000..1a765072045
 --- /dev/null
 +++ b/target/linux/qualcommbe/files/include/linux/soc/qcom/qca_ppe.h
 @@ -0,0 +1,39 @@
@@ -36751,7 +36751,7 @@ index 00000000..1a765072
 +#endif /* __LINUX_SOC_QCOM_QCA_PPE_H__ */
 diff --git a/target/linux/qualcommbe/files/include/net/netfilter/nf_conntrack_dscpremark_ext.h b/target/linux/qualcommbe/files/include/net/netfilter/nf_conntrack_dscpremark_ext.h
 new file mode 100644
-index 00000000..a0fe7a86
+index 00000000000..a0fe7a8654a
 --- /dev/null
 +++ b/target/linux/qualcommbe/files/include/net/netfilter/nf_conntrack_dscpremark_ext.h
 @@ -0,0 +1,100 @@
@@ -36857,7 +36857,7 @@ index 00000000..a0fe7a86
 +#endif /* _NF_CONNTRACK_DSCPREMARK_H */
 diff --git a/target/linux/qualcommbe/files/net/netfilter/nf_conntrack_dscpremark_ext.c b/target/linux/qualcommbe/files/net/netfilter/nf_conntrack_dscpremark_ext.c
 new file mode 100644
-index 00000000..678d27ac
+index 00000000000..678d27ac9df
 --- /dev/null
 +++ b/target/linux/qualcommbe/files/net/netfilter/nf_conntrack_dscpremark_ext.c
 @@ -0,0 +1,61 @@
@@ -36923,7 +36923,7 @@ index 00000000..678d27ac
 +}
 +EXPORT_SYMBOL(nf_conntrack_dscpremark_ext_get_dscp_rule_validity);
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success
-index f08db9b7..bfbbe3a3 100755
+index f08db9b78df..bfbbe3a384a 100755
 --- a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success
 @@ -33,22 +33,24 @@ boot() {
@@ -36971,7 +36971,7 @@ index f08db9b7..bfbbe3a3 100755
  }
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/18_be7000_uapsd_off b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/18_be7000_uapsd_off
 new file mode 100644
-index 00000000..144ba116
+index 00000000000..144ba116b62
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/18_be7000_uapsd_off
 @@ -0,0 +1,14 @@
@@ -36991,7 +36991,7 @@ index 00000000..144ba116
 +exit 0
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/19_be7000_flow_offload b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/19_be7000_flow_offload
 new file mode 100644
-index 00000000..1203e698
+index 00000000000..1203e698f82
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/19_be7000_flow_offload
 @@ -0,0 +1,9 @@
@@ -37006,7 +37006,7 @@ index 00000000..1203e698
 +exit 0
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/20_be7000_cpu_perf b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/20_be7000_cpu_perf
 new file mode 100644
-index 00000000..371678a6
+index 00000000000..371678a6e00
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/20_be7000_cpu_perf
 @@ -0,0 +1,13 @@
@@ -37025,7 +37025,7 @@ index 00000000..371678a6
 +exit 0
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/21_be7000_net_perf b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/21_be7000_net_perf
 new file mode 100644
-index 00000000..8882c92f
+index 00000000000..8882c92f158
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/21_be7000_net_perf
 @@ -0,0 +1,39 @@
@@ -37069,7 +37069,7 @@ index 00000000..8882c92f
 +fi
 +exit 0
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh b/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
-index d0dc66fb..88b90e1d 100644
+index d0dc66fb86f..88b90e1d9cd 100644
 --- a/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
 @@ -4,11 +4,71 @@ REQUIRE_IMAGE_METADATA=1
@@ -37194,7 +37194,7 @@ index d0dc66fb..88b90e1d 100644
  		;;
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
 new file mode 100755
-index 00000000..63ecfd29
+index 00000000000..63ecfd29b2f
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
 @@ -0,0 +1,53 @@
@@ -37252,7 +37252,7 @@ index 00000000..63ecfd29
 +[ "$FAIL" = "0" ] && echo "Wi-Fi-тюнинг полностью активен." || echo "Есть деградации — см. FAIL-строки."
 +exit 0
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wireless-defaults b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wireless-defaults
-index 95872ce0..e515aa87 100755
+index 95872ce005e..e515aa87b9a 100755
 --- a/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wireless-defaults
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wireless-defaults
 @@ -96,6 +96,42 @@ apply_defaults()
@@ -37300,7 +37300,7 @@ index 95872ce0..e515aa87 100755
  		uci -q set wireless.radio1.country="$country"
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-config-backup b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-config-backup
 new file mode 100755
-index 00000000..515e8718
+index 00000000000..515e87181f5
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-config-backup
 @@ -0,0 +1,10 @@
@@ -37316,7 +37316,7 @@ index 00000000..515e8718
 +logger -t config-backup "готово: $F ($(du -h $F | cut -f1))"
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-crashlog b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-crashlog
 new file mode 100755
-index 00000000..e9bac6d2
+index 00000000000..e9bac6d2af0
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-crashlog
 @@ -0,0 +1,22 @@
@@ -37344,7 +37344,7 @@ index 00000000..e9bac6d2
 +esac
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-health-check b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-health-check
 new file mode 100755
-index 00000000..4daa17ce
+index 00000000000..4daa17ced0d
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-health-check
 @@ -0,0 +1,66 @@
@@ -37416,7 +37416,7 @@ index 00000000..4daa17ce
 +echo "=== конец проверки ==="
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-log-dump b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-log-dump
 new file mode 100755
-index 00000000..230347a2
+index 00000000000..230347a24f9
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-log-dump
 @@ -0,0 +1,36 @@
@@ -37458,7 +37458,7 @@ index 00000000..230347a2
 +fi
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-ram-guard b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-ram-guard
 new file mode 100755
-index 00000000..907a6895
+index 00000000000..907a6895db8
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-ram-guard
 @@ -0,0 +1,17 @@
@@ -39530,7 +39530,7 @@ HcmV?d00001
 
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/usb-watchdog.sh b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/usb-watchdog.sh
 new file mode 100755
-index 00000000..681a626c
+index 00000000000..681a626c287
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/usb-watchdog.sh
 @@ -0,0 +1,191 @@
@@ -40094,7 +40094,7 @@ HcmV?d00001
 
 diff --git a/target/linux/qualcommbe/patches-6.18/0900-net-qcom-ppe-fix-napi-disable-hang.patch b/target/linux/qualcommbe/patches-6.18/0900-net-qcom-ppe-fix-napi-disable-hang.patch
 new file mode 100644
-index 00000000..f36e2bc5
+index 00000000000..f36e2bc519a
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0900-net-qcom-ppe-fix-napi-disable-hang.patch
 @@ -0,0 +1,38 @@
@@ -40138,7 +40138,7 @@ index 00000000..f36e2bc5
 + 	}
 diff --git a/target/linux/qualcommbe/patches-6.18/0901-net-phy-qca8084-baser-wait-non-fatal.patch b/target/linux/qualcommbe/patches-6.18/0901-net-phy-qca8084-baser-wait-non-fatal.patch
 new file mode 100644
-index 00000000..8c42fc65
+index 00000000000..8c42fc65d30
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0901-net-phy-qca8084-baser-wait-non-fatal.patch
 @@ -0,0 +1,26 @@
@@ -40170,7 +40170,7 @@ index 00000000..8c42fc65
 + 	/* Enable USXGMII mode */
 diff --git a/target/linux/qualcommbe/patches-6.18/0902-net-qcom-ppe-fix-port-unwind.patch b/target/linux/qualcommbe/patches-6.18/0902-net-qcom-ppe-fix-port-unwind.patch
 new file mode 100644
-index 00000000..7c9d7a0f
+index 00000000000..7c9d7a0f7bf
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0902-net-qcom-ppe-fix-port-unwind.patch
 @@ -0,0 +1,41 @@
@@ -40217,7 +40217,7 @@ index 00000000..7c9d7a0f
 + err_port_clk:
 diff --git a/target/linux/qualcommbe/patches-6.18/0903-net-phy-qca8084-redo-xpcs-setup-after-baser-lock.patch b/target/linux/qualcommbe/patches-6.18/0903-net-phy-qca8084-redo-xpcs-setup-after-baser-lock.patch
 new file mode 100644
-index 00000000..26611244
+index 00000000000..26611244482
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0903-net-phy-qca8084-redo-xpcs-setup-after-baser-lock.patch
 @@ -0,0 +1,165 @@
@@ -40388,7 +40388,7 @@ index 00000000..26611244
 + 					 priv->channel_id,
 diff --git a/target/linux/qualcommbe/patches-6.18/0910-qca-nss-ecm-support-CORE.patch b/target/linux/qualcommbe/patches-6.18/0910-qca-nss-ecm-support-CORE.patch
 new file mode 100644
-index 00000000..92f68fb7
+index 00000000000..92f68fb7052
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0910-qca-nss-ecm-support-CORE.patch
 @@ -0,0 +1,976 @@
@@ -41370,7 +41370,7 @@ index 00000000..92f68fb7
 + 		      (ifr->ifr_flags & TUN_FEATURES);
 diff --git a/target/linux/qualcommbe/patches-6.18/0911-qca-nss-ecm-support-PPPOE-offload.patch b/target/linux/qualcommbe/patches-6.18/0911-qca-nss-ecm-support-PPPOE-offload.patch
 new file mode 100644
-index 00000000..378dd498
+index 00000000000..378dd498304
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0911-qca-nss-ecm-support-PPPOE-offload.patch
 @@ -0,0 +1,556 @@
@@ -41932,7 +41932,7 @@ index 00000000..378dd498
 +  * The channel code must ensure that when it calls ppp_unregister_channel,
 diff --git a/target/linux/qualcommbe/patches-6.18/0912-qca-nss-ecm-support-netfilter-DSCPREMARK.patch b/target/linux/qualcommbe/patches-6.18/0912-qca-nss-ecm-support-netfilter-DSCPREMARK.patch
 new file mode 100644
-index 00000000..9043afbb
+index 00000000000..9043afbb1c5
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0912-qca-nss-ecm-support-netfilter-DSCPREMARK.patch
 @@ -0,0 +1,233 @@
@@ -42171,7 +42171,7 @@ index 00000000..9043afbb
 + 	    skb->ip_summed != CHECKSUM_PARTIAL) {
 diff --git a/target/linux/qualcommbe/patches-6.18/0913-qca-nss-ecm-fix-IPv6-user-route-change-event-calls.patch b/target/linux/qualcommbe/patches-6.18/0913-qca-nss-ecm-fix-IPv6-user-route-change-event-calls.patch
 new file mode 100644
-index 00000000..fb12b4d0
+index 00000000000..fb12b4d03f1
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0913-qca-nss-ecm-fix-IPv6-user-route-change-event-calls.patch
 @@ -0,0 +1,87 @@
@@ -42264,7 +42264,7 @@ index 00000000..fb12b4d0
 + /* add the overhead of this fib6_nh to nexthop_len */
 diff --git a/target/linux/qualcommbe/patches-6.18/0914-qca-nss-ecm-bridge-Fixes-for-Bridge-VLAN-Filtering.patch b/target/linux/qualcommbe/patches-6.18/0914-qca-nss-ecm-bridge-Fixes-for-Bridge-VLAN-Filtering.patch
 new file mode 100644
-index 00000000..053030f9
+index 00000000000..053030f981d
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0914-qca-nss-ecm-bridge-Fixes-for-Bridge-VLAN-Filtering.patch
 @@ -0,0 +1,324 @@
@@ -42594,7 +42594,7 @@ index 00000000..053030f9
 + 	u16 pvid = br->default_pvid;
 diff --git a/target/linux/qualcommbe/patches-6.18/0915-qca-nss-qdisc-uapi-pkt_cls-support.patch b/target/linux/qualcommbe/patches-6.18/0915-qca-nss-qdisc-uapi-pkt_cls-support.patch
 new file mode 100644
-index 00000000..cd0cd661
+index 00000000000..cd0cd661f3e
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0915-qca-nss-qdisc-uapi-pkt_cls-support.patch
 @@ -0,0 +1,29 @@
@@ -42629,7 +42629,7 @@ index 00000000..cd0cd661
 + #endif
 diff --git a/target/linux/qualcommbe/patches-6.18/0916-qca-nss-clients-add-qdisc-support.patch b/target/linux/qualcommbe/patches-6.18/0916-qca-nss-clients-add-qdisc-support.patch
 new file mode 100644
-index 00000000..18fb086f
+index 00000000000..18fb086fd4f
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0916-qca-nss-clients-add-qdisc-support.patch
 @@ -0,0 +1,457 @@
@@ -43092,7 +43092,7 @@ index 00000000..18fb086f
 + 	__u8			csum_level:2;
 diff --git a/target/linux/qualcommbe/patches-6.18/0917-qca-nss-clients-add-bridge-mgr-support.patch b/target/linux/qualcommbe/patches-6.18/0917-qca-nss-clients-add-bridge-mgr-support.patch
 new file mode 100644
-index 00000000..154992f1
+index 00000000000..154992f1ef2
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0917-qca-nss-clients-add-bridge-mgr-support.patch
 @@ -0,0 +1,111 @@
@@ -43207,6 +43207,3 @@ index 00000000..154992f1
 + 				/* QCA NSS ECM support - End */
 + 			}
 + 
--- 
-2.43.0
-

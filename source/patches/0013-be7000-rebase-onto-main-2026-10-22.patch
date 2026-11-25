@@ -30,7 +30,7 @@ Claude-Session: https://claude.ai/code/session_01QwnEsRTxW1M7XMasPGxfRD
 
 diff --git a/package/kernel/mac80211/patches/ath11k/960-wifi-ath11k-add-ipq9574-support.patch b/package/kernel/mac80211/patches/ath11k/960-wifi-ath11k-add-ipq9574-support.patch
 deleted file mode 100644
-index 9038bfb3..00000000
+index 9038bfb3bb8..00000000000
 --- a/package/kernel/mac80211/patches/ath11k/960-wifi-ath11k-add-ipq9574-support.patch
 +++ /dev/null
 @@ -1,212 +0,0 @@
@@ -248,7 +248,7 @@ index 9038bfb3..00000000
 - extern const struct ath11k_hw_ops qca6390_ops;
 diff --git a/package/kernel/mac80211/patches/ath12k/303-wifi-ath12k-ignore-unsupported-direct-buffer-modules.patch b/package/kernel/mac80211/patches/ath12k/303-wifi-ath12k-ignore-unsupported-direct-buffer-modules.patch
 deleted file mode 100644
-index 27daf3af..00000000
+index 27daf3afcbc..00000000000
 --- a/package/kernel/mac80211/patches/ath12k/303-wifi-ath12k-ignore-unsupported-direct-buffer-modules.patch
 +++ /dev/null
 @@ -1,61 +0,0 @@
@@ -318,7 +318,7 @@ similarity index 100%
 rename from package/kernel/mac80211/patches/subsys/393-wifi-mac80211-end-forward-path-at-ap-interface.patch
 rename to package/kernel/mac80211/patches/subsys/420-wifi-mac80211-end-forward-path-at-ap-interface.patch
 diff --git a/target/linux/qualcommbe/dts/ipq9574-be7000.dts b/target/linux/qualcommbe/dts/ipq9574-be7000.dts
-index 15534080..af2f274c 100644
+index 15534080860..af2f274c041 100644
 --- a/target/linux/qualcommbe/dts/ipq9574-be7000.dts
 +++ b/target/linux/qualcommbe/dts/ipq9574-be7000.dts
 @@ -12,6 +12,16 @@
@@ -338,6 +338,3 @@ index 15534080..af2f274c 100644
  / {
  	model = "Xiaomi BE7000";
  	compatible = "xiaomi,be7000", "qcom,ipq9574";
--- 
-2.43.0
-

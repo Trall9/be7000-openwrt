@@ -12,7 +12,7 @@ Subject: [PATCH] qualcommbe: port Xiaomi BE7000 support (kravasuper 790d036)
  .../uboot-envtools/files/fw_defaults          |   4 +-
  .../uboot-envtools/files/qualcommbe_ipq95xx   |  22 +-
  package/firmware/ath11k-firmware/Makefile     |  36 +-
- package/firmware/ipq-wifi/Makefile            |  12 +-
+ package/firmware/ipq-wifi/Makefile            |  24 +-
  .../950-wifi-ath11k-add-ipq9574-support.patch | 213 ++++
  ...1k-use-iommu-paging-domain-allocator.patch |  19 +
  ...drop-pcie-pme-capability-for-ipq9574.patch |  19 +
@@ -56,7 +56,7 @@ Subject: [PATCH] qualcommbe: port Xiaomi BE7000 support (kravasuper 790d036)
  ...-qcom-gcc-ipq9574-add-wcss-q6-clocks.patch | 490 +++++++++
  ...c-qcom-q6v5-wcss-add-ipq9574-support.patch | 538 ++++++++++
  ...ca808x-disable-EEE-on-QCA8084-QXGMII.patch |  35 +
- 50 files changed, 4516 insertions(+), 29 deletions(-)
+ 50 files changed, 4516 insertions(+), 41 deletions(-)
  create mode 100644 package/be7000-nfc-i2ctransfer/Makefile
  create mode 100644 package/be7000-nfc-i2ctransfer/src/be7000-nfc-i2ctransfer.c
  create mode 100644 package/kernel/mac80211/patches/ath11k/950-wifi-ath11k-add-ipq9574-support.patch
@@ -97,7 +97,7 @@ Subject: [PATCH] qualcommbe: port Xiaomi BE7000 support (kravasuper 790d036)
  create mode 100644 target/linux/qualcommbe/patches-6.18/0707-net-phy-qca808x-disable-EEE-on-QCA8084-QXGMII.patch
 
 diff --git a/include/target.mk b/include/target.mk
-index c17c56d4..04721dd0 100644
+index c17c56d4ac8..04721dd05f3 100644
 --- a/include/target.mk
 +++ b/include/target.mk
 @@ -272,6 +272,7 @@ ifeq ($(DUMP),1)
@@ -110,7 +110,7 @@ index c17c56d4..04721dd0 100644
      CPU_TYPE ?= generic
 diff --git a/package/be7000-nfc-i2ctransfer/Makefile b/package/be7000-nfc-i2ctransfer/Makefile
 new file mode 100644
-index 00000000..1692e4a6
+index 00000000000..1692e4a6960
 --- /dev/null
 +++ b/package/be7000-nfc-i2ctransfer/Makefile
 @@ -0,0 +1,41 @@
@@ -157,7 +157,7 @@ index 00000000..1692e4a6
 +$(eval $(call BuildPackage,be7000-nfc-i2ctransfer))
 diff --git a/package/be7000-nfc-i2ctransfer/src/be7000-nfc-i2ctransfer.c b/package/be7000-nfc-i2ctransfer/src/be7000-nfc-i2ctransfer.c
 new file mode 100644
-index 00000000..a2e0693a
+index 00000000000..a2e0693a62f
 --- /dev/null
 +++ b/package/be7000-nfc-i2ctransfer/src/be7000-nfc-i2ctransfer.c
 @@ -0,0 +1,186 @@
@@ -348,7 +348,7 @@ index 00000000..a2e0693a
 +	return 0;
 +}
 diff --git a/package/boot/uboot-tools/uboot-envtools/files/fw_defaults b/package/boot/uboot-tools/uboot-envtools/files/fw_defaults
-index 42558aaa..6fc59da5 100644
+index 42558aaa883..6fc59da5cf1 100644
 --- a/package/boot/uboot-tools/uboot-envtools/files/fw_defaults
 +++ b/package/boot/uboot-tools/uboot-envtools/files/fw_defaults
 @@ -1,6 +1,8 @@
@@ -362,7 +362,7 @@ index 42558aaa..6fc59da5 100644
  board_config_update
  
 diff --git a/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx b/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx
-index cf89850f..1eefa40d 100644
+index cf89850ffc8..1eefa40dfb1 100644
 --- a/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx
 +++ b/package/boot/uboot-tools/uboot-envtools/files/qualcommbe_ipq95xx
 @@ -1,16 +1,30 @@
@@ -401,7 +401,7 @@ index cf89850f..1eefa40d 100644
  linksys,ln6001)
  	ubootenv_add_mmc "u_env" "" "0x0" "0x40000" "0x40000"
 diff --git a/package/firmware/ath11k-firmware/Makefile b/package/firmware/ath11k-firmware/Makefile
-index 32ec67ea..01a278eb 100644
+index 32ec67eaca9..01a278ebece 100644
 --- a/package/firmware/ath11k-firmware/Makefile
 +++ b/package/firmware/ath11k-firmware/Makefile
 @@ -32,6 +32,12 @@ ATH11K_LEGACY_FW_SUBDIR:=$(ATH11K_LEGACY_FW_NAME)-$(ATH11K_LEGACY_FW_DATE)~$(ATH
@@ -483,7 +483,7 @@ index 32ec67ea..01a278eb 100644
  
  $(eval $(call BuildPackage,ath11k-firmware-ipq5018-qcn6122))
 diff --git a/package/firmware/ipq-wifi/Makefile b/package/firmware/ipq-wifi/Makefile
-index a1eb14e7..b168a405 100644
+index 23d20e0b55a..b168a405605 100644
 --- a/package/firmware/ipq-wifi/Makefile
 +++ b/package/firmware/ipq-wifi/Makefile
 @@ -5,10 +5,10 @@ PKG_NAME:=ipq-wifi
@@ -491,9 +491,9 @@ index a1eb14e7..b168a405 100644
  
  PKG_SOURCE_PROTO:=git
 -PKG_SOURCE_URL=$(PROJECT_GIT)/project/firmware/qca-wireless.git
--PKG_SOURCE_DATE:=2026-10-25
--PKG_SOURCE_VERSION:=49ce14c099b16044b7062df54bdabeb495b804ad
--PKG_MIRROR_HASH:=b9c6723021af9267035b7e25762b80c06887a5ea9c524b2649b0b27ea58b121c
+-PKG_SOURCE_DATE:=2026-11-16
+-PKG_SOURCE_VERSION:=c832ed2cfbd42350bc2f683175952d341f737ec0
+-PKG_MIRROR_HASH:=46756b986f0182a4b317eca478c3fa3733dc585f6a56c4f99704944436360509
 +PKG_SOURCE_URL=https://github.com/kravasuper/firmware_qca-wireless.git
 +PKG_SOURCE_DATE:=2026-06-13
 +PKG_SOURCE_VERSION:=f6128066e7496aa0fb4beb32355c26b95d2d2381
@@ -501,7 +501,34 @@ index a1eb14e7..b168a405 100644
  PKG_FLAGS:=nonshared
  
  include $(INCLUDE_DIR)/package.mk
-@@ -120,6 +120,7 @@ ALLWIFIBOARDS:= \
+@@ -32,10 +32,6 @@ ALLWIFIBOARDS:= \
+ 	alfa-network_ap120c-ax \
+ 	aliyun_ap8220 \
+ 	arcadyan_aw1000 \
+-	aruba_ap-303 \
+-	aruba_ap-303h \
+-	aruba_ap-325 \
+-	aruba_ap-365 \
+ 	askey_sbe1v1k \
+ 	asus_rt-ax89x \
+ 	avm_fritzbox-4050 \
+@@ -73,7 +69,6 @@ ALLWIFIBOARDS:= \
+ 	linksys_mx8500 \
+ 	linksys_spnmx56 \
+ 	linksys_whw03 \
+-	liteon_wpx8324 \
+ 	meraki_mr30h \
+ 	meraki_underdog \
+ 	meraki_z3 \
+@@ -117,7 +112,6 @@ ALLWIFIBOARDS:= \
+ 	tplink_eap660hd-v1 \
+ 	tplink_re700x \
+ 	tplink_tl-wa1201-v2 \
+-	ubnt_unifi-6-pro \
+ 	ubnt_utr \
+ 	wallys_dr40x9 \
+ 	wallys_dr5018s \
+@@ -126,6 +120,7 @@ ALLWIFIBOARDS:= \
  	xiaomi_ax3600 \
  	xiaomi_ax6000 \
  	xiaomi_ax9000 \
@@ -509,7 +536,7 @@ index a1eb14e7..b168a405 100644
  	xiaomi_redmi-ax5400 \
  	xunison_exigo-hub-d50-5g \
  	yuncore_ax830 \
-@@ -240,7 +241,7 @@ endef
+@@ -246,17 +241,13 @@ endef
  # 2. Add $(eval $(call generate-ipq-wifi-package,<devicename>,<display name>))
  #
  # Board files should follow this name structure:
@@ -518,7 +545,33 @@ index a1eb14e7..b168a405 100644
  
  $(eval $(call generate-ipq-wifi-package,8devices_kiwi,8devices Kiwi))
  $(eval $(call generate-ipq-wifi-package,8devices_mango,8devices Mango))
-@@ -335,6 +336,7 @@ $(eval $(call generate-ipq-wifi-package,xiaomi_aiot-ac2350,Xiaomi AIoT AC2350))
+ $(eval $(call generate-ipq-wifi-package,alfa-network_ap120c-ax,ALFA Network AP120C-AX))
+ $(eval $(call generate-ipq-wifi-package,aliyun_ap8220,Aliyun AP8220))
+ $(eval $(call generate-ipq-wifi-package,arcadyan_aw1000,Arcadyan AW1000))
+-$(eval $(call generate-ipq-wifi-package,aruba_ap-303,Aruba AP-303))
+-$(eval $(call generate-ipq-wifi-package,aruba_ap-303h,Aruba AP-303H))
+-$(eval $(call generate-ipq-wifi-package,aruba_ap-325,Aruba AP-325))
+-$(eval $(call generate-ipq-wifi-package,aruba_ap-365,Aruba AP-365))
+ $(eval $(call generate-ipq-wifi-package,askey_sbe1v1k,Askey SBE1V1K))
+ $(eval $(call generate-ipq-wifi-package,asus_rt-ax89x,Asus RT-AX89X))
+ $(eval $(call generate-ipq-wifi-package,avm_fritzbox-4050,AVM FRITZ!Box 4050))
+@@ -294,7 +285,6 @@ $(eval $(call generate-ipq-wifi-package,linksys_mx6200,Linksys MX6200))
+ $(eval $(call generate-ipq-wifi-package,linksys_mx8500,Linksys MX8500))
+ $(eval $(call generate-ipq-wifi-package,linksys_spnmx56,Linksys SPNMX56))
+ $(eval $(call generate-ipq-wifi-package,linksys_whw03,Linksys WHW03))
+-$(eval $(call generate-ipq-wifi-package,liteon_wpx8324,Lite-On WPX8324))
+ $(eval $(call generate-ipq-wifi-package,meraki_mr30h,Meraki MR30H))
+ $(eval $(call generate-ipq-wifi-package,meraki_underdog,Meraki underdog))
+ $(eval $(call generate-ipq-wifi-package,meraki_z3,Meraki Z3))
+@@ -338,7 +328,6 @@ $(eval $(call generate-ipq-wifi-package,tplink_eap650-outdoor-v1,TP-Link EAP650-
+ $(eval $(call generate-ipq-wifi-package,tplink_eap660hd-v1,TP-Link EAP660 HD v1))
+ $(eval $(call generate-ipq-wifi-package,tplink_re700x,TP-Link RE700X))
+ $(eval $(call generate-ipq-wifi-package,tplink_tl-wa1201-v2,TP-Link TL-WA1201 V2))
+-$(eval $(call generate-ipq-wifi-package,ubnt_unifi-6-pro,Ubiquiti UniFi 6 Pro))
+ $(eval $(call generate-ipq-wifi-package,ubnt_utr,Ubiquiti UniFi Travel Router))
+ $(eval $(call generate-ipq-wifi-package,wallys_dr40x9,Wallys DR40X9))
+ $(eval $(call generate-ipq-wifi-package,wallys_dr5018s,Wallys DR5018S))
+@@ -347,6 +336,7 @@ $(eval $(call generate-ipq-wifi-package,xiaomi_aiot-ac2350,Xiaomi AIoT AC2350))
  $(eval $(call generate-ipq-wifi-package,xiaomi_ax3600,Xiaomi AX3600))
  $(eval $(call generate-ipq-wifi-package,xiaomi_ax6000,Xiaomi AX6000))
  $(eval $(call generate-ipq-wifi-package,xiaomi_ax9000,Xiaomi AX9000))
@@ -528,7 +581,7 @@ index a1eb14e7..b168a405 100644
  $(eval $(call generate-ipq-wifi-package,yuncore_ax830,Yuncore AX830))
 diff --git a/package/kernel/mac80211/patches/ath11k/950-wifi-ath11k-add-ipq9574-support.patch b/package/kernel/mac80211/patches/ath11k/950-wifi-ath11k-add-ipq9574-support.patch
 new file mode 100644
-index 00000000..3e45f58b
+index 00000000000..3e45f58b90b
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath11k/950-wifi-ath11k-add-ipq9574-support.patch
 @@ -0,0 +1,213 @@
@@ -747,7 +800,7 @@ index 00000000..3e45f58b
 + extern const struct ath11k_hw_ops qca6390_ops;
 diff --git a/package/kernel/mac80211/patches/ath11k/951-wifi-ath11k-use-iommu-paging-domain-allocator.patch b/package/kernel/mac80211/patches/ath11k/951-wifi-ath11k-use-iommu-paging-domain-allocator.patch
 new file mode 100644
-index 00000000..6f55f802
+index 00000000000..6f55f80284c
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath11k/951-wifi-ath11k-use-iommu-paging-domain-allocator.patch
 @@ -0,0 +1,19 @@
@@ -772,7 +825,7 @@ index 00000000..6f55f802
 + 		ret = -ENOMEM;
 diff --git a/package/kernel/mac80211/patches/ath11k/952-wifi-ath11k-drop-pcie-pme-capability-for-ipq9574.patch b/package/kernel/mac80211/patches/ath11k/952-wifi-ath11k-drop-pcie-pme-capability-for-ipq9574.patch
 new file mode 100644
-index 00000000..73c932ab
+index 00000000000..73c932ab948
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath11k/952-wifi-ath11k-drop-pcie-pme-capability-for-ipq9574.patch
 @@ -0,0 +1,19 @@
@@ -797,7 +850,7 @@ index 00000000..73c932ab
 + 
 diff --git a/package/kernel/mac80211/patches/ath12k/301-wifi-ath12k-allow-dt-board-id-override.patch b/package/kernel/mac80211/patches/ath12k/301-wifi-ath12k-allow-dt-board-id-override.patch
 new file mode 100644
-index 00000000..c6877bb6
+index 00000000000..c6877bb624c
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath12k/301-wifi-ath12k-allow-dt-board-id-override.patch
 @@ -0,0 +1,45 @@
@@ -848,7 +901,7 @@ index 00000000..c6877bb6
 + 
 diff --git a/package/kernel/mac80211/patches/ath12k/302-wifi-ath12k-allow-dt-num-radios-override.patch b/package/kernel/mac80211/patches/ath12k/302-wifi-ath12k-allow-dt-num-radios-override.patch
 new file mode 100644
-index 00000000..35a34d49
+index 00000000000..35a34d49061
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath12k/302-wifi-ath12k-allow-dt-num-radios-override.patch
 @@ -0,0 +1,88 @@
@@ -942,7 +995,7 @@ index 00000000..35a34d49
 + 		ab->qmi.target.soc_id = resp.soc_info.soc_id;
 diff --git a/package/kernel/mac80211/patches/ath12k/303-wifi-ath12k-ignore-unsupported-direct-buffer-modules.patch b/package/kernel/mac80211/patches/ath12k/303-wifi-ath12k-ignore-unsupported-direct-buffer-modules.patch
 new file mode 100644
-index 00000000..27daf3af
+index 00000000000..27daf3afcbc
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath12k/303-wifi-ath12k-ignore-unsupported-direct-buffer-modules.patch
 @@ -0,0 +1,61 @@
@@ -1009,7 +1062,7 @@ index 00000000..27daf3af
 + static void
 diff --git a/package/kernel/mac80211/patches/ath12k/304-wifi-ath12k-force-unique-qcn9274-qrtr-instance.patch b/package/kernel/mac80211/patches/ath12k/304-wifi-ath12k-force-unique-qcn9274-qrtr-instance.patch
 new file mode 100644
-index 00000000..fe5d9624
+index 00000000000..fe5d9624270
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath12k/304-wifi-ath12k-force-unique-qcn9274-qrtr-instance.patch
 @@ -0,0 +1,50 @@
@@ -1065,7 +1118,7 @@ index 00000000..fe5d9624
 + 	ret = ath12k_mhi_start(ab_pci);
 diff --git a/package/kernel/mac80211/patches/ath12k/305-wifi-ath12k-use-dt-mac-address.patch b/package/kernel/mac80211/patches/ath12k/305-wifi-ath12k-use-dt-mac-address.patch
 new file mode 100644
-index 00000000..62923e3f
+index 00000000000..62923e3f562
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath12k/305-wifi-ath12k-use-dt-mac-address.patch
 @@ -0,0 +1,44 @@
@@ -1115,7 +1168,7 @@ index 00000000..62923e3f
 + 
 diff --git a/package/kernel/mac80211/patches/ath12k/306-wifi-ath12k-use-fixed-memory-region-for-pci.patch b/package/kernel/mac80211/patches/ath12k/306-wifi-ath12k-use-fixed-memory-region-for-pci.patch
 new file mode 100644
-index 00000000..c061d010
+index 00000000000..c061d010a3b
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath12k/306-wifi-ath12k-use-fixed-memory-region-for-pci.patch
 @@ -0,0 +1,135 @@
@@ -1256,7 +1309,7 @@ index 00000000..c061d010
 + 			rmem = ath12k_core_get_reserved_mem(ab, 0);
 diff --git a/package/kernel/mac80211/patches/ath12k/307-wifi-ath12k-avoid-duplicate-soc-debugfs-files.patch b/package/kernel/mac80211/patches/ath12k/307-wifi-ath12k-avoid-duplicate-soc-debugfs-files.patch
 new file mode 100644
-index 00000000..db683f5d
+index 00000000000..db683f5d8cd
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath12k/307-wifi-ath12k-avoid-duplicate-soc-debugfs-files.patch
 @@ -0,0 +1,18 @@
@@ -1280,7 +1333,7 @@ index 00000000..db683f5d
 + 	}
 diff --git a/package/luci-app-be7000-nfc/Makefile b/package/luci-app-be7000-nfc/Makefile
 new file mode 100644
-index 00000000..a4bba098
+index 00000000000..a4bba0981a3
 --- /dev/null
 +++ b/package/luci-app-be7000-nfc/Makefile
 @@ -0,0 +1,17 @@
@@ -1303,7 +1356,7 @@ index 00000000..a4bba098
 +# call BuildPackage - OpenWrt buildroot signature
 diff --git a/package/luci-app-be7000-nfc/htdocs/luci-static/resources/view/nfc/nfc.js b/package/luci-app-be7000-nfc/htdocs/luci-static/resources/view/nfc/nfc.js
 new file mode 100644
-index 00000000..84bd6641
+index 00000000000..84bd6641df2
 --- /dev/null
 +++ b/package/luci-app-be7000-nfc/htdocs/luci-static/resources/view/nfc/nfc.js
 @@ -0,0 +1,130 @@
@@ -1439,7 +1492,7 @@ index 00000000..84bd6641
 +});
 diff --git a/package/luci-app-be7000-nfc/root/usr/share/luci/menu.d/luci-app-be7000-nfc.json b/package/luci-app-be7000-nfc/root/usr/share/luci/menu.d/luci-app-be7000-nfc.json
 new file mode 100644
-index 00000000..8b3ffec3
+index 00000000000..8b3ffec3851
 --- /dev/null
 +++ b/package/luci-app-be7000-nfc/root/usr/share/luci/menu.d/luci-app-be7000-nfc.json
 @@ -0,0 +1,14 @@
@@ -1459,7 +1512,7 @@ index 00000000..8b3ffec3
 +}
 diff --git a/package/luci-app-be7000-nfc/root/usr/share/rpcd/acl.d/luci-app-be7000-nfc.json b/package/luci-app-be7000-nfc/root/usr/share/rpcd/acl.d/luci-app-be7000-nfc.json
 new file mode 100644
-index 00000000..9a4fe82a
+index 00000000000..9a4fe82a7c2
 --- /dev/null
 +++ b/package/luci-app-be7000-nfc/root/usr/share/rpcd/acl.d/luci-app-be7000-nfc.json
 @@ -0,0 +1,14 @@
@@ -1478,7 +1531,7 @@ index 00000000..9a4fe82a
 +	}
 +}
 diff --git a/target/linux/qualcommbe/Makefile b/target/linux/qualcommbe/Makefile
-index cb6fbada..385ed9fc 100644
+index cb6fbada52e..385ed9fc6ea 100644
 --- a/target/linux/qualcommbe/Makefile
 +++ b/target/linux/qualcommbe/Makefile
 @@ -5,7 +5,7 @@ BOARD:=qualcommbe
@@ -1502,7 +1555,7 @@ index cb6fbada..385ed9fc 100644
  
  $(eval $(call BuildTarget))
 diff --git a/target/linux/qualcommbe/config-6.18 b/target/linux/qualcommbe/config-6.18
-index 0659c6dd..63950f29 100644
+index 0659c6ddc0b..63950f29a43 100644
 --- a/target/linux/qualcommbe/config-6.18
 +++ b/target/linux/qualcommbe/config-6.18
 @@ -435,6 +435,7 @@ CONFIG_QCOM_PIL_INFO=y
@@ -1524,7 +1577,7 @@ index 0659c6dd..63950f29 100644
  # CONFIG_QCS_GCC_404 is not set
 diff --git a/target/linux/qualcommbe/dts/ipq9574-be7000.dts b/target/linux/qualcommbe/dts/ipq9574-be7000.dts
 new file mode 100644
-index 00000000..872e3d35
+index 00000000000..872e3d35404
 --- /dev/null
 +++ b/target/linux/qualcommbe/dts/ipq9574-be7000.dts
 @@ -0,0 +1,982 @@
@@ -2511,7 +2564,7 @@ index 00000000..872e3d35
 +	status = "disabled";
 +};
 diff --git a/target/linux/qualcommbe/image/ipq95xx.mk b/target/linux/qualcommbe/image/ipq95xx.mk
-index ae404d92..862a065f 100644
+index 9e9c9561a01..a7ac2d85b26 100644
 --- a/target/linux/qualcommbe/image/ipq95xx.mk
 +++ b/target/linux/qualcommbe/image/ipq95xx.mk
 @@ -1,5 +1,45 @@
@@ -2591,7 +2644,7 @@ index ae404d92..862a065f 100644
  	DEVICE_VENDOR := Qualcomm Technologies, Inc.
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/board.d/01_leds b/target/linux/qualcommbe/ipq95xx/base-files/etc/board.d/01_leds
 new file mode 100644
-index 00000000..eb2d328c
+index 00000000000..eb2d328c018
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/board.d/01_leds
 @@ -0,0 +1,23 @@
@@ -2619,7 +2672,7 @@ index 00000000..eb2d328c
 +
 +exit 0
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/board.d/02_network b/target/linux/qualcommbe/ipq95xx/base-files/etc/board.d/02_network
-index 1ab91adc..07d3d4e5 100644
+index 1ab91adc483..07d3d4e5aa0 100644
 --- a/target/linux/qualcommbe/ipq95xx/base-files/etc/board.d/02_network
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/board.d/02_network
 @@ -23,6 +23,9 @@ ipq95xx_setup_interfaces()
@@ -2634,7 +2687,7 @@ index 1ab91adc..07d3d4e5 100644
  		;;
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/config/nfc b/target/linux/qualcommbe/ipq95xx/base-files/etc/config/nfc
 new file mode 100644
-index 00000000..da75676e
+index 00000000000..da75676ee72
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/config/nfc
 @@ -0,0 +1,4 @@
@@ -2644,7 +2697,7 @@ index 00000000..da75676e
 +	option url 'auto'
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath11k-caldata b/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
 new file mode 100755
-index 00000000..a396cdb2
+index 00000000000..a396cdb20ff
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
 @@ -0,0 +1,20 @@
@@ -2671,7 +2724,7 @@ index 00000000..a396cdb2
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath12k-caldata b/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath12k-caldata
 old mode 100644
 new mode 100755
-index 3bdb743a..73b8c2a3
+index 3bdb743a3da..73b8c2a3490
 --- a/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath12k-caldata
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath12k-caldata
 @@ -6,6 +6,21 @@
@@ -2712,7 +2765,7 @@ index 3bdb743a..73b8c2a3
  "ath12k/QCN9274/hw2.0/cal-pci-0003:01:00.0.bin")
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success
 new file mode 100755
-index 00000000..f08db9b7
+index 00000000000..f08db9b78df
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_boot_success
 @@ -0,0 +1,54 @@
@@ -2772,7 +2825,7 @@ index 00000000..f08db9b7
 +}
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_wireless b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_wireless
 new file mode 100755
-index 00000000..11d64a15
+index 00000000000..11d64a15a92
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/be7000_wireless
 @@ -0,0 +1,9 @@
@@ -2787,7 +2840,7 @@ index 00000000..11d64a15
 +}
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/nfc b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/nfc
 new file mode 100755
-index 00000000..984ef607
+index 00000000000..984ef60779d
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/nfc
 @@ -0,0 +1,29 @@
@@ -2822,7 +2875,7 @@ index 00000000..984ef607
 +}
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/smp_affinity b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/smp_affinity
 new file mode 100755
-index 00000000..0f283228
+index 00000000000..0f283228620
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/smp_affinity
 @@ -0,0 +1,76 @@
@@ -2904,7 +2957,7 @@ index 00000000..0f283228
 +}
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/05_packet_steering b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/05_packet_steering
 new file mode 100755
-index 00000000..d44c7c2b
+index 00000000000..d44c7c2b5d7
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/05_packet_steering
 @@ -0,0 +1,13 @@
@@ -2923,7 +2976,7 @@ index 00000000..d44c7c2b
 +exit 0
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/15_smp_affinity b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/15_smp_affinity
 new file mode 100755
-index 00000000..71057b0d
+index 00000000000..71057b0de0d
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/15_smp_affinity
 @@ -0,0 +1,20 @@
@@ -2949,7 +3002,7 @@ index 00000000..71057b0d
 +exit 0
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/16_be7000_wireless b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/16_be7000_wireless
 new file mode 100755
-index 00000000..ca2c7841
+index 00000000000..ca2c78417b7
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/16_be7000_wireless
 @@ -0,0 +1,9 @@
@@ -2964,7 +3017,7 @@ index 00000000..ca2c7841
 +exit 0
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/17_be7000_nfc b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/17_be7000_nfc
 new file mode 100755
-index 00000000..c078dde5
+index 00000000000..c078dde5c40
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/17_be7000_nfc
 @@ -0,0 +1,17 @@
@@ -2987,7 +3040,7 @@ index 00000000..c078dde5
 +exit 0
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/99_be7000_boot_success b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/99_be7000_boot_success
 new file mode 100755
-index 00000000..a966ae3f
+index 00000000000..a966ae3f5f0
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/99_be7000_boot_success
 @@ -0,0 +1,10 @@
@@ -3002,7 +3055,7 @@ index 00000000..a966ae3f
 +
 +exit 0
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh b/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
-index 5c1a014f..d0dc66fb 100644
+index 5c1a014ff95..d0dc66fb86f 100644
 --- a/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
 @@ -4,6 +4,44 @@ REQUIRE_IMAGE_METADATA=1
@@ -3069,7 +3122,7 @@ index 5c1a014f..d0dc66fb 100644
  		;;
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wireless-defaults b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wireless-defaults
 new file mode 100755
-index 00000000..95872ce0
+index 00000000000..95872ce005e
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wireless-defaults
 @@ -0,0 +1,119 @@
@@ -3194,7 +3247,7 @@ index 00000000..95872ce0
 +exit 0
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/sbin/nfc b/target/linux/qualcommbe/ipq95xx/base-files/sbin/nfc
 new file mode 100755
-index 00000000..73a28230
+index 00000000000..73a28230893
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/sbin/nfc
 @@ -0,0 +1,375 @@
@@ -3574,7 +3627,7 @@ index 00000000..73a28230
 +	*) usage ;;
 +esac
 diff --git a/target/linux/qualcommbe/patches-6.18/0337-net-ethernet-qualcomm-Add-module-parameters-for-driv.patch b/target/linux/qualcommbe/patches-6.18/0337-net-ethernet-qualcomm-Add-module-parameters-for-driv.patch
-index 2255a58e..82468ef5 100644
+index 2255a58ecbf..82468ef578b 100644
 --- a/target/linux/qualcommbe/patches-6.18/0337-net-ethernet-qualcomm-Add-module-parameters-for-driv.patch
 +++ b/target/linux/qualcommbe/patches-6.18/0337-net-ethernet-qualcomm-Add-module-parameters-for-driv.patch
 @@ -31,7 +31,7 @@ Signed-off-by: Pavithra R <quic_pavir@quicinc.com>
@@ -3599,7 +3652,7 @@ index 2255a58e..82468ef5 100644
   /* Tx mitigation timer's default value. */
   #define EDMA_TX_MITIGATION_TIMER_DEF	250
 diff --git a/target/linux/qualcommbe/patches-6.18/0342-net-qualcomm-Update-IPQ9574-PPE-driver.patch b/target/linux/qualcommbe/patches-6.18/0342-net-qualcomm-Update-IPQ9574-PPE-driver.patch
-index f4b1639b..8942ccf6 100644
+index f4b1639b096..8942ccf6a89 100644
 --- a/target/linux/qualcommbe/patches-6.18/0342-net-qualcomm-Update-IPQ9574-PPE-driver.patch
 +++ b/target/linux/qualcommbe/patches-6.18/0342-net-qualcomm-Update-IPQ9574-PPE-driver.patch
 @@ -66,8 +66,9 @@ Signed-off-by: Balsam CHIHI <balsam.chihi@moment.tech>
@@ -3616,7 +3669,7 @@ index f4b1639b..8942ccf6 100644
  @@ -156,13 +156,12 @@ static int edma_clock_set_and_enable(str
 diff --git a/target/linux/qualcommbe/patches-6.18/0356-clk-qcom-nsscc-qca8k-keep-QCA8084-AHB-clocks-on.patch b/target/linux/qualcommbe/patches-6.18/0356-clk-qcom-nsscc-qca8k-keep-QCA8084-AHB-clocks-on.patch
 new file mode 100644
-index 00000000..aa738ce2
+index 00000000000..aa738ce21f6
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0356-clk-qcom-nsscc-qca8k-keep-QCA8084-AHB-clocks-on.patch
 @@ -0,0 +1,42 @@
@@ -3664,7 +3717,7 @@ index 00000000..aa738ce2
 + 	},
 diff --git a/target/linux/qualcommbe/patches-6.18/0701-net-phy-qca808x-enable-qca8084-leds.patch b/target/linux/qualcommbe/patches-6.18/0701-net-phy-qca808x-enable-qca8084-leds.patch
 new file mode 100644
-index 00000000..139bd598
+index 00000000000..139bd598c41
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0701-net-phy-qca808x-enable-qca8084-leds.patch
 @@ -0,0 +1,275 @@
@@ -3945,7 +3998,7 @@ index 00000000..139bd598
 + module_phy_driver(qca808x_driver);
 diff --git a/target/linux/qualcommbe/patches-6.18/0702-dt-bindings-clk-qcom-ipq9574-add-wcss-q6-clocks.patch b/target/linux/qualcommbe/patches-6.18/0702-dt-bindings-clk-qcom-ipq9574-add-wcss-q6-clocks.patch
 new file mode 100644
-index 00000000..c986d2f6
+index 00000000000..c986d2f6900
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0702-dt-bindings-clk-qcom-ipq9574-add-wcss-q6-clocks.patch
 @@ -0,0 +1,80 @@
@@ -4031,7 +4084,7 @@ index 00000000..c986d2f6
 +2.45.1
 diff --git a/target/linux/qualcommbe/patches-6.18/0703-clk-qcom-gcc-ipq9574-add-wcss-q6-clocks.patch b/target/linux/qualcommbe/patches-6.18/0703-clk-qcom-gcc-ipq9574-add-wcss-q6-clocks.patch
 new file mode 100644
-index 00000000..b127ef2d
+index 00000000000..b127ef2deaa
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0703-clk-qcom-gcc-ipq9574-add-wcss-q6-clocks.patch
 @@ -0,0 +1,490 @@
@@ -4527,7 +4580,7 @@ index 00000000..b127ef2d
 +2.45.1
 diff --git a/target/linux/qualcommbe/patches-6.18/0704-remoteproc-qcom-q6v5-wcss-add-ipq9574-support.patch b/target/linux/qualcommbe/patches-6.18/0704-remoteproc-qcom-q6v5-wcss-add-ipq9574-support.patch
 new file mode 100644
-index 00000000..86c4f4f1
+index 00000000000..86c4f4f1631
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0704-remoteproc-qcom-q6v5-wcss-add-ipq9574-support.patch
 @@ -0,0 +1,538 @@
@@ -5071,7 +5124,7 @@ index 00000000..86c4f4f1
 + };
 diff --git a/target/linux/qualcommbe/patches-6.18/0707-net-phy-qca808x-disable-EEE-on-QCA8084-QXGMII.patch b/target/linux/qualcommbe/patches-6.18/0707-net-phy-qca808x-disable-EEE-on-QCA8084-QXGMII.patch
 new file mode 100644
-index 00000000..72aef7ea
+index 00000000000..72aef7eac53
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0707-net-phy-qca808x-disable-EEE-on-QCA8084-QXGMII.patch
 @@ -0,0 +1,35 @@
@@ -5110,6 +5163,3 @@ index 00000000..72aef7ea
 + 	/* Configure the ADC to convert the signal using falling edge
 + 	 * instead of the default rising edge.
 + 	 */
--- 
-2.43.0
-

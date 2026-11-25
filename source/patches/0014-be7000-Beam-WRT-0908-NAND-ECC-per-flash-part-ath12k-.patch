@@ -35,7 +35,7 @@ Claude-Session: https://claude.ai/code/session_01QwnEsRTxW1M7XMasPGxfRD
 
 diff --git a/package/kernel/mac80211/patches/ath12k/312-wifi-ath12k-keep-peer-table-valid-during-recovery.patch b/package/kernel/mac80211/patches/ath12k/312-wifi-ath12k-keep-peer-table-valid-during-recovery.patch
 new file mode 100644
-index 00000000..fc81f064
+index 00000000000..fc81f064394
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath12k/312-wifi-ath12k-keep-peer-table-valid-during-recovery.patch
 @@ -0,0 +1,135 @@
@@ -176,7 +176,7 @@ index 00000000..fc81f064
 + 
 diff --git a/package/kernel/mac80211/patches/ath12k/313-wifi-ath12k-keep-crash-flush-until-rings-are-rebuilt.patch b/package/kernel/mac80211/patches/ath12k/313-wifi-ath12k-keep-crash-flush-until-rings-are-rebuilt.patch
 new file mode 100644
-index 00000000..63c85273
+index 00000000000..63c85273b60
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath12k/313-wifi-ath12k-keep-crash-flush-until-rings-are-rebuilt.patch
 @@ -0,0 +1,78 @@
@@ -260,7 +260,7 @@ index 00000000..63c85273
 + 		goto err_hal_srng_deinit;
 diff --git a/package/kernel/mac80211/patches/ath12k/314-wifi-ath12k-keep-link-sta-table-valid-during-recovery.patch b/package/kernel/mac80211/patches/ath12k/314-wifi-ath12k-keep-link-sta-table-valid-during-recovery.patch
 new file mode 100644
-index 00000000..5a430321
+index 00000000000..5a4303216fc
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath12k/314-wifi-ath12k-keep-link-sta-table-valid-during-recovery.patch
 @@ -0,0 +1,107 @@
@@ -373,7 +373,7 @@ index 00000000..5a430321
 + }
 diff --git a/package/kernel/mac80211/patches/ath12k/315-wifi-ath12k-skip-links-without-vdev-on-ml-station-remove.patch b/package/kernel/mac80211/patches/ath12k/315-wifi-ath12k-skip-links-without-vdev-on-ml-station-remove.patch
 new file mode 100644
-index 00000000..8b9f15b6
+index 00000000000..8b9f15b698c
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath12k/315-wifi-ath12k-skip-links-without-vdev-on-ml-station-remove.patch
 @@ -0,0 +1,67 @@
@@ -446,7 +446,7 @@ index 00000000..8b9f15b6
 + 	}
 diff --git a/target/linux/qualcommbe/patches-6.18/0908-spi-qpic-snand-vendor-ecc-strength.patch b/target/linux/qualcommbe/patches-6.18/0908-spi-qpic-snand-vendor-ecc-strength.patch
 new file mode 100644
-index 00000000..74923cd1
+index 00000000000..74923cd1a70
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0908-spi-qpic-snand-vendor-ecc-strength.patch
 @@ -0,0 +1,124 @@
@@ -574,6 +574,3 @@ index 00000000..74923cd1
 + 	if (ecc_cfg->step_size != NANDC_STEP_SIZE) {
 + 		dev_err(snandc->dev,
 + 			"only %u bytes ECC step size is supported\n",
--- 
-2.43.0
-

@@ -13,7 +13,7 @@ Claude-Session: https://claude.ai/code/session_01QwnEsRTxW1M7XMasPGxfRD
 
 diff --git a/feed-patches/packages/multimedia/minidlna/patches/080-ffmpeg-ch-layout.patch b/feed-patches/packages/multimedia/minidlna/patches/080-ffmpeg-ch-layout.patch
 deleted file mode 100644
-index c412f961..00000000
+index c412f96145d..00000000000
 --- a/feed-patches/packages/multimedia/minidlna/patches/080-ffmpeg-ch-layout.patch
 +++ /dev/null
 @@ -1,14 +0,0 @@
@@ -31,6 +31,3 @@ index c412f961..00000000
 - #define lav_width(s) s->codecpar->width
 - #define lav_height(s) s->codecpar->height
 - #define lav_profile(s) s->codecpar->profile
--- 
-2.43.0
-

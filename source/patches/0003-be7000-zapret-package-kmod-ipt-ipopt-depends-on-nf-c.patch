@@ -84,10 +84,10 @@ Subject: [PATCH] be7000: zapret package; kmod-ipt-ipopt depends on
  create mode 100755 package/zapret-openwrt/zapret/update-pkg.sh
 
 diff --git a/package/kernel/linux/modules/netfilter.mk b/package/kernel/linux/modules/netfilter.mk
-index debc2a5a..870f427b 100644
+index 8e4e6c08af0..dd55019e162 100644
 --- a/package/kernel/linux/modules/netfilter.mk
 +++ b/package/kernel/linux/modules/netfilter.mk
-@@ -311,6 +311,8 @@ define KernelPackage/ipt-ipopt
+@@ -321,6 +321,8 @@ define KernelPackage/ipt-ipopt
    KCONFIG:=$(KCONFIG_IPT_IPOPT)
    FILES:=$(foreach mod,$(IPT_IPOPT-m),$(LINUX_DIR)/net/$(mod).ko)
    AUTOLOAD:=$(call AutoProbe,$(notdir $(IPT_IPOPT-m)))
@@ -98,7 +98,7 @@ index debc2a5a..870f427b 100644
  
 diff --git a/package/zapret-openwrt/LICENSE b/package/zapret-openwrt/LICENSE
 new file mode 100644
-index 00000000..6f8f4cc5
+index 00000000000..6f8f4cc5082
 --- /dev/null
 +++ b/package/zapret-openwrt/LICENSE
 @@ -0,0 +1,21 @@
@@ -125,7 +125,7 @@ index 00000000..6f8f4cc5
 +SOFTWARE.
 diff --git a/package/zapret-openwrt/README.md b/package/zapret-openwrt/README.md
 new file mode 100644
-index 00000000..fd1dcf0e
+index 00000000000..fd1dcf0e573
 --- /dev/null
 +++ b/package/zapret-openwrt/README.md
 @@ -0,0 +1,22 @@
@@ -153,14 +153,14 @@ index 00000000..fd1dcf0e
 +[![Donations Page](https://github.com/andry81-cache/gh-content-static-cache/raw/master/common/badges/donate/donate.svg)](https://github.com/remittor/donate)
 diff --git a/package/zapret-openwrt/SOURCE b/package/zapret-openwrt/SOURCE
 new file mode 100644
-index 00000000..c0f4bd00
+index 00000000000..c0f4bd0075d
 --- /dev/null
 +++ b/package/zapret-openwrt/SOURCE
 @@ -0,0 +1 @@
 +remittor/zapret-openwrt @ 1b04a87 (2026-08-06)
 diff --git a/package/zapret-openwrt/luci-app-zapret/Makefile b/package/zapret-openwrt/luci-app-zapret/Makefile
 new file mode 100644
-index 00000000..f7131910
+index 00000000000..f7131910a3d
 --- /dev/null
 +++ b/package/zapret-openwrt/luci-app-zapret/Makefile
 @@ -0,0 +1,32 @@
@@ -198,7 +198,7 @@ index 00000000..f7131910
 +# call BuildPackage - OpenWrt buildroot signature
 diff --git a/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/diagnost.js b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/diagnost.js
 new file mode 100644
-index 00000000..2be86d2a
+index 00000000000..2be86d2aacb
 --- /dev/null
 +++ b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/diagnost.js
 @@ -0,0 +1,174 @@
@@ -378,7 +378,7 @@ index 00000000..2be86d2a
 +});
 diff --git a/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/dmnlog.js b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/dmnlog.js
 new file mode 100644
-index 00000000..99c98f26
+index 00000000000..99c98f2641b
 --- /dev/null
 +++ b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/dmnlog.js
 @@ -0,0 +1,214 @@
@@ -598,7 +598,7 @@ index 00000000..99c98f26
 +});
 diff --git a/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/env.js b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/env.js
 new file mode 100644
-index 00000000..badfe723
+index 00000000000..badfe72369c
 --- /dev/null
 +++ b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/env.js
 @@ -0,0 +1,70 @@
@@ -674,7 +674,7 @@ index 00000000..badfe723
 +});
 diff --git a/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/service.js b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/service.js
 new file mode 100644
-index 00000000..528f36f1
+index 00000000000..528f36f1c80
 --- /dev/null
 +++ b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/service.js
 @@ -0,0 +1,443 @@
@@ -1123,7 +1123,7 @@ index 00000000..528f36f1
 +});
 diff --git a/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/settings.js b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/settings.js
 new file mode 100644
-index 00000000..343f3b41
+index 00000000000..343f3b41406
 --- /dev/null
 +++ b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/settings.js
 @@ -0,0 +1,515 @@
@@ -1644,7 +1644,7 @@ index 00000000..343f3b41
 +});
 diff --git a/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/styles.css b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/styles.css
 new file mode 100644
-index 00000000..1ceecf14
+index 00000000000..1ceecf14504
 --- /dev/null
 +++ b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/styles.css
 @@ -0,0 +1,8 @@
@@ -1658,7 +1658,7 @@ index 00000000..1ceecf14
 +}
 diff --git a/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/tools.js b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/tools.js
 new file mode 100644
-index 00000000..779781cb
+index 00000000000..779781cbd03
 --- /dev/null
 +++ b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/tools.js
 @@ -0,0 +1,1033 @@
@@ -2697,7 +2697,7 @@ index 00000000..779781cb
 +});
 diff --git a/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/updater.js b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/updater.js
 new file mode 100644
-index 00000000..8de5711d
+index 00000000000..8de5711daef
 --- /dev/null
 +++ b/package/zapret-openwrt/luci-app-zapret/htdocs/luci-static/resources/view/zapret/updater.js
 @@ -0,0 +1,217 @@
@@ -2920,7 +2920,7 @@ index 00000000..8de5711d
 +});
 diff --git a/package/zapret-openwrt/luci-app-zapret/root/usr/share/luci/menu.d/luci-app-zapret.json b/package/zapret-openwrt/luci-app-zapret/root/usr/share/luci/menu.d/luci-app-zapret.json
 new file mode 100644
-index 00000000..cea1cf2c
+index 00000000000..cea1cf2cf27
 --- /dev/null
 +++ b/package/zapret-openwrt/luci-app-zapret/root/usr/share/luci/menu.d/luci-app-zapret.json
 @@ -0,0 +1,46 @@
@@ -2972,7 +2972,7 @@ index 00000000..cea1cf2c
 +}
 diff --git a/package/zapret-openwrt/luci-app-zapret/root/usr/share/rpcd/acl.d/luci-app-zapret.json b/package/zapret-openwrt/luci-app-zapret/root/usr/share/rpcd/acl.d/luci-app-zapret.json
 new file mode 100644
-index 00000000..341d4c9b
+index 00000000000..341d4c9b8d9
 --- /dev/null
 +++ b/package/zapret-openwrt/luci-app-zapret/root/usr/share/rpcd/acl.d/luci-app-zapret.json
 @@ -0,0 +1,40 @@
@@ -3018,7 +3018,7 @@ index 00000000..341d4c9b
 +}
 diff --git a/package/zapret-openwrt/zapret/Makefile b/package/zapret-openwrt/zapret/Makefile
 new file mode 100644
-index 00000000..36c03523
+index 00000000000..36c035235c5
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/Makefile
 @@ -0,0 +1,341 @@
@@ -3365,7 +3365,7 @@ index 00000000..36c03523
 +$(eval $(call BuildPackage,$(PKG_NAME)))
 diff --git a/package/zapret-openwrt/zapret/comfunc.sh b/package/zapret-openwrt/zapret/comfunc.sh
 new file mode 100755
-index 00000000..b9762c8a
+index 00000000000..b9762c8a951
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/comfunc.sh
 @@ -0,0 +1,248 @@
@@ -3619,7 +3619,7 @@ index 00000000..b9762c8a
 +}
 diff --git a/package/zapret-openwrt/zapret/config.default b/package/zapret-openwrt/zapret/config.default
 new file mode 100644
-index 00000000..c89785d5
+index 00000000000..c89785d5ca3
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/config.default
 @@ -0,0 +1,159 @@
@@ -3784,7 +3784,7 @@ index 00000000..c89785d5
 +DAEMON_LOG_FILE="/tmp/zapret+<DAEMON_NAME>+<DAEMON_IDNUM>+<DAEMON_CFGNAME>.log"
 diff --git a/package/zapret-openwrt/zapret/custom.d/50-script.sh b/package/zapret-openwrt/zapret/custom.d/50-script.sh
 new file mode 100644
-index 00000000..83d7fea8
+index 00000000000..83d7fea8522
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/custom.d/50-script.sh
 @@ -0,0 +1,31 @@
@@ -3821,7 +3821,7 @@ index 00000000..83d7fea8
 +}
 diff --git a/package/zapret-openwrt/zapret/def-cfg.sh b/package/zapret-openwrt/zapret/def-cfg.sh
 new file mode 100755
-index 00000000..745c652b
+index 00000000000..745c652bfa2
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/def-cfg.sh
 @@ -0,0 +1,509 @@
@@ -4336,7 +4336,7 @@ index 00000000..745c652b
 +}
 diff --git a/package/zapret-openwrt/zapret/dwc.sh b/package/zapret-openwrt/zapret/dwc.sh
 new file mode 100644
-index 00000000..ec03ec09
+index 00000000000..ec03ec09503
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/dwc.sh
 @@ -0,0 +1,321 @@
@@ -4748,7 +4748,7 @@ HcmV?d00001
 
 diff --git a/package/zapret-openwrt/zapret/init.d.sh b/package/zapret-openwrt/zapret/init.d.sh
 new file mode 100755
-index 00000000..8f8bfecf
+index 00000000000..8f8bfecf806
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/init.d.sh
 @@ -0,0 +1,91 @@
@@ -4845,7 +4845,7 @@ index 00000000..8f8bfecf
 +}
 diff --git a/package/zapret-openwrt/zapret/ipset/zapret-hosts-google.txt b/package/zapret-openwrt/zapret/ipset/zapret-hosts-google.txt
 new file mode 100644
-index 00000000..56b9a53e
+index 00000000000..56b9a53e60d
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/ipset/zapret-hosts-google.txt
 @@ -0,0 +1,198 @@
@@ -5049,7 +5049,7 @@ index 00000000..56b9a53e
 +youtubego.in
 diff --git a/package/zapret-openwrt/zapret/ipset/zapret-hosts-user-exclude.txt b/package/zapret-openwrt/zapret/ipset/zapret-hosts-user-exclude.txt
 new file mode 100644
-index 00000000..41f525d7
+index 00000000000..41f525d7a8a
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/ipset/zapret-hosts-user-exclude.txt
 @@ -0,0 +1,347 @@
@@ -5402,7 +5402,7 @@ index 00000000..41f525d7
 +####################################
 diff --git a/package/zapret-openwrt/zapret/ipset/zapret-hosts-user.txt b/package/zapret-openwrt/zapret/ipset/zapret-hosts-user.txt
 new file mode 100644
-index 00000000..a2305cb4
+index 00000000000..a2305cb47ad
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/ipset/zapret-hosts-user.txt
 @@ -0,0 +1,23 @@
@@ -5431,7 +5431,7 @@ index 00000000..a2305cb4
 +discordsez.com
 diff --git a/package/zapret-openwrt/zapret/ipset/zapret-ip-exclude.txt b/package/zapret-openwrt/zapret/ipset/zapret-ip-exclude.txt
 new file mode 100644
-index 00000000..c14c04b0
+index 00000000000..c14c04b0d2e
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/ipset/zapret-ip-exclude.txt
 @@ -0,0 +1,9 @@
@@ -5446,7 +5446,7 @@ index 00000000..c14c04b0
 +fe80::/10
 diff --git a/package/zapret-openwrt/zapret/patches/0001-Add-support-log-file-for-each-daemons.patch b/package/zapret-openwrt/zapret/patches/0001-Add-support-log-file-for-each-daemons.patch
 new file mode 100644
-index 00000000..98e4d0fe
+index 00000000000..98e4d0feb7b
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/patches/0001-Add-support-log-file-for-each-daemons.patch
 @@ -0,0 +1,65 @@
@@ -5517,7 +5517,7 @@ index 00000000..98e4d0fe
 +
 diff --git a/package/zapret-openwrt/zapret/renew-cfg.sh b/package/zapret-openwrt/zapret/renew-cfg.sh
 new file mode 100755
-index 00000000..82e5aaba
+index 00000000000..82e5aaba332
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/renew-cfg.sh
 @@ -0,0 +1,18 @@
@@ -5541,7 +5541,7 @@ index 00000000..82e5aaba
 +fi
 diff --git a/package/zapret-openwrt/zapret/restore-def-cfg.sh b/package/zapret-openwrt/zapret/restore-def-cfg.sh
 new file mode 100755
-index 00000000..d406f382
+index 00000000000..d406f3829aa
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/restore-def-cfg.sh
 @@ -0,0 +1,40 @@
@@ -5587,7 +5587,7 @@ index 00000000..d406f382
 +fi
 diff --git a/package/zapret-openwrt/zapret/script-exec.sh b/package/zapret-openwrt/zapret/script-exec.sh
 new file mode 100755
-index 00000000..a496270f
+index 00000000000..a496270ffe3
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/script-exec.sh
 @@ -0,0 +1,37 @@
@@ -5630,7 +5630,7 @@ index 00000000..a496270f
 +exit 0
 diff --git a/package/zapret-openwrt/zapret/sync_config.sh b/package/zapret-openwrt/zapret/sync_config.sh
 new file mode 100755
-index 00000000..7e94a6ea
+index 00000000000..7e94a6ea2a3
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/sync_config.sh
 @@ -0,0 +1,148 @@
@@ -5784,7 +5784,7 @@ index 00000000..7e94a6ea
 +fi
 diff --git a/package/zapret-openwrt/zapret/uci-def-cfg.sh b/package/zapret-openwrt/zapret/uci-def-cfg.sh
 new file mode 100755
-index 00000000..c39472be
+index 00000000000..c39472bed00
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/uci-def-cfg.sh
 @@ -0,0 +1,23 @@
@@ -5814,7 +5814,7 @@ index 00000000..c39472be
 \ No newline at end of file
 diff --git a/package/zapret-openwrt/zapret/update-pkg.sh b/package/zapret-openwrt/zapret/update-pkg.sh
 new file mode 100755
-index 00000000..be1f19df
+index 00000000000..be1f19df5e4
 --- /dev/null
 +++ b/package/zapret-openwrt/zapret/update-pkg.sh
 @@ -0,0 +1,570 @@
@@ -6388,6 +6388,3 @@ index 00000000..be1f19df
 +	fi
 +	echo "RESULT: (+) Packages from $ZAP_PKG_ZIP_NAME successfully installed!"
 +fi
--- 
-2.43.0
-

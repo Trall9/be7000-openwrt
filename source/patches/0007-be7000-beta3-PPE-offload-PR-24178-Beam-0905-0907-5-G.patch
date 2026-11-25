@@ -146,7 +146,7 @@ Claude-Session: https://claude.ai/code/session_01KVjjsvZKZfHpcTdFRmGaAY
 
 diff --git a/package/kernel/mac80211/patches/ath12k/308-wifi-ath12k-dt-board-id-selects-dualmac.patch b/package/kernel/mac80211/patches/ath12k/308-wifi-ath12k-dt-board-id-selects-dualmac.patch
 new file mode 100644
-index 00000000..46fcb593
+index 00000000000..46fcb593bcd
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath12k/308-wifi-ath12k-dt-board-id-selects-dualmac.patch
 @@ -0,0 +1,39 @@
@@ -191,7 +191,7 @@ index 00000000..46fcb593
 + 			/* use MHI firmware file from firmware-N.bin */
 diff --git a/package/kernel/mac80211/patches/ath12k/309-wifi-ath12k-pci-fixed-mem-keep-all-segments.patch b/package/kernel/mac80211/patches/ath12k/309-wifi-ath12k-pci-fixed-mem-keep-all-segments.patch
 new file mode 100644
-index 00000000..e49b5d60
+index 00000000000..e49b5d60d23
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath12k/309-wifi-ath12k-pci-fixed-mem-keep-all-segments.patch
 @@ -0,0 +1,86 @@
@@ -283,7 +283,7 @@ index 00000000..e49b5d60
 + 	if (test_bit(ATH12K_FLAG_FIXED_MEM_REGION, &ab->dev_flags)) {
 diff --git a/package/kernel/mac80211/patches/ath12k/310-wifi-ath12k-board-id-parameter.patch b/package/kernel/mac80211/patches/ath12k/310-wifi-ath12k-board-id-parameter.patch
 new file mode 100644
-index 00000000..c74e239a
+index 00000000000..c74e239aa13
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath12k/310-wifi-ath12k-board-id-parameter.patch
 @@ -0,0 +1,96 @@
@@ -385,7 +385,7 @@ index 00000000..c74e239a
 + 	if (of_property_read_u32(ab->dev->of_node, "qcom,num-radios", &num_radios))
 diff --git a/package/kernel/mac80211/patches/ath12k/311-wifi-ath12k-skip-links-without-vdev-on-scan-failure.patch b/package/kernel/mac80211/patches/ath12k/311-wifi-ath12k-skip-links-without-vdev-on-scan-failure.patch
 new file mode 100644
-index 00000000..dfce5e25
+index 00000000000..dfce5e25822
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/ath12k/311-wifi-ath12k-skip-links-without-vdev-on-scan-failure.patch
 @@ -0,0 +1,20 @@
@@ -411,7 +411,7 @@ index 00000000..dfce5e25
 + 			ar = arvif->ar;
 diff --git a/package/kernel/mac80211/patches/subsys/393-wifi-mac80211-end-forward-path-at-ap-interface.patch b/package/kernel/mac80211/patches/subsys/393-wifi-mac80211-end-forward-path-at-ap-interface.patch
 new file mode 100644
-index 00000000..718ecc0f
+index 00000000000..718ecc0f172
 --- /dev/null
 +++ b/package/kernel/mac80211/patches/subsys/393-wifi-mac80211-end-forward-path-at-ap-interface.patch
 @@ -0,0 +1,46 @@
@@ -462,7 +462,7 @@ index 00000000..718ecc0f
 + out:
 + 	rcu_read_unlock();
 diff --git a/package/network/utils/iwinfo/Makefile b/package/network/utils/iwinfo/Makefile
-index a809d4cc..c3750fa8 100644
+index a809d4cca32..c3750fa8de3 100644
 --- a/package/network/utils/iwinfo/Makefile
 +++ b/package/network/utils/iwinfo/Makefile
 @@ -7,7 +7,7 @@
@@ -476,7 +476,7 @@ index a809d4cc..c3750fa8 100644
  PKG_SOURCE_URL=$(PROJECT_GIT)/project/iwinfo.git
 diff --git a/package/network/utils/iwinfo/patches/101-nl80211-freqlist-per-radio.patch b/package/network/utils/iwinfo/patches/101-nl80211-freqlist-per-radio.patch
 new file mode 100644
-index 00000000..a0db2d69
+index 00000000000..a0db2d691eb
 --- /dev/null
 +++ b/package/network/utils/iwinfo/patches/101-nl80211-freqlist-per-radio.patch
 @@ -0,0 +1,143 @@
@@ -625,7 +625,7 @@ index 00000000..a0db2d69
 + nla_put_failure:
 diff --git a/target/linux/generic/hack-6.18/767-net-flow-offload-publish-lwt-tunnel-metadata.patch b/target/linux/generic/hack-6.18/767-net-flow-offload-publish-lwt-tunnel-metadata.patch
 new file mode 100644
-index 00000000..8050be23
+index 00000000000..8050be236dd
 --- /dev/null
 +++ b/target/linux/generic/hack-6.18/767-net-flow-offload-publish-lwt-tunnel-metadata.patch
 @@ -0,0 +1,58 @@
@@ -689,7 +689,7 @@ index 00000000..8050be23
 + 
 diff --git a/target/linux/generic/hack-6.18/768-net-ppp-publish-channel-lifecycle-events.patch b/target/linux/generic/hack-6.18/768-net-ppp-publish-channel-lifecycle-events.patch
 new file mode 100644
-index 00000000..df9ad838
+index 00000000000..df9ad838389
 --- /dev/null
 +++ b/target/linux/generic/hack-6.18/768-net-ppp-publish-channel-lifecycle-events.patch
 @@ -0,0 +1,200 @@
@@ -895,7 +895,7 @@ index 00000000..df9ad838
 ++EXPORT_SYMBOL_GPL(ppp_channel_notify);
 diff --git a/target/linux/generic/hack-6.18/769-net-ip6-tunnel-publish-flow-offload-parameters.patch b/target/linux/generic/hack-6.18/769-net-ip6-tunnel-publish-flow-offload-parameters.patch
 new file mode 100644
-index 00000000..c6776466
+index 00000000000..c6776466ea4
 --- /dev/null
 +++ b/target/linux/generic/hack-6.18/769-net-ip6-tunnel-publish-flow-offload-parameters.patch
 @@ -0,0 +1,225 @@
@@ -1125,7 +1125,7 @@ index 00000000..c6776466
 + 
 + #define IPXIPX_FEATURES (NETIF_F_SG |		\
 diff --git a/target/linux/generic/hack-6.18/901-debloat_sock_diag.patch b/target/linux/generic/hack-6.18/901-debloat_sock_diag.patch
-index b7883532..fba8d74a 100644
+index b788353232b..fba8d74a6b2 100644
 --- a/target/linux/generic/hack-6.18/901-debloat_sock_diag.patch
 +++ b/target/linux/generic/hack-6.18/901-debloat_sock_diag.patch
 @@ -40,7 +40,7 @@ Signed-off-by: Felix Fietkau <nbd@nbd.name>
@@ -1138,7 +1138,7 @@ index b7883532..fba8d74a 100644
   obj-y += netdev_rx_queue.o
  --- a/net/core/sock.c
 diff --git a/target/linux/qualcommbe/config-6.18 b/target/linux/qualcommbe/config-6.18
-index 534da07f..28b9f359 100644
+index 534da07fbc1..28b9f359e9e 100644
 --- a/target/linux/qualcommbe/config-6.18
 +++ b/target/linux/qualcommbe/config-6.18
 @@ -650,10 +650,21 @@ CONFIG_ZSTD_DECOMPRESS=y
@@ -1165,7 +1165,7 @@ index 534da07f..28b9f359 100644
 +# CONFIG_CMA_SYSFS is not set
 +CONFIG_DMA_CMA=y
 diff --git a/target/linux/qualcommbe/dts/ipq9574-be7000.dts b/target/linux/qualcommbe/dts/ipq9574-be7000.dts
-index 70b93d4e..15534080 100644
+index 70b93d4e559..15534080860 100644
 --- a/target/linux/qualcommbe/dts/ipq9574-be7000.dts
 +++ b/target/linux/qualcommbe/dts/ipq9574-be7000.dts
 @@ -140,6 +140,24 @@
@@ -1247,7 +1247,7 @@ index 70b93d4e..15534080 100644
  	i2c1_pins: i2c1-state {
  		pins = "gpio36", "gpio37";
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath12k-caldata b/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath12k-caldata
-index 73b8c2a3..48fe7150 100755
+index 73b8c2a3490..48fe715010d 100755
 --- a/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath12k-caldata
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/firmware/11-ath12k-caldata
 @@ -36,10 +36,17 @@ case "$FIRMWARE" in
@@ -1273,7 +1273,7 @@ index 73b8c2a3..48fe7150 100755
  	esac
  	;;
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/21_be7000_net_perf b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/21_be7000_net_perf
-index 8882c92f..2527c5a3 100644
+index 8882c92f158..2527c5a30cb 100644
 --- a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/21_be7000_net_perf
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/21_be7000_net_perf
 @@ -8,7 +8,7 @@
@@ -1300,7 +1300,7 @@ index 8882c92f..2527c5a3 100644
  ( n=0; while [ \$n -lt 30 ] && ! grep -q "DP_EXT_IRQ" /proc/interrupts; do sleep 1; n=\$((n+1)); done
    i=0
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
-index 63ecfd29..15a8df66 100755
+index 63ecfd29b2f..15a8df667b9 100755
 --- a/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
 @@ -25,6 +25,7 @@ nft list flowtables 2>/dev/null | grep -q "flowtable" \
@@ -1313,7 +1313,7 @@ index 63ecfd29..15a8df66 100755
  	*) bad "RPS wan=${r:-нет} — однo-core форвардинг, см. 21_be7000_net_perf" ;;
 diff --git a/target/linux/qualcommbe/patches-6.18/0374-net-phy-qca8084-forward-phy-link-status-to-xpcs.patch b/target/linux/qualcommbe/patches-6.18/0374-net-phy-qca8084-forward-phy-link-status-to-xpcs.patch
 new file mode 100644
-index 00000000..cd8df102
+index 00000000000..cd8df1022c7
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0374-net-phy-qca8084-forward-phy-link-status-to-xpcs.patch
 @@ -0,0 +1,33 @@
@@ -1352,7 +1352,7 @@ index 00000000..cd8df102
 + 	/* Check EEE capability supported or not */
 diff --git a/target/linux/qualcommbe/patches-6.18/0500-01-net-ethernet-qualcomm-ppe-add-per-soc-variant-framework.patch b/target/linux/qualcommbe/patches-6.18/0500-01-net-ethernet-qualcomm-ppe-add-per-soc-variant-framework.patch
 new file mode 100644
-index 00000000..0febce24
+index 00000000000..0febce24f59
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0500-01-net-ethernet-qualcomm-ppe-add-per-soc-variant-framework.patch
 @@ -0,0 +1,110 @@
@@ -1468,7 +1468,7 @@ index 00000000..0febce24
 + 	struct dentry *debugfs_root;
 diff --git a/target/linux/qualcommbe/patches-6.18/0500-02-net-ethernet-qualcomm-ppe-add-l2-bridge-config-helpers.patch b/target/linux/qualcommbe/patches-6.18/0500-02-net-ethernet-qualcomm-ppe-add-l2-bridge-config-helpers.patch
 new file mode 100644
-index 00000000..40b1a8b1
+index 00000000000..40b1a8b1d84
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0500-02-net-ethernet-qualcomm-ppe-add-l2-bridge-config-helpers.patch
 @@ -0,0 +1,744 @@
@@ -2218,7 +2218,7 @@ index 00000000..40b1a8b1
 + #define PPE_TL_SERVICE_TBL_ENTRIES		256
 diff --git a/target/linux/qualcommbe/patches-6.18/0500-03-net-ethernet-qualcomm-ppe-prepare-edma-for-bridge-offload.patch b/target/linux/qualcommbe/patches-6.18/0500-03-net-ethernet-qualcomm-ppe-prepare-edma-for-bridge-offload.patch
 new file mode 100644
-index 00000000..75b4bf2f
+index 00000000000..75b4bf2fea2
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0500-03-net-ethernet-qualcomm-ppe-prepare-edma-for-bridge-offload.patch
 @@ -0,0 +1,113 @@
@@ -2337,7 +2337,7 @@ index 00000000..75b4bf2f
 + 				if (unlikely(!
 diff --git a/target/linux/qualcommbe/patches-6.18/0500-04-net-ethernet-qualcomm-ppe-add-switchdev-bridge-offload.patch b/target/linux/qualcommbe/patches-6.18/0500-04-net-ethernet-qualcomm-ppe-add-switchdev-bridge-offload.patch
 new file mode 100644
-index 00000000..e29050ab
+index 00000000000..e29050ab503
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0500-04-net-ethernet-qualcomm-ppe-add-switchdev-bridge-offload.patch
 @@ -0,0 +1,543 @@
@@ -2886,7 +2886,7 @@ index 00000000..e29050ab
 ++#endif
 diff --git a/target/linux/qualcommbe/patches-6.18/0501-net-ethernet-qualcomm-ppe-handle-fdb-events.patch b/target/linux/qualcommbe/patches-6.18/0501-net-ethernet-qualcomm-ppe-handle-fdb-events.patch
 new file mode 100644
-index 00000000..23f4a4df
+index 00000000000..23f4a4df3cb
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0501-net-ethernet-qualcomm-ppe-handle-fdb-events.patch
 @@ -0,0 +1,386 @@
@@ -3278,7 +3278,7 @@ index 00000000..23f4a4df
 + 			    struct ppe_scheduler_cfg scheduler_cfg);
 diff --git a/target/linux/qualcommbe/patches-6.18/0502-net-ethernet-qualcomm-ppe-trap-bpdu-to-cpu.patch b/target/linux/qualcommbe/patches-6.18/0502-net-ethernet-qualcomm-ppe-trap-bpdu-to-cpu.patch
 new file mode 100644
-index 00000000..c72ff2a9
+index 00000000000..c72ff2a982b
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0502-net-ethernet-qualcomm-ppe-trap-bpdu-to-cpu.patch
 @@ -0,0 +1,230 @@
@@ -3514,7 +3514,7 @@ index 00000000..c72ff2a9
 + #define PPE_VSI_TBL_ENTRIES			64
 diff --git a/target/linux/qualcommbe/patches-6.18/0503-net-ethernet-qualcomm-ppe-report-learned-fdb-to-bridge.patch b/target/linux/qualcommbe/patches-6.18/0503-net-ethernet-qualcomm-ppe-report-learned-fdb-to-bridge.patch
 new file mode 100644
-index 00000000..64bc7c78
+index 00000000000..64bc7c78901
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0503-net-ethernet-qualcomm-ppe-report-learned-fdb-to-bridge.patch
 @@ -0,0 +1,324 @@
@@ -3844,7 +3844,7 @@ index 00000000..64bc7c78
 + 	ppe_dev->bridge = NULL;
 diff --git a/target/linux/qualcommbe/patches-6.18/0504-net-ethernet-qualcomm-ppe-offload-bridge-port-flags.patch b/target/linux/qualcommbe/patches-6.18/0504-net-ethernet-qualcomm-ppe-offload-bridge-port-flags.patch
 new file mode 100644
-index 00000000..3ce481dc
+index 00000000000..3ce481dcb7a
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0504-net-ethernet-qualcomm-ppe-offload-bridge-port-flags.patch
 @@ -0,0 +1,319 @@
@@ -4169,7 +4169,7 @@ index 00000000..3ce481dc
 + int ppe_fdb_entry_add(struct ppe_device *ppe_dev,
 diff --git a/target/linux/qualcommbe/patches-6.18/0505-01-net-ethernet-qualcomm-ppe-add-vlan-config-helpers.patch b/target/linux/qualcommbe/patches-6.18/0505-01-net-ethernet-qualcomm-ppe-add-vlan-config-helpers.patch
 new file mode 100644
-index 00000000..a3f31307
+index 00000000000..a3f313071fc
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0505-01-net-ethernet-qualcomm-ppe-add-vlan-config-helpers.patch
 @@ -0,0 +1,264 @@
@@ -4439,7 +4439,7 @@ index 00000000..a3f31307
 +  * such as flow entry lookup bypass.
 diff --git a/target/linux/qualcommbe/patches-6.18/0505-02-net-ethernet-qualcomm-ppe-offload-vlan-aware-bridges.patch b/target/linux/qualcommbe/patches-6.18/0505-02-net-ethernet-qualcomm-ppe-offload-vlan-aware-bridges.patch
 new file mode 100644
-index 00000000..e6f56a0b
+index 00000000000..e6f56a0b686
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0505-02-net-ethernet-qualcomm-ppe-offload-vlan-aware-bridges.patch
 @@ -0,0 +1,1113 @@
@@ -5558,7 +5558,7 @@ index 00000000..e6f56a0b
 + 						     edma_port_dev_check,
 diff --git a/target/linux/qualcommbe/patches-6.18/0505-03-net-ethernet-qualcomm-ppe-age-out-learned-fdb-entries.patch b/target/linux/qualcommbe/patches-6.18/0505-03-net-ethernet-qualcomm-ppe-age-out-learned-fdb-entries.patch
 new file mode 100644
-index 00000000..ca1e9f8d
+index 00000000000..ca1e9f8d960
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0505-03-net-ethernet-qualcomm-ppe-age-out-learned-fdb-entries.patch
 @@ -0,0 +1,275 @@
@@ -5839,7 +5839,7 @@ index 00000000..ca1e9f8d
 + #define PPE_L2_VP_PORT_TBL_ADDR			0x98000
 diff --git a/target/linux/qualcommbe/patches-6.18/0505-04-net-ethernet-qualcomm-ppe-offload-multicast-groups.patch b/target/linux/qualcommbe/patches-6.18/0505-04-net-ethernet-qualcomm-ppe-offload-multicast-groups.patch
 new file mode 100644
-index 00000000..4c300303
+index 00000000000..4c30030368b
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0505-04-net-ethernet-qualcomm-ppe-offload-multicast-groups.patch
 @@ -0,0 +1,499 @@
@@ -6344,7 +6344,7 @@ index 00000000..4c300303
 + };
 diff --git a/target/linux/qualcommbe/patches-6.18/0505-05-net-ethernet-qualcomm-ppe-offload-tx-flooding.patch b/target/linux/qualcommbe/patches-6.18/0505-05-net-ethernet-qualcomm-ppe-offload-tx-flooding.patch
 new file mode 100644
-index 00000000..fe7432d1
+index 00000000000..fe7432d11df
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0505-05-net-ethernet-qualcomm-ppe-offload-tx-flooding.patch
 @@ -0,0 +1,333 @@
@@ -6683,7 +6683,7 @@ index 00000000..fe7432d1
 + }
 diff --git a/target/linux/qualcommbe/patches-6.18/0506-01-net-ethernet-qualcomm-ppe-add-l3-flow-engine-registers.patch b/target/linux/qualcommbe/patches-6.18/0506-01-net-ethernet-qualcomm-ppe-add-l3-flow-engine-registers.patch
 new file mode 100644
-index 00000000..c6b2b031
+index 00000000000..c6b2b031751
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0506-01-net-ethernet-qualcomm-ppe-add-l3-flow-engine-registers.patch
 @@ -0,0 +1,240 @@
@@ -6929,7 +6929,7 @@ index 00000000..c6b2b031
 + 	FIELD_MODIFY(PPE_L3_VP_PORT_W1_VSI_VALID, (tbl_cfg) + 0x1, value)
 diff --git a/target/linux/qualcommbe/patches-6.18/0506-02-net-ethernet-qualcomm-ppe-add-l3-flow-engine.patch b/target/linux/qualcommbe/patches-6.18/0506-02-net-ethernet-qualcomm-ppe-add-l3-flow-engine.patch
 new file mode 100644
-index 00000000..6f999d11
+index 00000000000..6f999d11a57
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0506-02-net-ethernet-qualcomm-ppe-add-l3-flow-engine.patch
 @@ -0,0 +1,906 @@
@@ -7841,7 +7841,7 @@ index 00000000..6f999d11
 + #define PPE_IN_L3_IF_W2_MTU_IPV6		GENMASK(13, 0)
 diff --git a/target/linux/qualcommbe/patches-6.18/0507-01-net-ethernet-qualcomm-ppe-offload-netfilter-flowtables.patch b/target/linux/qualcommbe/patches-6.18/0507-01-net-ethernet-qualcomm-ppe-offload-netfilter-flowtables.patch
 new file mode 100644
-index 00000000..61d1eab6
+index 00000000000..61d1eab6c7c
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0507-01-net-ethernet-qualcomm-ppe-offload-netfilter-flowtables.patch
 @@ -0,0 +1,1262 @@
@@ -9109,7 +9109,7 @@ index 00000000..61d1eab6
 ++#endif
 diff --git a/target/linux/qualcommbe/patches-6.18/0507-02-net-ethernet-qualcomm-ppe-expose-flowtable-diagnostics.patch b/target/linux/qualcommbe/patches-6.18/0507-02-net-ethernet-qualcomm-ppe-expose-flowtable-diagnostics.patch
 new file mode 100644
-index 00000000..9db80462
+index 00000000000..9db804629e1
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0507-02-net-ethernet-qualcomm-ppe-expose-flowtable-diagnostics.patch
 @@ -0,0 +1,651 @@
@@ -9766,7 +9766,7 @@ index 00000000..9db80462
 +  */
 diff --git a/target/linux/qualcommbe/patches-6.18/0507-03-net-ethernet-qualcomm-ppe-bind-netfilter-flowtables.patch b/target/linux/qualcommbe/patches-6.18/0507-03-net-ethernet-qualcomm-ppe-bind-netfilter-flowtables.patch
 new file mode 100644
-index 00000000..71a5149a
+index 00000000000..71a5149a4bd
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0507-03-net-ethernet-qualcomm-ppe-bind-netfilter-flowtables.patch
 @@ -0,0 +1,47 @@
@@ -9819,7 +9819,7 @@ index 00000000..71a5149a
 + 
 diff --git a/target/linux/qualcommbe/patches-6.18/0507-04-net-ethernet-qualcomm-ppe-expire-flows-of-link-down-ports.patch b/target/linux/qualcommbe/patches-6.18/0507-04-net-ethernet-qualcomm-ppe-expire-flows-of-link-down-ports.patch
 new file mode 100644
-index 00000000..e0d8f74f
+index 00000000000..e0d8f74f759
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0507-04-net-ethernet-qualcomm-ppe-expire-flows-of-link-down-ports.patch
 @@ -0,0 +1,167 @@
@@ -9992,7 +9992,7 @@ index 00000000..e0d8f74f
 + 	ret = regmap_clear_bits(ppe_dev->regmap, reg, PPE_PORT_BRIDGE_TXMAC_EN);
 diff --git a/target/linux/qualcommbe/patches-6.18/0508-net-ethernet-qualcomm-ppe-offload-ipv6-flows.patch b/target/linux/qualcommbe/patches-6.18/0508-net-ethernet-qualcomm-ppe-offload-ipv6-flows.patch
 new file mode 100644
-index 00000000..f52f3630
+index 00000000000..f52f3630a38
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0508-net-ethernet-qualcomm-ppe-offload-ipv6-flows.patch
 @@ -0,0 +1,666 @@
@@ -10664,7 +10664,7 @@ index 00000000..f52f3630
 + #define PPE_FLOW_FWD_TYPE_DNAT			2
 diff --git a/target/linux/qualcommbe/patches-6.18/0509-net-ethernet-qualcomm-ppe-offload-pppoe-flows.patch b/target/linux/qualcommbe/patches-6.18/0509-net-ethernet-qualcomm-ppe-offload-pppoe-flows.patch
 new file mode 100644
-index 00000000..3467189a
+index 00000000000..3467189a6ec
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0509-net-ethernet-qualcomm-ppe-offload-pppoe-flows.patch
 @@ -0,0 +1,950 @@
@@ -11620,7 +11620,7 @@ index 00000000..3467189a
 + #define PPE_FLOW_CNT_TBL_ENTRIES		4096
 diff --git a/target/linux/qualcommbe/patches-6.18/0510-net-ethernet-qualcomm-ppe-offload-flows-of-vlan-uplinks.patch b/target/linux/qualcommbe/patches-6.18/0510-net-ethernet-qualcomm-ppe-offload-flows-of-vlan-uplinks.patch
 new file mode 100644
-index 00000000..cdebf9c0
+index 00000000000..cdebf9c00db
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0510-net-ethernet-qualcomm-ppe-offload-flows-of-vlan-uplinks.patch
 @@ -0,0 +1,784 @@
@@ -12410,7 +12410,7 @@ index 00000000..cdebf9c0
 + #define PPE_FLOW_CNT_TBL_ENTRIES		4096
 diff --git a/target/linux/qualcommbe/patches-6.18/0514-01-net-ethernet-qualcomm-ppe-recognize-tunnel-flow-rules.patch b/target/linux/qualcommbe/patches-6.18/0514-01-net-ethernet-qualcomm-ppe-recognize-tunnel-flow-rules.patch
 new file mode 100644
-index 00000000..ce0de59b
+index 00000000000..ce0de59bbfd
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0514-01-net-ethernet-qualcomm-ppe-recognize-tunnel-flow-rules.patch
 @@ -0,0 +1,133 @@
@@ -12549,7 +12549,7 @@ index 00000000..ce0de59b
 + 	      BIT_ULL(FLOW_DISSECTOR_KEY_CONTROL) |
 diff --git a/target/linux/qualcommbe/patches-6.18/0514-02-net-ethernet-qualcomm-ppe-add-tunnel-decap-transactions.patch b/target/linux/qualcommbe/patches-6.18/0514-02-net-ethernet-qualcomm-ppe-add-tunnel-decap-transactions.patch
 new file mode 100644
-index 00000000..acb492e1
+index 00000000000..acb492e12b8
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0514-02-net-ethernet-qualcomm-ppe-add-tunnel-decap-transactions.patch
 @@ -0,0 +1,311 @@
@@ -12866,7 +12866,7 @@ index 00000000..acb492e1
 ++#endif
 diff --git a/target/linux/qualcommbe/patches-6.18/0514-03-net-ethernet-qualcomm-ppe-add-tunnel-encap-transactions.patch b/target/linux/qualcommbe/patches-6.18/0514-03-net-ethernet-qualcomm-ppe-add-tunnel-encap-transactions.patch
 new file mode 100644
-index 00000000..5b86d725
+index 00000000000..5b86d725bcb
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0514-03-net-ethernet-qualcomm-ppe-add-tunnel-encap-transactions.patch
 @@ -0,0 +1,378 @@
@@ -13250,7 +13250,7 @@ index 00000000..5b86d725
 + #endif
 diff --git a/target/linux/qualcommbe/patches-6.18/0514-04-net-ethernet-qualcomm-ppe-add-dedicated-tunnel-ports.patch b/target/linux/qualcommbe/patches-6.18/0514-04-net-ethernet-qualcomm-ppe-add-dedicated-tunnel-ports.patch
 new file mode 100644
-index 00000000..fc5ccf1d
+index 00000000000..fc5ccf1d94b
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0514-04-net-ethernet-qualcomm-ppe-add-dedicated-tunnel-ports.patch
 @@ -0,0 +1,306 @@
@@ -13562,7 +13562,7 @@ index 00000000..fc5ccf1d
 + #endif
 diff --git a/target/linux/qualcommbe/patches-6.18/0514-05-net-ethernet-qualcomm-ppe-build-ipip6-tunnel-rows.patch b/target/linux/qualcommbe/patches-6.18/0514-05-net-ethernet-qualcomm-ppe-build-ipip6-tunnel-rows.patch
 new file mode 100644
-index 00000000..d1cc0e6d
+index 00000000000..d1cc0e6daec
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0514-05-net-ethernet-qualcomm-ppe-build-ipip6-tunnel-rows.patch
 @@ -0,0 +1,236 @@
@@ -13804,7 +13804,7 @@ index 00000000..d1cc0e6d
 + int ppe_tunnel_encap_clear(struct ppe_device *ppe_dev, int tunnel_id);
 diff --git a/target/linux/qualcommbe/patches-6.18/0514-06-net-ethernet-qualcomm-ppe-offload-ds-lite-flows.patch b/target/linux/qualcommbe/patches-6.18/0514-06-net-ethernet-qualcomm-ppe-offload-ds-lite-flows.patch
 new file mode 100644
-index 00000000..f1a349ff
+index 00000000000..f1a349ffe66
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0514-06-net-ethernet-qualcomm-ppe-offload-ds-lite-flows.patch
 @@ -0,0 +1,581 @@
@@ -14391,7 +14391,7 @@ index 00000000..f1a349ff
 + }
 diff --git a/target/linux/qualcommbe/patches-6.18/0514-07-net-ethernet-qualcomm-ppe-offload-map-e-fmrs.patch b/target/linux/qualcommbe/patches-6.18/0514-07-net-ethernet-qualcomm-ppe-offload-map-e-fmrs.patch
 new file mode 100644
-index 00000000..da4eeb44
+index 00000000000..da4eeb44334
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0514-07-net-ethernet-qualcomm-ppe-offload-map-e-fmrs.patch
 @@ -0,0 +1,115 @@
@@ -14512,7 +14512,7 @@ index 00000000..da4eeb44
 + 			goto err_unlock;
 diff --git a/target/linux/qualcommbe/patches-6.18/0514-08-net-ethernet-qualcomm-ppe-compose-tunnel-underlays.patch b/target/linux/qualcommbe/patches-6.18/0514-08-net-ethernet-qualcomm-ppe-compose-tunnel-underlays.patch
 new file mode 100644
-index 00000000..79d1cbf8
+index 00000000000..79d1cbf8c21
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0514-08-net-ethernet-qualcomm-ppe-compose-tunnel-underlays.patch
 @@ -0,0 +1,678 @@
@@ -15196,7 +15196,7 @@ index 00000000..79d1cbf8
 + 		       const u32 key[PPE_TUNNEL_KEY_WORDS]);
 diff --git a/target/linux/qualcommbe/patches-6.18/0514-09-net-ethernet-qualcomm-ppe-offload-ip6-lwt-tunnels.patch b/target/linux/qualcommbe/patches-6.18/0514-09-net-ethernet-qualcomm-ppe-offload-ip6-lwt-tunnels.patch
 new file mode 100644
-index 00000000..13dd2781
+index 00000000000..13dd278191c
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0514-09-net-ethernet-qualcomm-ppe-offload-ip6-lwt-tunnels.patch
 @@ -0,0 +1,239 @@
@@ -15441,7 +15441,7 @@ index 00000000..13dd2781
 + 			goto err_unlock;
 diff --git a/target/linux/qualcommbe/patches-6.18/0515-net-ethernet-qualcomm-ppe-offload-tbf-to-port-shapers.patch b/target/linux/qualcommbe/patches-6.18/0515-net-ethernet-qualcomm-ppe-offload-tbf-to-port-shapers.patch
 new file mode 100644
-index 00000000..972f9ebc
+index 00000000000..972f9ebc838
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0515-net-ethernet-qualcomm-ppe-offload-tbf-to-port-shapers.patch
 @@ -0,0 +1,224 @@
@@ -15671,7 +15671,7 @@ index 00000000..972f9ebc
 + #define PPE_L0_FLOW_MAP_TBL_ENTRIES		300
 diff --git a/target/linux/qualcommbe/patches-6.18/0517-01-net-ethernet-qualcomm-ppe-add-virtual-ports.patch b/target/linux/qualcommbe/patches-6.18/0517-01-net-ethernet-qualcomm-ppe-add-virtual-ports.patch
 new file mode 100644
-index 00000000..05f2cb6b
+index 00000000000..05f2cb6b240
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0517-01-net-ethernet-qualcomm-ppe-add-virtual-ports.patch
 @@ -0,0 +1,428 @@
@@ -16105,7 +16105,7 @@ index 00000000..05f2cb6b
 ++#endif
 diff --git a/target/linux/qualcommbe/patches-6.18/0517-02-net-ethernet-qualcomm-ppe-track-virtual-port-device-events.patch b/target/linux/qualcommbe/patches-6.18/0517-02-net-ethernet-qualcomm-ppe-track-virtual-port-device-events.patch
 new file mode 100644
-index 00000000..f0f9b66b
+index 00000000000..f0f9b66b499
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0517-02-net-ethernet-qualcomm-ppe-track-virtual-port-device-events.patch
 @@ -0,0 +1,115 @@
@@ -16226,7 +16226,7 @@ index 00000000..f0f9b66b
 + 		if (rcu_access_pointer(vp->slots[i].dev)) {
 diff --git a/target/linux/qualcommbe/patches-6.18/0518-01-net-ethernet-qualcomm-ppe-offload-flows-to-virtual-ports.patch b/target/linux/qualcommbe/patches-6.18/0518-01-net-ethernet-qualcomm-ppe-offload-flows-to-virtual-ports.patch
 new file mode 100644
-index 00000000..d5e7fc58
+index 00000000000..d5e7fc58246
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0518-01-net-ethernet-qualcomm-ppe-offload-flows-to-virtual-ports.patch
 @@ -0,0 +1,192 @@
@@ -16424,7 +16424,7 @@ index 00000000..d5e7fc58
 + 		return -ERANGE;
 diff --git a/target/linux/qualcommbe/patches-6.18/0518-02-net-ethernet-qualcomm-ppe-deliver-virtual-port-flows-on-rx.patch b/target/linux/qualcommbe/patches-6.18/0518-02-net-ethernet-qualcomm-ppe-deliver-virtual-port-flows-on-rx.patch
 new file mode 100644
-index 00000000..36fa852c
+index 00000000000..36fa852c6d8
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0518-02-net-ethernet-qualcomm-ppe-deliver-virtual-port-flows-on-rx.patch
 @@ -0,0 +1,155 @@
@@ -16585,7 +16585,7 @@ index 00000000..36fa852c
 + 		napi_gro_receive(&rxdesc_ring->napi, skb);
 diff --git a/target/linux/qualcommbe/patches-6.18/0519-01-net-ethernet-qualcomm-ppe-route-virtual-port-ingress.patch b/target/linux/qualcommbe/patches-6.18/0519-01-net-ethernet-qualcomm-ppe-route-virtual-port-ingress.patch
 new file mode 100644
-index 00000000..4e622e45
+index 00000000000..4e622e45c27
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0519-01-net-ethernet-qualcomm-ppe-route-virtual-port-ingress.patch
 @@ -0,0 +1,41 @@
@@ -16632,7 +16632,7 @@ index 00000000..4e622e45
 + 			if (ret)
 diff --git a/target/linux/qualcommbe/patches-6.18/0519-02-net-ethernet-qualcomm-ppe-inject-virtual-port-uplink.patch b/target/linux/qualcommbe/patches-6.18/0519-02-net-ethernet-qualcomm-ppe-inject-virtual-port-uplink.patch
 new file mode 100644
-index 00000000..8f8889d3
+index 00000000000..8f8889d31fd
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0519-02-net-ethernet-qualcomm-ppe-inject-virtual-port-uplink.patch
 @@ -0,0 +1,447 @@
@@ -17085,7 +17085,7 @@ index 00000000..8f8889d3
 + irqreturn_t edma_tx_handle_irq(int irq, void *ctx);
 diff --git a/target/linux/qualcommbe/patches-6.18/0520-01-net-ethernet-qualcomm-ppe-intercept-virtual-port-uplink.patch b/target/linux/qualcommbe/patches-6.18/0520-01-net-ethernet-qualcomm-ppe-intercept-virtual-port-uplink.patch
 new file mode 100644
-index 00000000..626d93de
+index 00000000000..626d93defc8
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0520-01-net-ethernet-qualcomm-ppe-intercept-virtual-port-uplink.patch
 @@ -0,0 +1,1182 @@
@@ -18273,7 +18273,7 @@ index 00000000..626d93de
 + #endif
 diff --git a/target/linux/qualcommbe/patches-6.18/0520-02-net-ethernet-qualcomm-ppe-harden-virtual-port-rx-and-teardown.patch b/target/linux/qualcommbe/patches-6.18/0520-02-net-ethernet-qualcomm-ppe-harden-virtual-port-rx-and-teardown.patch
 new file mode 100644
-index 00000000..9ef633c1
+index 00000000000..9ef633c1267
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0520-02-net-ethernet-qualcomm-ppe-harden-virtual-port-rx-and-teardown.patch
 @@ -0,0 +1,356 @@
@@ -18635,7 +18635,7 @@ index 00000000..9ef633c1
 + 	/* Netdevice teardown unbinds the flow blocks and quiesces their
 diff --git a/target/linux/qualcommbe/patches-6.18/0905-net-qcom-ppe-edma-rx-no-stale-next-skb.patch b/target/linux/qualcommbe/patches-6.18/0905-net-qcom-ppe-edma-rx-no-stale-next-skb.patch
 new file mode 100644
-index 00000000..63b7dc92
+index 00000000000..63b7dc92586
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0905-net-qcom-ppe-edma-rx-no-stale-next-skb.patch
 @@ -0,0 +1,48 @@
@@ -18689,7 +18689,7 @@ index 00000000..63b7dc92
 + 			edma_rx_handle_frag_list(rxdesc_ring, rxdesc_pri, skb);
 diff --git a/target/linux/qualcommbe/patches-6.18/0906-net-qcom-ppe-write-whole-table-rows.patch b/target/linux/qualcommbe/patches-6.18/0906-net-qcom-ppe-write-whole-table-rows.patch
 new file mode 100644
-index 00000000..a54cda8f
+index 00000000000..a54cda8f449
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0906-net-qcom-ppe-write-whole-table-rows.patch
 @@ -0,0 +1,91 @@
@@ -18786,7 +18786,7 @@ index 00000000..a54cda8f
 + /**
 diff --git a/target/linux/qualcommbe/patches-6.18/0907-net-qcom-ppe-bridge-offload-opt-in.patch b/target/linux/qualcommbe/patches-6.18/0907-net-qcom-ppe-bridge-offload-opt-in.patch
 new file mode 100644
-index 00000000..71c07e24
+index 00000000000..71c07e24842
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/0907-net-qcom-ppe-bridge-offload-opt-in.patch
 @@ -0,0 +1,56 @@
@@ -18848,7 +18848,7 @@ index 00000000..71c07e24
 + 
 diff --git a/target/linux/qualcommbe/patches-6.18/0910-qca-nss-ecm-support-CORE.patch b/target/linux/qualcommbe/patches-6.18/0910-qca-nss-ecm-support-CORE.patch
 deleted file mode 100644
-index 92f68fb7..00000000
+index 92f68fb7052..00000000000
 --- a/target/linux/qualcommbe/patches-6.18/0910-qca-nss-ecm-support-CORE.patch
 +++ /dev/null
 @@ -1,976 +0,0 @@
@@ -19830,7 +19830,7 @@ index 92f68fb7..00000000
 - 		      (ifr->ifr_flags & TUN_FEATURES);
 diff --git a/target/linux/qualcommbe/patches-6.18/0911-qca-nss-ecm-support-PPPOE-offload.patch b/target/linux/qualcommbe/patches-6.18/0911-qca-nss-ecm-support-PPPOE-offload.patch
 deleted file mode 100644
-index 378dd498..00000000
+index 378dd498304..00000000000
 --- a/target/linux/qualcommbe/patches-6.18/0911-qca-nss-ecm-support-PPPOE-offload.patch
 +++ /dev/null
 @@ -1,556 +0,0 @@
@@ -20392,7 +20392,7 @@ index 378dd498..00000000
 -  * The channel code must ensure that when it calls ppp_unregister_channel,
 diff --git a/target/linux/qualcommbe/patches-6.18/0912-qca-nss-ecm-support-netfilter-DSCPREMARK.patch b/target/linux/qualcommbe/patches-6.18/0912-qca-nss-ecm-support-netfilter-DSCPREMARK.patch
 deleted file mode 100644
-index 9043afbb..00000000
+index 9043afbb1c5..00000000000
 --- a/target/linux/qualcommbe/patches-6.18/0912-qca-nss-ecm-support-netfilter-DSCPREMARK.patch
 +++ /dev/null
 @@ -1,233 +0,0 @@
@@ -20631,7 +20631,7 @@ index 9043afbb..00000000
 - 	    skb->ip_summed != CHECKSUM_PARTIAL) {
 diff --git a/target/linux/qualcommbe/patches-6.18/0913-qca-nss-ecm-fix-IPv6-user-route-change-event-calls.patch b/target/linux/qualcommbe/patches-6.18/0913-qca-nss-ecm-fix-IPv6-user-route-change-event-calls.patch
 deleted file mode 100644
-index fb12b4d0..00000000
+index fb12b4d03f1..00000000000
 --- a/target/linux/qualcommbe/patches-6.18/0913-qca-nss-ecm-fix-IPv6-user-route-change-event-calls.patch
 +++ /dev/null
 @@ -1,87 +0,0 @@
@@ -20724,7 +20724,7 @@ index fb12b4d0..00000000
 - /* add the overhead of this fib6_nh to nexthop_len */
 diff --git a/target/linux/qualcommbe/patches-6.18/0914-qca-nss-ecm-bridge-Fixes-for-Bridge-VLAN-Filtering.patch b/target/linux/qualcommbe/patches-6.18/0914-qca-nss-ecm-bridge-Fixes-for-Bridge-VLAN-Filtering.patch
 deleted file mode 100644
-index 053030f9..00000000
+index 053030f981d..00000000000
 --- a/target/linux/qualcommbe/patches-6.18/0914-qca-nss-ecm-bridge-Fixes-for-Bridge-VLAN-Filtering.patch
 +++ /dev/null
 @@ -1,324 +0,0 @@
@@ -21054,7 +21054,7 @@ index 053030f9..00000000
 - 	u16 pvid = br->default_pvid;
 diff --git a/target/linux/qualcommbe/patches-6.18/0915-qca-nss-qdisc-uapi-pkt_cls-support.patch b/target/linux/qualcommbe/patches-6.18/0915-qca-nss-qdisc-uapi-pkt_cls-support.patch
 deleted file mode 100644
-index cd0cd661..00000000
+index cd0cd661f3e..00000000000
 --- a/target/linux/qualcommbe/patches-6.18/0915-qca-nss-qdisc-uapi-pkt_cls-support.patch
 +++ /dev/null
 @@ -1,29 +0,0 @@
@@ -21089,7 +21089,7 @@ index cd0cd661..00000000
 - #endif
 diff --git a/target/linux/qualcommbe/patches-6.18/0916-qca-nss-clients-add-qdisc-support.patch b/target/linux/qualcommbe/patches-6.18/0916-qca-nss-clients-add-qdisc-support.patch
 deleted file mode 100644
-index 18fb086f..00000000
+index 18fb086fd4f..00000000000
 --- a/target/linux/qualcommbe/patches-6.18/0916-qca-nss-clients-add-qdisc-support.patch
 +++ /dev/null
 @@ -1,457 +0,0 @@
@@ -21552,7 +21552,7 @@ index 18fb086f..00000000
 - 	__u8			csum_level:2;
 diff --git a/target/linux/qualcommbe/patches-6.18/0917-qca-nss-clients-add-bridge-mgr-support.patch b/target/linux/qualcommbe/patches-6.18/0917-qca-nss-clients-add-bridge-mgr-support.patch
 deleted file mode 100644
-index 154992f1..00000000
+index 154992f1ef2..00000000000
 --- a/target/linux/qualcommbe/patches-6.18/0917-qca-nss-clients-add-bridge-mgr-support.patch
 +++ /dev/null
 @@ -1,111 +0,0 @@
@@ -21669,7 +21669,7 @@ index 154992f1..00000000
 - 
 diff --git a/target/linux/qualcommbe/patches-6.18/9511-clk-qcom-qca8k-sleepable-rcg-status.patch b/target/linux/qualcommbe/patches-6.18/9511-clk-qcom-qca8k-sleepable-rcg-status.patch
 new file mode 100644
-index 00000000..9b0e1f4b
+index 00000000000..9b0e1f4bc59
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/9511-clk-qcom-qca8k-sleepable-rcg-status.patch
 @@ -0,0 +1,158 @@
@@ -21833,7 +21833,7 @@ index 00000000..9b0e1f4b
 + 
 diff --git a/target/linux/qualcommbe/patches-6.18/9518-clk-qcom-qca8k-preserve-phy-clock-parent.patch b/target/linux/qualcommbe/patches-6.18/9518-clk-qcom-qca8k-preserve-phy-clock-parent.patch
 new file mode 100644
-index 00000000..49036800
+index 00000000000..490368000c6
 --- /dev/null
 +++ b/target/linux/qualcommbe/patches-6.18/9518-clk-qcom-qca8k-preserve-phy-clock-parent.patch
 @@ -0,0 +1,92 @@
@@ -21929,6 +21929,3 @@ index 00000000..49036800
 + 		.ops = &clk_rcg2_fm_prepare_ops,
 + 	},
 + };
--- 
-2.43.0
-

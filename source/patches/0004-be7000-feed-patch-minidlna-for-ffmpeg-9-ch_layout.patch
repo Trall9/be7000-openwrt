@@ -13,7 +13,7 @@ Subject: [PATCH] be7000: feed patch minidlna for ffmpeg 9 (ch_layout)
 
 diff --git a/feed-patches/apply.sh b/feed-patches/apply.sh
 new file mode 100755
-index 00000000..bf5ab638
+index 00000000000..bf5ab6382fd
 --- /dev/null
 +++ b/feed-patches/apply.sh
 @@ -0,0 +1,6 @@
@@ -25,7 +25,7 @@ index 00000000..bf5ab638
 +done
 diff --git a/feed-patches/packages/multimedia/minidlna/patches/080-ffmpeg-ch-layout.patch b/feed-patches/packages/multimedia/minidlna/patches/080-ffmpeg-ch-layout.patch
 new file mode 100644
-index 00000000..c412f961
+index 00000000000..c412f96145d
 --- /dev/null
 +++ b/feed-patches/packages/multimedia/minidlna/patches/080-ffmpeg-ch-layout.patch
 @@ -0,0 +1,14 @@
@@ -43,6 +43,3 @@ index 00000000..c412f961
 + #define lav_width(s) s->codecpar->width
 + #define lav_height(s) s->codecpar->height
 + #define lav_profile(s) s->codecpar->profile
--- 
-2.43.0
-

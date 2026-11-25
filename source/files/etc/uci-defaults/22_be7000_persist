@@ -37,7 +37,7 @@ CR=/etc/crontabs/root
 touch $CR
 sed -i 's#^\* \* \* \* \* /usr/bin/usb-watchdog.sh#*/10 * * * * /usr/bin/usb-watchdog.sh#' $CR
 grep -qs 'usb-watchdog.sh' $CR    || echo '*/10 * * * * /usr/bin/usb-watchdog.sh' >> $CR
-grep -qs 'be7000-log-dump' $CR    || echo '*/15 * * * * /usr/bin/be7000-log-dump' >> $CR
+grep -qs 'be7000-log-dump' $CR    || echo '*/5 * * * * /usr/bin/be7000-log-dump' >> $CR
 grep -qs 'be7000-ram-guard' $CR   || echo '*/5 * * * * /usr/bin/be7000-ram-guard' >> $CR
 grep -qs 'be7000-config-backup' $CR || echo '7 4 * * * /usr/bin/be7000-config-backup' >> $CR
 /etc/init.d/cron restart 2>/dev/null

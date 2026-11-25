@@ -16,7 +16,7 @@ Claude-Session: https://claude.ai/code/session_01F55aWzRSTFrSN8kqrKnPGN
 
 diff --git a/feed-patches/packages/net/usteer/patches/002-band-steering-skip-2g-only-stations.patch b/feed-patches/packages/net/usteer/patches/002-band-steering-skip-2g-only-stations.patch
 new file mode 100644
-index 00000000..08f66372
+index 00000000000..08f663725a5
 --- /dev/null
 +++ b/feed-patches/packages/net/usteer/patches/002-band-steering-skip-2g-only-stations.patch
 @@ -0,0 +1,117 @@
@@ -137,6 +137,3 @@ index 00000000..08f66372
 + 	_n = blobmsg_open_table(&b, "nodes");
 + 	list_for_each_entry(si, &sta->nodes, list) {
 + 		_cur_n = blobmsg_open_table(&b, usteer_node_name(si->node));
--- 
-2.43.0
-

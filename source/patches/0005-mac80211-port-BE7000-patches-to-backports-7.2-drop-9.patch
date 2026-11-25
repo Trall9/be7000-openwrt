@@ -14,7 +14,7 @@ Subject: [PATCH] mac80211: port BE7000 patches to backports 7.2 (drop 961/307
  delete mode 100644 package/kernel/mac80211/patches/ath12k/307-wifi-ath12k-avoid-duplicate-soc-debugfs-files.patch
 
 diff --git a/package/kernel/mac80211/patches/ath11k/960-wifi-ath11k-add-ipq9574-support.patch b/package/kernel/mac80211/patches/ath11k/960-wifi-ath11k-add-ipq9574-support.patch
-index 3e45f58b..9038bfb3 100644
+index 3e45f58b90b..9038bfb3bb8 100644
 --- a/package/kernel/mac80211/patches/ath11k/960-wifi-ath11k-add-ipq9574-support.patch
 +++ b/package/kernel/mac80211/patches/ath11k/960-wifi-ath11k-add-ipq9574-support.patch
 @@ -32,7 +32,7 @@ Signed-off-by: Igor Kravchenko <igor.kravchenko05@gmail.com>
@@ -36,7 +36,7 @@ index 3e45f58b..9038bfb3 100644
  +		.alloc_cacheable_memory = true,
 diff --git a/package/kernel/mac80211/patches/ath11k/961-wifi-ath11k-use-iommu-paging-domain-allocator.patch b/package/kernel/mac80211/patches/ath11k/961-wifi-ath11k-use-iommu-paging-domain-allocator.patch
 deleted file mode 100644
-index 6f55f802..00000000
+index 6f55f80284c..00000000000
 --- a/package/kernel/mac80211/patches/ath11k/961-wifi-ath11k-use-iommu-paging-domain-allocator.patch
 +++ /dev/null
 @@ -1,19 +0,0 @@
@@ -61,7 +61,7 @@ index 6f55f802..00000000
 - 		ret = -ENOMEM;
 diff --git a/package/kernel/mac80211/patches/ath12k/307-wifi-ath12k-avoid-duplicate-soc-debugfs-files.patch b/package/kernel/mac80211/patches/ath12k/307-wifi-ath12k-avoid-duplicate-soc-debugfs-files.patch
 deleted file mode 100644
-index db683f5d..00000000
+index db683f5d8cd..00000000000
 --- a/package/kernel/mac80211/patches/ath12k/307-wifi-ath12k-avoid-duplicate-soc-debugfs-files.patch
 +++ /dev/null
 @@ -1,18 +0,0 @@
@@ -83,6 +83,3 @@ index db683f5d..00000000
 - 		ath12k_mac_set_device_defaults(ab);
 - 		total_radio += ab->num_radios;
 - 	}
--- 
-2.43.0
-

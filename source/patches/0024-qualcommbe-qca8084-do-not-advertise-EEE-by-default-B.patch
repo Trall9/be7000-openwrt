@@ -1,0 +1,62 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Trall9 <tralllll9@gmail.com>
+Date: Wed, 25 Nov 2026 01:36:34 +0100
+Subject: [PATCH] qualcommbe: qca8084: do not advertise EEE by default (Beam
+ WRT 0910)
+
+From Beam WRT 1.5.6 (Timofey Maykov). The PPE MAC cannot signal LPI;
+EEE advertised out of reset caused rx CRC errors and link flaps with
+some ISP ONTs at 1G. ethtool --set-eee can turn it back on.
+
+Claude-Session: https://claude.ai/code/session_01F55aX2seqR8MdAoMzYRsjG
+---
+ ...0910-net-phy-qca8084-eee-default-off.patch | 40 +++++++++++++++++++
+ 1 file changed, 40 insertions(+)
+ create mode 100644 target/linux/qualcommbe/patches-6.18/0910-net-phy-qca8084-eee-default-off.patch
+
+diff --git a/target/linux/qualcommbe/patches-6.18/0910-net-phy-qca8084-eee-default-off.patch b/target/linux/qualcommbe/patches-6.18/0910-net-phy-qca8084-eee-default-off.patch
+new file mode 100644
+index 00000000000..ec5f93e0c76
+--- /dev/null
++++ b/target/linux/qualcommbe/patches-6.18/0910-net-phy-qca8084-eee-default-off.patch
+@@ -0,0 +1,40 @@
++From: Timofey Maykov <itnitro@gmail.com>
++Subject: [PATCH] net: phy: qca8084: do not advertise EEE by default
++
++The qca808x driver has no EEE ops, so phylib keeps whatever EEE
++advertisement the PHY has out of reset and replays it at every
++auto-negotiation. On the QCA8084 that reset default is "advertise
++everything". With some link partners this trains badly: ISP ONTs
++(Eltex, Huawei) at 1G show a storm of rx CRC errors, QUIC/UDP loss
++and link flaps until EEE is switched off. The PPE MAC cannot signal
++LPI anyway, so EEE buys nothing here.
++
++Clear the advertisement and the enabled flag in config_init. phylib
++then writes zero EEE advertisement at every aneg. Users who want EEE
++can still turn it on with ethtool --set-eee, the eee_disabled_modes
++mask is left untouched.
++
++Signed-off-by: Timofey Maykov <itnitro@gmail.com>
++[BE7000 tree: taken from Beam WRT 1.5.6 (timofey-maykov/be7000-openwrt,
++ patches/0910), GPL-2.0 like the file it changes.]
++---
++--- a/drivers/net/phy/qcom/qca808x.c
+++++ b/drivers/net/phy/qcom/qca808x.c
++@@ -944,6 +944,17 @@
++ {
++ 	int ret;
++ 
+++	/* phylib preserves the EEE advertisement found at probe, and
+++	 * this PHY advertises EEE out of reset. EEE trains badly with
+++	 * some link partners (ISP ONTs at 1G were reported with rx CRC
+++	 * errors and link flaps), and the MAC cannot signal LPI, so do
+++	 * not advertise it by default. ethtool --set-eee can still turn
+++	 * it on.
+++	 */
+++	linkmode_zero(phydev->advertising_eee);
+++	phydev->eee_cfg.eee_enabled = false;
+++	phydev->eee_cfg.tx_lpi_enabled = false;
+++
++ 	if (phy_package_init_once(phydev)) {
++ 		ret = qca8084_phy_package_config_init_once(phydev);
++ 		if (ret)

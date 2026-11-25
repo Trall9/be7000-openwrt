@@ -36,7 +36,7 @@ Claude-Session: https://claude.ai/code/session_01QwnEsRTxW1M7XMasPGxfRD
 
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/block/05-usb-disk-guard b/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/block/05-usb-disk-guard
 new file mode 100644
-index 00000000..6aab8369
+index 00000000000..6aab8369689
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/hotplug.d/block/05-usb-disk-guard
 @@ -0,0 +1,9 @@
@@ -51,7 +51,7 @@ index 00000000..6aab8369
 +esac
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/usb-hangwatch b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/usb-hangwatch
 new file mode 100755
-index 00000000..78ff33a7
+index 00000000000..78ff33a7142
 --- /dev/null
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/init.d/usb-hangwatch
 @@ -0,0 +1,11 @@
@@ -67,7 +67,7 @@ index 00000000..78ff33a7
 +	procd_close_instance
 +}
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/20_be7000_cpu_perf b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/20_be7000_cpu_perf
-index 371678a6..1b8982b0 100644
+index 371678a6e00..1b8982b039e 100644
 --- a/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/20_be7000_cpu_perf
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/etc/uci-defaults/20_be7000_cpu_perf
 @@ -1,13 +1,18 @@
@@ -94,7 +94,7 @@ index 371678a6..1b8982b0 100644
  grep -qsF "$LINE" /etc/rc.local || sed -i "/^exit 0/i $LINE" /etc/rc.local
  exit 0
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
-index 15a8df66..aa55afcb 100755
+index 15a8df667b9..aa55afcb669 100755
 --- a/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
 @@ -13,9 +13,9 @@ grep -q "^uapsd_advertisement_enabled=0" /var/run/hostapd-phy1.conf 2>/dev/null
@@ -111,7 +111,7 @@ index 15a8df66..aa55afcb 100755
  # 4. Flow offload
  nft list flowtables 2>/dev/null | grep -q "flowtable" \
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-health-check b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-health-check
-index 4daa17ce..57b3ab77 100755
+index 4daa17ced0d..57b3ab77a45 100755
 --- a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-health-check
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-health-check
 @@ -59,7 +59,7 @@ done
@@ -124,7 +124,7 @@ index 4daa17ce..57b3ab77 100755
  fi
  
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-log-dump b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-log-dump
-index 230347a2..235189af 100755
+index 230347a24f9..235189af2d4 100755
 --- a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-log-dump
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-log-dump
 @@ -1,33 +1,35 @@
@@ -183,7 +183,7 @@ index 230347a2..235189af 100755
  # ротация: 5МБ → current становится prev
  if [ -f $CUR ] && [ "$(wc -c < $CUR)" -gt 5242880 ]; then
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-ram-guard b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-ram-guard
-index 907a6895..cd8e115e 100755
+index 907a6895db8..cd8e115e610 100755
 --- a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-ram-guard
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/be7000-ram-guard
 @@ -5,11 +5,17 @@
@@ -206,7 +206,7 @@ index 907a6895..cd8e115e 100755
  	fi
  	exit 0
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/usb-watchdog.sh b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/usb-watchdog.sh
-index 681a626c..5d6a0ffd 100755
+index 681a626c287..5d6a0ffd1de 100755
 --- a/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/usb-watchdog.sh
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/usr/bin/usb-watchdog.sh
 @@ -1,5 +1,8 @@
@@ -402,6 +402,3 @@ index 681a626c..5d6a0ffd 100755
  	# один раз после (пере)монтирования: «Стоп» из LuCI не перебиваем каждую минуту
  	if [ ! -e $AUTOSTARTED ] && [ -x /usr/bin/opt-install ]; then
  		touch $AUTOSTARTED
--- 
-2.43.0
-

@@ -11,10 +11,10 @@
 # не нужны. Миграция с 22.10 (было 30000) — до проверки маркера.
 # 24.10 usteer ВЫКЛЮЧЕН по умолчанию: aggressiveness=3 → BTM с disassoc imminent,
 # hostapd кикал ТВ (только 2.4 ГГц, -32 dBm) каждые ~124 с (reason 12), ~24 с без сети.
-# Пакет и конфиг остаются, включать вручную: /etc/init.d/usteer enable && start.
+# beta5.2: снова включён — патч usteer 002 переводит только клиентов, замеченных
+# на 5 ГГц; 2.4-only (ТВ, IoT) не трогаются. Проверено 01.11 (телефон 2.4 → 5).
+# Выключить: /etc/init.d/usteer disable && /etc/init.d/usteer stop.
 [ -f /etc/config/usteer ] || exit 0
-/etc/init.d/usteer disable 2>/dev/null
-/etc/init.d/usteer stop 2>/dev/null
 if [ "$(uci -q get usteer.@usteer[0].be7000)" = "1" ]; then
 	if [ "$(uci -q get usteer.@usteer[0].link_measurement_interval)" = "30000" ]; then
 		uci set usteer.@usteer[0].link_measurement_interval='0'

@@ -11,7 +11,7 @@ Claude-Session: https://claude.ai/code/session_01QwnEsRTxW1M7XMasPGxfRD
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
-index aa55afcb..d69ac114 100755
+index aa55afcb669..d69ac114f97 100755
 --- a/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/sbin/be7000-wifi-check
 @@ -45,7 +45,8 @@ case "$aff" in
@@ -24,6 +24,3 @@ index aa55afcb..d69ac114 100755
  echo "[INFO] speedbin raw(0x14..0x15): $b (ожидаемо 0080 = bin 1, потолок 1488МГц)"
  
  echo "-------------------------------------"
--- 
-2.43.0
-

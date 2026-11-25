@@ -26,7 +26,7 @@ Claude-Session: https://claude.ai/code/session_016s4ZCYE4HWyW97D5LRd25E
  1 file changed, 161 insertions(+), 21 deletions(-)
 
 diff --git a/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh b/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
-index 88b90e1d..c7eb15be 100644
+index 88b90e1d9cd..c7eb15bee2c 100644
 --- a/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
 +++ b/target/linux/qualcommbe/ipq95xx/base-files/lib/upgrade/platform.sh
 @@ -2,7 +2,7 @@ PART_NAME=firmware
@@ -254,6 +254,3 @@ index 88b90e1d..c7eb15be 100644
  		;;
  	*)
  		return 0
--- 
-2.43.0
-
