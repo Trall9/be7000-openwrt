@@ -1,0 +1,60 @@
+#!/bin/sh
+# Обновление прошивки BE7000 в один клик: сверяет версию с latest.json на сайте
+# сборки, качает sysupgrade-образ в /tmp, проверяет sha256 и sysupgrade -T,
+# затем прошивает с сохранением настроек и списка пакетов (как LuCI с галками).
+# check | status | download | install
+
+URL=https://trall9.github.io/be7000-openwrt/latest.json
+D=/tmp/be7000-update
+IMG=$D/sysupgrade.bin
+mkdir -p $D
+
+. /etc/openwrt_release
+CUR=${DISTRIB_RELEASE#be7000-qwrt-}
+VAR=full; case $CUR in *-mini) VAR=mini; CUR=${CUR%-mini} ;; esac
+
+field() { jsonfilter -i $D/latest.json -e "@.$VAR.$1" 2>/dev/null; }
+state() { cat $D/state 2>/dev/null || echo idle; }
+status() {
+	NEW=$(field version)
+	AV=false; [ -n "$NEW" ] && [ "$NEW" != "$CUR" ] && AV=true
+	printf '{"current":"%s","variant":"%s","latest":"%s","available":%s,"notes":"%s","state":"%s","msg":"%s"}\n' \
+		"$CUR" "$VAR" "$NEW" "$AV" "$(field notes)" "$(state)" "$(cat $D/msg 2>/dev/null | tr -d '"\\\n')"
+}
+
+case "$1" in
+check)
+	wget -q -T 20 -O $D/latest.json.new "$URL?$(date +%s)" && mv $D/latest.json.new $D/latest.json || {
+		rm -f $D/latest.json.new
+		echo '{"error":"Не удалось получить latest.json — нет интернета или сайт недоступен"}'
+		exit 0
+	}
+	status
+	;;
+status) status ;;
+download)
+	[ "$2" = bg ] || {
+		case $(state) in downloading|flashing) exit 0 ;; esac
+		[ -f $D/latest.json ] || { echo "сначала check" >&2; exit 1; }
+		echo downloading > $D/state; : > $D/msg
+		# rpcd file exec ждёт потомков от «&»; start-stop-daemon -b отцепляется полностью
+		start-stop-daemon -S -b -m -p $D/pid -x "$0" -- download bg
+		exit 0
+	}
+	rm -f $IMG
+	fail() { echo "$1" > $D/msg; echo error > $D/state; rm -f $IMG; exit 1; }
+	# url — API-ссылка на файл релиза: github.com через mbedtls (uclient-fetch) виснет,
+	# api.github.com и release-assets работают
+	wget -q -T 30 --header='Accept: application/octet-stream' -O $IMG "$(field url)" || fail "Ошибка скачивания образа"
+	[ "$(sha256sum $IMG | cut -d' ' -f1)" = "$(field sha256)" ] || fail "Контрольная сумма не совпала — образ повреждён"
+	sysupgrade -T $IMG >$D/msg 2>&1 || fail "Образ не прошёл проверку sysupgrade: $(tail -n1 $D/msg)"
+	: > $D/msg; echo ready > $D/state
+	;;
+install)
+	[ "$(state)" = ready ] || { echo "образ не скачан" >&2; exit 1; }
+	echo flashing > $D/state
+	# пауза, чтобы LuCI успела получить ответ до обрыва связи
+	start-stop-daemon -S -b -m -p $D/pid -x /bin/sh -- -c "sleep 2; sysupgrade -k $IMG"
+	;;
+*) echo "usage: $0 check|status|download|install" >&2; exit 1 ;;
+esac

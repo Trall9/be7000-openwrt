@@ -1,0 +1,15 @@
+{
+	"luci-app-be7000-update": {
+		"description": "Обновление прошивки BE7000 в один клик",
+		"read": {
+			"file": {
+				"/usr/bin/be7000-update": [ "exec" ]
+			}
+		},
+		"write": {
+			"file": {
+				"/usr/bin/be7000-update": [ "exec" ]
+			}
+		}
+	}
+}
