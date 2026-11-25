@@ -1,0 +1,157 @@
+#!/bin/sh
+# Функции сборки BE7000 по /etc/config/be7000: гостевая сеть, ночной режим подсветки,
+# расписание Wi-Fi, действие кнопки WPS. Вызывается из /etc/init.d/be7000-features
+# (при сохранении в LuCI), из cron и из /etc/rc.wps/10-be7000.
+# apply | leds on|off|toggle | wifi on|off|toggle
+. /lib/functions.sh
+TAG='#be7000-features'
+LS=/tmp/be7000-leds
+CR=/etc/crontabs/root
+
+leds_off() {
+	[ -d $LS ] && return
+	mkdir -p $LS
+	for l in /sys/class/leds/*; do
+		n=$(basename "$l")
+		echo "$(sed -n 's/.*\[\(.*\)\].*/\1/p' "$l/trigger") $(cat "$l/brightness")" > "$LS/$n"
+		echo none > "$l/trigger"; echo 0 > "$l/brightness"
+	done
+}
+leds_on() {
+	[ -d $LS ] || return
+	for f in $LS/*; do
+		l=/sys/class/leds/$(basename "$f"); read -r t b < "$f"
+		echo "$t" > "$l/trigger" 2>/dev/null; echo "$b" > "$l/brightness" 2>/dev/null
+	done
+	rm -rf $LS
+	# светодиоды из «Система → Светодиоды» (netdev и т. п.) — заново по настройкам
+	/etc/init.d/led restart 2>/dev/null
+}
+wifi_up() { [ -n "$(ubus -S list 'hostapd.*')" ]; }
+
+# HH:MM → минуты; now_in A B — сейчас внутри интервала [A, B) (через полночь тоже)
+mins() { echo "$1" | awk -F: '{ print $1 * 60 + $2 }'; }
+now_in() {
+	n=$(mins $(date +%H:%M)); a=$(mins $1); b=$(mins $2)
+	[ $a -le $b ] && [ $n -ge $a ] && [ $n -lt $b ] && return 0
+	[ $a -gt $b ] && { [ $n -ge $a ] || [ $n -lt $b ]; } && return 0
+	return 1
+}
+cronline() { echo "$1" | awk -F: -v d="$2" -v c="$3 $TAG" '{ print $2 + 0, $1 + 0, "*", "*", d, c }'; }
+valid() { echo "$1" | grep -qE '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'; }
+
+apply_sched() {
+	config_load be7000
+	sed -i "/$TAG/d" $CR
+	config_get_bool on leds night 0; config_get a leds off; config_get b leds on
+	if [ $on = 1 ] && valid "$a" && valid "$b"; then
+		cronline $a '*' "/usr/libexec/be7000-features leds off" >> $CR
+		cronline $b '*' "/usr/libexec/be7000-features leds on" >> $CR
+		if now_in $a $b; then leds_off; else leds_on; fi
+	else
+		leds_on
+	fi
+	config_get_bool on wifi_schedule enabled 0; config_get a wifi_schedule off; config_get b wifi_schedule on
+	config_get d wifi_schedule days '*'
+	echo "$d" | grep -qE '^(\*|[0-6](-[0-6])?(,[0-6](-[0-6])?)*)$' || d='*'
+	if [ $on = 1 ] && valid "$a" && valid "$b"; then
+		# выключение — по выбранным дням, включение — каждый день (Wi-Fi не останется выключенным)
+		cronline $a "$d" "/usr/libexec/be7000-features wifi off" >> $CR
+		cronline $b '*' "/usr/libexec/be7000-features wifi on" >> $CR
+	fi
+	/etc/init.d/cron restart
+}
+
+# гостевая сеть: свои секции guest* в network/wireless/dhcp/firewall
+guest_del() {
+	for s in network.guest network.guest_dev dhcp.guest firewall.guest_zone firewall.guest_fwd \
+		firewall.guest_dns firewall.guest_dhcp; do uci -q delete $s; done
+	for s in $(uci -q show wireless | sed -n 's/^wireless\.\(guest_[^.=]*\)=wifi-iface$/\1/p'); do
+		uci -q delete wireless.$s
+	done
+}
+guest_radio() {
+	local r=$1
+	uci batch <<-EOT
+	set wireless.guest_$r=wifi-iface
+	set wireless.guest_$r.device=$r
+	set wireless.guest_$r.mode=ap
+	set wireless.guest_$r.network=guest
+	set wireless.guest_$r.isolate=1
+	EOT
+	uci set wireless.guest_$r.ssid="$G_SSID"
+	if [ -n "$G_KEY" ]; then
+		uci set wireless.guest_$r.encryption=sae-mixed; uci set wireless.guest_$r.key="$G_KEY"
+	else
+		uci set wireless.guest_$r.encryption=none
+	fi
+}
+apply_guest() {
+	H=$(uci -q show be7000.guest | md5sum | cut -c1-32)
+	[ "$H" = "$(cat /etc/be7000-guest.applied 2>/dev/null)" ] && return
+	config_load be7000
+	config_get_bool en guest enabled 0; config_get G_SSID guest ssid; config_get G_KEY guest key
+	# выключена и следов нет — ничего не перезапускаем (первая загрузка, обновление)
+	if [ $en != 1 ] && ! uci -q get network.guest >/dev/null; then echo "$H" > /etc/be7000-guest.applied; return; fi
+	guest_del
+	if [ $en = 1 ] && [ -n "$G_SSID" ]; then
+		NET=192.168.77.1
+		case "$(uci -q get network.lan.ipaddr)" in 192.168.77.*) NET=192.168.78.1 ;; esac
+		uci batch <<-EOT
+		set network.guest_dev=device
+		set network.guest_dev.name=br-guest
+		set network.guest_dev.type=bridge
+		set network.guest_dev.bridge_empty=1
+		set network.guest=interface
+		set network.guest.proto=static
+		set network.guest.device=br-guest
+		set network.guest.ipaddr=$NET/24
+		set dhcp.guest=dhcp
+		set dhcp.guest.interface=guest
+		set dhcp.guest.start=100
+		set dhcp.guest.limit=150
+		set dhcp.guest.leasetime=2h
+		set dhcp.guest.ra=disabled
+		set dhcp.guest.dhcpv6=disabled
+		set firewall.guest_zone=zone
+		set firewall.guest_zone.name=guest
+		add_list firewall.guest_zone.network=guest
+		set firewall.guest_zone.input=REJECT
+		set firewall.guest_zone.output=ACCEPT
+		set firewall.guest_zone.forward=REJECT
+		set firewall.guest_fwd=forwarding
+		set firewall.guest_fwd.src=guest
+		set firewall.guest_fwd.dest=wan
+		set firewall.guest_dns=rule
+		set firewall.guest_dns.name=Guest-DNS
+		set firewall.guest_dns.src=guest
+		set firewall.guest_dns.dest_port=53
+		set firewall.guest_dns.proto='tcp udp'
+		set firewall.guest_dns.target=ACCEPT
+		set firewall.guest_dhcp=rule
+		set firewall.guest_dhcp.name=Guest-DHCP
+		set firewall.guest_dhcp.src=guest
+		set firewall.guest_dhcp.dest_port=67
+		set firewall.guest_dhcp.proto=udp
+		set firewall.guest_dhcp.target=ACCEPT
+		EOT
+		config_load wireless
+		config_foreach guest_radio wifi-device
+	fi
+	uci commit network; uci commit wireless; uci commit dhcp; uci commit firewall
+	echo "$H" > /etc/be7000-guest.applied
+	/etc/init.d/network reload; wifi reload; /etc/init.d/firewall reload
+	/etc/init.d/dnsmasq reload; /etc/init.d/odhcpd reload 2>/dev/null
+	logger -t be7000-features "гостевая сеть: $([ $en = 1 ] && echo "включена ($G_SSID)" || echo выключена)"
+}
+
+case "$1 $2" in
+"apply "*) apply_sched; apply_guest ;;
+"leds off") leds_off ;;
+"leds on") leds_on ;;
+"leds toggle") if [ -d $LS ]; then leds_on; else leds_off; fi ;;
+"wifi off") wifi_up && { logger -t be7000-features "Wi-Fi выключен по расписанию"; wifi down; } ;;
+"wifi on") wifi_up || { logger -t be7000-features "Wi-Fi включён по расписанию"; wifi up; } ;;
+"wifi toggle") if wifi_up; then wifi down; else wifi up; fi ;;
+*) echo "usage: $0 apply | leds on|off|toggle | wifi on|off|toggle" >&2; exit 1 ;;
+esac

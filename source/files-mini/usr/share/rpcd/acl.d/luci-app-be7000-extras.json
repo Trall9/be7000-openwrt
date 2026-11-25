@@ -1,0 +1,12 @@
+{
+	"luci-app-be7000-extras": {
+		"description": "Гостевая сеть, подсветка, расписание Wi-Fi, кнопка, температуры",
+		"read": {
+			"file": { "/usr/bin/be7000-temps": [ "exec" ] },
+			"uci": [ "be7000" ]
+		},
+		"write": {
+			"uci": [ "be7000" ]
+		}
+	}
+}

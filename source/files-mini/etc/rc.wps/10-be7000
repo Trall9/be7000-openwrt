@@ -1,0 +1,9 @@
+#!/bin/sh
+# Кнопка WPS: действие из be7000.button.wps (wps — стандартное подключение WPS).
+# exit 0 — нажатие обработано, остальные /etc/rc.wps/* не запускаются.
+case "$(uci -q get be7000.button.wps)" in
+wifi) /usr/libexec/be7000-features wifi toggle; logger -t be7000-features "кнопка: Wi-Fi вкл/выкл" ;;
+leds) /usr/libexec/be7000-features leds toggle ;;
+*) exit 1 ;;
+esac
+exit 0

@@ -1,0 +1,24 @@
+#!/bin/sh
+# Настройки функций сборки (гостевая сеть, подсветка, расписание Wi-Fi, кнопка).
+# Существующий /etc/config/be7000 (после обновления с сохранением настроек) не трогаем.
+[ -s /etc/config/be7000 ] || cat > /etc/config/be7000 <<'EOT'
+config guest 'guest'
+	option enabled '0'
+	option ssid 'Guest'
+
+config leds 'leds'
+	option night '0'
+	option off '23:00'
+	option on '07:00'
+
+config wifi_schedule 'wifi_schedule'
+	option enabled '0'
+	option off '01:00'
+	option on '07:00'
+	option days '*'
+
+config button 'button'
+	option wps 'wps'
+EOT
+/etc/init.d/be7000-features enable
+exit 0

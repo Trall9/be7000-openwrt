@@ -1,0 +1,8 @@
+#!/bin/sh /etc/rc.common
+# Применение /etc/config/be7000 при загрузке и при сохранении в LuCI.
+START=99
+USE_PROCD=1
+
+start_service() { /usr/libexec/be7000-features apply; }
+reload_service() { /usr/libexec/be7000-features apply; }
+service_triggers() { procd_add_reload_trigger be7000; }

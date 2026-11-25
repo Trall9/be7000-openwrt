@@ -1,0 +1,27 @@
+#!/bin/sh
+# Температуры для главной LuCI: процессор, NSS, Wi-Fi 2,4 ГГц и USB-диски (SMART).
+# JSON [{"name":..,"t":..}]. Диски — из кэша, обновление не чаще раза в 5 минут и с
+# -n standby: спящий HDD не будим (смарт по USB-мосту — подбор типа -d).
+z() { for f in /sys/class/thermal/thermal_zone*; do
+	case "$(cat $f/type)" in $1) cat $f/temp ;; esac; done | sort -n | tail -n1; }
+out() { [ -n "$2" ] && printf '%s{"name":"%s","t":%d}' "$S" "$1" $(( $2 / 1000 )) && S=,; }
+S=; printf '['
+out "Процессор" "$(z 'cpu*')"
+out "NSS" "$(z 'nss*')"
+out "Wi-Fi 2,4 ГГц" "$(z 'wcss*')"
+C=/tmp/be7000-temps-disk
+if [ -x /usr/sbin/smartctl ] && { [ ! -f $C ] || [ -n "$(find $C -mmin +5)" ]; }; then
+	: > $C.new
+	for d in $(ls /sys/block | grep -E '^(sd[a-z]|nvme[0-9]+n[0-9]+)$'); do
+		T=; for t in auto sntrealtek sntjmicron sntasmedia sat; do
+			T=$(smartctl -n standby -A -d $t /dev/$d 2>/dev/null | awk '
+				/^Temperature:/ { print $2; exit }
+				/Temperature_Celsius|Airflow_Temperature/ { print $10; exit }')
+			[ -n "$T" ] && break
+		done
+		[ -n "$T" ] && echo "$d $T" >> $C.new
+	done
+	mv $C.new $C
+fi
+[ -f $C ] && while read -r d t; do out "Диск $d" $((t * 1000)); done < $C
+echo ']'

@@ -1,0 +1,14 @@
+{
+	"admin/network/be7000-guest": {
+		"title": "Гостевая сеть",
+		"order": 35,
+		"action": { "type": "view", "path": "be7000-guest" },
+		"depends": { "acl": [ "luci-app-be7000-extras" ], "uci": { "be7000": true } }
+	},
+	"admin/system/be7000-extras": {
+		"title": "Подсветка, кнопка, расписание",
+		"order": 68,
+		"action": { "type": "view", "path": "be7000-extras" },
+		"depends": { "acl": [ "luci-app-be7000-extras" ], "uci": { "be7000": true } }
+	}
+}
