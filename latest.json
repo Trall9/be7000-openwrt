@@ -6,9 +6,9 @@
   "notes": "https://github.com/Trall9/be7000-openwrt/releases/tag/beta5.2.1"
  },
  "mini": {
-  "version": "beta5.2",
-  "url": "https://api.github.com/repos/Trall9/be7000-openwrt/releases/assets/789711358",
-  "sha256": "d4f81d537f7bdd7d0ff57a27e77a40f3cff59dcc26ca136600d3d9d702caf23f",
-  "notes": "https://github.com/Trall9/be7000-openwrt/releases/tag/beta5.2-mini"
+  "version": "beta5.2.1",
+  "url": "https://api.github.com/repos/Trall9/be7000-openwrt/releases/assets/800683386",
+  "sha256": "e2952ec4d5a36b8f8806076ac51d09e2af59e183c8abe8f2481fc75b0f3b62d9",
+  "notes": "https://github.com/Trall9/be7000-openwrt/releases/tag/beta5.2.1-mini"
  }
 }
