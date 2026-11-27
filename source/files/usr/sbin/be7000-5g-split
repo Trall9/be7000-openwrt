@@ -433,6 +433,14 @@ case "$1" in
 	boot)
 		saved=$(saved_mode)
 		if [ $saved != single ]; then mode=split; id=$SPLIT_ID; else mode=single; id=0; fi
+		# one radio, but /etc/config/wireless still describes two (a restored
+		# file, power lost mid-switch): hostapd would fail on 5 GHz
+		r="$(main_radio)"
+		if [ $mode = single ] && [ -n "$r" ] && { [ -n "$(low_radio $r)" ] || [ "$(uci -q get wireless.$r.radio)" = 1 ]; }; then
+			logger -t be7000-5g-split "two-radio config in single mode, back to one radio"
+			config_mlo_off
+			config_off
+		fi
 		if [ -e "$PARAM" ]; then
 			# ath12k is already in: switch it by a rebind
 			apply_fw $id || exit 0
