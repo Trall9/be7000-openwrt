@@ -1,0 +1,28 @@
+#!/bin/sh
+# fw4 раскрывает порты моста в список устройств flowtable только в момент
+# reload. Wi-Fi-интерфейс, поднятый позже (DFS CAC, wifi reload, смена
+# режима 5 ГГц), остаётся вне flowtable — его клиенты идут без разгрузки.
+# Ждём входа интерфейса в мост и перезагружаем fw4, если его там нет.
+[ "$ACTION" = add ] || exit 0
+case "$INTERFACE" in phy*-ap*|wlan*) ;; *) exit 0 ;; esac
+case "$INTERFACE" in *.sta*) exit 0 ;; esac
+[ "$(uci -q get firewall.@defaults[0].flow_offloading)" = 1 ] || exit 0
+
+(
+	dev=$INTERFACE
+	i=0
+	while [ ! -e /sys/class/net/$dev/master ]; do
+		[ -e /sys/class/net/$dev ] || exit 0
+		i=$((i + 1)); [ $i -gt 120 ] && exit 0
+		sleep 1
+	done
+	sleep 3
+	exec 9>/var/lock/be7000-flowtable.lock
+	flock 9
+	ft=$(nft list flowtables inet 2>/dev/null) || exit 0
+	[ -n "$ft" ] || exit 0
+	echo "$ft" | grep -q "\"$dev\"" && exit 0
+	logger -t firewall "Reloading firewall: $dev not in flowtable"
+	fw4 -q reload
+) </dev/null >/dev/null 2>&1 &
+exit 0
