@@ -2,7 +2,7 @@
 # 5 GHz split, like 5G-1 and 5G-2 on stock: the QCN9274 runs its dual-MAC
 # firmware as two radios, 36-64 and 149-165.
 #
-#   be7000-5g-split status | mode [single|split|mlo] | on | off
+#   be7000-5g-split status | mode [single|split|mlo] | on | off | sync
 #
 # on and off are the old names of mode split and mode single.
 #
@@ -420,6 +420,13 @@ case "$1" in
 	on)
 		to_split split || exit 1
 		;;
+	sync)
+		# after Wi-Fi settings are saved in LuCI: the MLO network, which
+		# LuCI does not show, takes the name, password and the other
+		# options of the 5 GHz network edited there
+		/usr/libexec/be7000-wifi-sync && wifi reload
+		exit 0
+		;;
 	off)
 		to_single || exit 1
 		;;
@@ -454,7 +461,7 @@ case "$1" in
 		exit 0
 		;;
 	*)
-		echo "usage: $0 status | mode [single|split|mlo] | on | off" >&2
+		echo "usage: $0 status | mode [single|split|mlo] | on | off | sync" >&2
 		exit 1
 		;;
 esac

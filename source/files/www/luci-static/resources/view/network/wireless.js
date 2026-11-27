@@ -668,12 +668,24 @@ var CBIWifiCountryValue = form.Value.extend({
 	}),
 
 	load: function(section_id) {
-		return this.callCountryList(section_id).then(L.bind(function(countrylist) {
+		return Promise.all([ this.callCountryList(section_id), L.resolveDefault(fetch(L.resource('be7000-reg.json')).then(r => r.json()), {}) ]).then(L.bind(function([ countrylist, reg ]) {
 			if (Array.isArray(countrylist) && countrylist.length > 0) {
 				this.value('', _('driver default'));
 
+				/* be7000: лимиты чипа по странам (be7000-reg.json), лучшие сверху */
+				const ru = /^ru/.test(document.documentElement.lang || ''),
+				      n = x => x ? String(x) : '—',
+				      lbl = r => r.s < 0 ? (ru ? 'чип не поддерживает' : 'not supported by the chip') :
+				        `2.4: ${n(r.p[0])} · 5: ${r.p.slice(1).map(n).join('/')}` +
+				        (r.d ? '' : (ru ? ' · без DFS' : ' · no DFS')) + (r.e ? '' : (ru ? ' · без Wi-Fi 7' : ' · no Wi-Fi 7')),
+				      sc = c => (reg[c.iso3166] || { s: -2 }).s;
+				countrylist.sort((x, y) => sc(y) - sc(x));
 				for (let c of countrylist)
-					this.value(c.iso3166, `${c.iso3166} - ${c.country}`);
+					this.value(c.iso3166, `${c.iso3166} - ${c.country}` + (reg[c.iso3166] ? ` · ${lbl(reg[c.iso3166])}` : ''));
+				if (Object.keys(reg).length)
+					this.description = ru
+						? 'Лимиты чипа, dBm: 2,4 ГГц · 5 ГГц на каналах 36–48/52–64/100–144/149–165; «—» — каналы запрещены. Сверху — самые мощные. Реальная мощность может быть ниже.'
+						: 'Chip limits, dBm: 2.4 GHz · 5 GHz on channels 36–48/52–64/100–144/149–165; “—” = channels not allowed. Strongest countries first. Actual power may be lower.';
 			}
 
 			return form.Value.prototype.load.apply(this, [section_id]);
@@ -1023,6 +1035,9 @@ return view.extend({
 				o.ucisection = s.section;
 
 				if (hwtype == 'mac80211') {
+					o = ss.taboption('general', form.Flag, 'acs_exclude_dfs', _('Exclude DFS channels'), _('Automatic channel selection skips the DFS channels. These need a radar check of 1 to 10 minutes before the access point starts, and the access point has to leave the channel when a radar is detected. Where all 5 GHz channels are DFS channels, no channel is found then.'));
+					o.depends({'_freq': /,5g,auto$/});
+
 					o = ss.taboption('general', form.Flag, 'legacy_rates', _('Allow legacy 802.11b rates'), _('Legacy or badly behaving devices may require legacy 802.11b rates to interoperate. Airtime efficiency may be significantly reduced where these are used. It is recommended to not allow 802.11b rates where possible.'));
 					o.depends({'_freq': '2g', '!contains': true});
 
@@ -2077,7 +2092,10 @@ return view.extend({
 						const eo = this.section.children.filter(function(o) { return o.option == 'eap_type'; })[0];
 						const ev = eo.formvalue(section_id);
 
-						if (ev != 'ttls' && (value == 'PAP' || value == 'CHAP' || value == 'MSCHAP' || value == 'MSCHAPV2'))
+						if (ev != 'ttls' && (value == 'PAP' || value == 'CHAP' || value == 'MSCHAP'))
+							return _('This authentication type is not applicable to the selected EAP method.');
+
+						if (ev != 'ttls' && ev != 'peap' && value == 'MSCHAPV2')
 							return _('This authentication type is not applicable to the selected EAP method.');
 
 						return true;

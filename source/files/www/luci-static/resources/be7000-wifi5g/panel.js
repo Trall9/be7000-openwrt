@@ -44,6 +44,7 @@ var T = {
 			'нижнему можно дать 160 МГц, верхнему 80 МГц'
 		],
 		mloDown: 'Сеть MLO сейчас не поднята.',
+		mloEdit: 'Имя и пароль сети MLO меняйте у сети 5 ГГц в списке ниже: там она показана выключенной, после «Сохранить и применить» настройки переходят в MLO.',
 		active: 'включён',
 		radios: 'Радио 5 ГГц сейчас',
 		ch: 'канал',
@@ -108,6 +109,7 @@ var T = {
 			'the lower one can take 160 MHz, the upper one 80 MHz'
 		],
 		mloDown: 'The MLO network is not up right now.',
+		mloEdit: 'Change the name and password of the MLO network on the 5 GHz network in the list below: it is shown as disabled there, after Save & Apply the settings go to MLO.',
 		active: 'active',
 		radios: '5 GHz radios now',
 		ch: 'channel',
@@ -167,6 +169,7 @@ var T = {
 			'低频射频可用 160 MHz，高频射频 80 MHz'
 		],
 		mloDown: 'MLO 网络当前未启动。',
+		mloEdit: 'MLO 网络的名称和密码请在下方列表中的 5 GHz 网络里修改：它在那里显示为已禁用，“保存并应用”后设置会同步到 MLO。',
 		active: '已启用',
 		radios: '当前 5 GHz 射频',
 		ch: '信道',
@@ -325,6 +328,9 @@ return baseclass.extend({
 		}
 		else if (mode == 'mlo' && !st.mlo_up) {
 			note = tx.mloDown;
+		}
+		else if (mode == 'mlo') {
+			note = tx.mloEdit;
 		}
 
 		var label = { single: tx.toSingle, split: tx.toSplit, mlo: tx.toMlo };

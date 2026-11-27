@@ -1,9 +1,20 @@
 #!/bin/sh /etc/rc.common
 # Restore the 5 GHz split (be7000-5g-split): RF lines, calibration and the
-# ath12k board_id option, before kmodloader (S10 boot) loads ath12k
+# ath12k board_id option, before kmodloader (S10 boot) loads ath12k.
+# The config trigger brings Wi-Fi settings saved in LuCI to the MLO network.
 
+USE_PROCD=1
 START=09
 
 boot() {
 	/usr/sbin/be7000-5g-split boot
+	start
+}
+
+start_service() {
+	:
+}
+
+service_triggers() {
+	procd_add_config_trigger "config.change" "wireless" /usr/sbin/be7000-5g-split sync
 }

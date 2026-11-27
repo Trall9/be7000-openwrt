@@ -8,10 +8,12 @@
 
 LIST=/etc/backup/installed_packages.txt
 DONE=/etc/backup/installed_packages.restored
+# встроенные пакеты, которые пользователь удалил (пишет
+# /lib/upgrade/be7000-removed-pkgs.sh при создании бэкапа) — удаляем снова
+RMLIST=/etc/backup/removed_packages.txt
+RMDONE=/etc/backup/removed_packages.done
 
-[ -s "$LIST" ] || exit 0
-# список старше текущей прошивки? восстанавливаем один раз на каждый список
-[ -f "$DONE" ] && cmp -s "$LIST" "$DONE" && exit 0
+[ -s "$LIST" ] || [ -s "$RMLIST" ] || exit 0
 # extroot настроен, но /overlay сейчас во флеше (диск не подключился или
 # be7000-extroot ещё переносит настройки) — не забиваем 20 МБ флеша пакетами
 EXT=$(uci -q get fstab.extroot.uuid)
@@ -20,6 +22,27 @@ if [ -n "$EXT" ] && [ "$(uci -q get fstab.extroot.enabled)" != 0 ] &&
 	logger -t be7000-pkg-restore "extroot не подключён — пакеты поставлю, когда /overlay будет на диске"
 	exit 0
 fi
+
+if [ -s "$RMLIST" ] && ! cmp -s "$RMLIST" "$RMDONE"; then
+	rm_pkgs=""
+	for p in $(cat "$RMLIST"); do
+		apk info -e "$p" >/dev/null 2>&1 || continue
+		# нужен другому пакету новой прошивки — не трогаем (apk del его не
+		# удалил бы, а обновил из фида)
+		apk info -r "$p" 2>/dev/null | grep -v 'is required by:' | grep -q . && continue
+		rm_pkgs="$rm_pkgs $p"
+	done
+	if [ -n "$rm_pkgs" ]; then
+		logger -t be7000-pkg-restore "удаляю снова:$rm_pkgs"
+		apk del $rm_pkgs >/tmp/be7000-pkg-remove.log 2>&1 ||
+			logger -p user.err -t be7000-pkg-restore "apk del с ошибкой (журнал /tmp/be7000-pkg-remove.log)"
+	fi
+	cp "$RMLIST" "$RMDONE"
+fi
+
+[ -s "$LIST" ] || exit 0
+# список старше текущей прошивки? восстанавливаем один раз на каждый список
+[ -f "$DONE" ] && cmp -s "$LIST" "$DONE" && exit 0
 
 pkgs=""
 for p in $(awk -F'\t' '$2 == "overlay" { print $1 }' "$LIST"); do

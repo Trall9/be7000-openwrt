@@ -1,0 +1,6 @@
+#!/bin/sh
+# LuCI: сессия 1 ч → 12 ч. Свой вариант владельца (не 3600) не трогаем.
+[ "$(uci -q get luci.sauth.sessiontime)" = "3600" ] || exit 0
+uci set luci.sauth.sessiontime='43200'
+uci commit luci
+exit 0

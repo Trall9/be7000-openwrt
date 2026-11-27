@@ -1,0 +1,93 @@
+#!/usr/bin/ucode
+// Keep the copies be7000-5g-split makes of a 5 GHz network in step with it.
+//
+// In MLO mode the network on air is <iface>_mlo over both radios, which
+// LuCI does not list; it shows only the parked per-radio copies <iface>
+// (upper radio) and <iface>_low (lower). A change of either copy goes to
+// the other (the one that differs from the last synced state wins, else
+// <iface>), then the name, password and the other options config_mlo_on
+// copied go to <iface>_mlo. In split mode the two copies are separate
+// networks on air and may differ on purpose, they are left alone.
+// Exit 0 when the config was changed and committed, 1 when nothing to do.
+// Run from the config trigger of /etc/init.d/be7000-5g-split.
+
+'use strict';
+
+import { cursor } from 'uci';
+
+// per radio or kept by be7000-5g-split itself
+const SKIP = [ 'device', 'disabled', 'ifname', 'macaddr',
+	'be7000_mlo', 'be7000_mlo_off', 'be7000_sync' ];
+// what config_mlo_on copies into the MLO twin
+const MLO = [ 'mode', 'ssid', 'key', 'network', 'hidden', 'isolate',
+	'macfilter', 'maclist', 'wmm' ];
+
+let c = cursor(), changed = false;
+
+function opts(s) {
+	let all = c.get_all('wireless', s), rv = {};
+	for (let k in sort(keys(all)))
+		if (substr(k, 0, 1) != '.' && !(k in SKIP))
+			rv[k] = all[k];
+	return rv;
+}
+
+// short stable fingerprint of the options, kept in be7000_sync
+function hash(o) {
+	let s = sprintf('%J', o), h = 5381;
+	for (let i = 0; i < length(s); i++)
+		h = (h * 33 + ord(s, i)) % 4294967296;
+	return sprintf('%08x', h);
+}
+
+function same(a, b) {
+	return sprintf('%J', a) == sprintf('%J', b);
+}
+
+// make the options of dst (only the ones in list, or all but SKIP) equal src
+function copy(src, dst, list) {
+	let from = opts(src), to = opts(dst);
+	for (let k in (list ?? keys(to)))
+		if (!(k in from) && (k in to)) {
+			c.delete('wireless', dst, k);
+			changed = true;
+		}
+	for (let k in (list ?? keys(from)))
+		if ((k in from) && !same(from[k], to[k])) {
+			c.set('wireless', dst, k, from[k]);
+			changed = true;
+		}
+}
+
+function exists(s) {
+	return c.get('wireless', s) == 'wifi-iface';
+}
+
+c.foreach('wireless', 'wifi-iface', function(s) {
+	let low = s['.name'], m = match(low, /^(.+)_low$/);
+	if (!m || !exists(m[1]) || c.get('wireless', m[1] + '_mlo', 'be7000_mlo') != '1')
+		return;
+	let up = m[1], hu = hash(opts(up)), hl = hash(opts(low)),
+	    base = c.get('wireless', low, 'be7000_sync');
+	if (hu != hl) {
+		if (hl != base && hu == base)
+			copy(low, up);
+		else
+			copy(up, low);
+		hu = hash(opts(up));
+	}
+	if (base != hu) {
+		c.set('wireless', low, 'be7000_sync', hu);
+		changed = true;
+	}
+});
+
+c.foreach('wireless', 'wifi-iface', function(s) {
+	let m = match(s['.name'], /^(.+)_mlo$/);
+	if (s.be7000_mlo == '1' && m && exists(m[1]))
+		copy(m[1], s['.name'], MLO);
+});
+
+if (changed)
+	c.commit('wireless');
+exit(changed ? 0 : 1);
