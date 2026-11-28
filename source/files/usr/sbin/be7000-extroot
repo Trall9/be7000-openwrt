@@ -9,6 +9,12 @@
 #   be7000-extroot list [--json]
 #   be7000-extroot use <раздел> --yes      форматировать в ext4 и перенести
 #   be7000-extroot use <раздел> --keep     перенести на готовый ext4 без форматирования
+#   be7000-extroot disks [--json]          целые диски для prepare
+#   be7000-extroot prepare <диск> --yes [--split] [--swap]
+#                                          стереть диск, разметить GPT и перенести:
+#                                          весь диск ext4 под /overlay, или --split
+#                                          8 ГБ под /overlay + остальное ext4 в
+#                                          /mnt/data; --swap — ещё swap 1 ГБ
 #   be7000-extroot revert --yes [--reboot] вернуть /overlay во флеш
 #   be7000-extroot boot                    из /etc/init.d/be7000-extroot
 #
@@ -24,7 +30,12 @@
 # поставленное пользователем возвращает be7000-pkg-restore.
 
 LABEL=be7000_overlay
+DATA_LABEL=be7000_data
+SWAP_LABEL=be7000_swap
 MIN_MB=256
+SPLIT_MIN_MB=16384   # --split: диск от 16 ГБ
+SPLIT_OVERLAY_MB=8192
+SWAP_MB=1024
 MNT=/tmp/extroot.$$
 REFRESHED=/etc/be7000-extroot.refreshed
 LOST=/etc/be7000-extroot.lost  # во внутреннем томе: сколько раз подряд диск пропадал
@@ -123,6 +134,22 @@ candidates() {
 		case "$d" in /dev/sd[a-z]|/dev/mmcblk[0-9]) has_partitions "$d" && continue ;; esac
 		echo "$d"
 	done
+}
+
+part_dev() {
+	case "$1" in /dev/mmcblk*) echo "$1p$2" ;; *) echo "$1$2" ;; esac
+}
+
+# Почему целый диск нельзя стереть и разметить (пусто — можно)
+why_disk_unusable() {
+	local d="$1" sz
+	case "$(current_overlay_device)" in "$d"*) echo "на нём сейчас /overlay"; return ;; esac
+	dev_in_use "$d" && { echo "смонтирован"; return; }
+	children_busy "$d" && { echo "разделы смонтированы"; return; }
+	command -v sfdisk >/dev/null || { echo "нет sfdisk (apk add sfdisk)"; return; }
+	command -v mkfs.ext4 >/dev/null || { echo "нет mkfs.ext4 (apk add e2fsprogs)"; return; }
+	sz="$(size_mb "$d")"
+	[ "${sz:-0}" -ge $MIN_MB ] || { echo "меньше $MIN_MB МБ"; return; }
 }
 
 model_of() {
@@ -281,6 +308,102 @@ cmd_use() {
 	return 0
 }
 
+cmd_disks() {
+	local d p first=1 why parts
+	[ "$JSON" = 1 ] && printf '['
+	for d in /dev/sd[a-z] /dev/mmcblk[0-9]; do
+		[ -b "$d" ] || continue
+		[ -n "$(size_mb "$d")" ] || continue   # нет носителя (пустой кардридер)
+		parts=""
+		for p in "$d"[0-9]* "$d"p[0-9]*; do
+			[ -b "$p" ] || continue
+			parts="${parts:+$parts, }${p#/dev/} $(blk_field "$p" TYPE | tr -d '"\\') $(size_mb "$p") МБ"
+		done
+		why="$(why_disk_unusable "$d")"
+		if [ "$JSON" = 1 ]; then
+			[ $first = 1 ] || printf ','
+			printf '{"device":"%s","size_mb":%s,"model":"%s","parts":"%s","busy":"%s"}' \
+				"$d" "$(size_mb "$d")" "$(model_of "$d")" "$parts" "$why"
+		else
+			echo "$d  $(size_mb "$d") МБ  $(model_of "$d")  [${parts:-нет разделов}]${why:+  — $why}"
+		fi
+		first=0
+	done
+	[ "$JSON" = 1 ] && printf ']\n'
+	[ "$JSON" = 1 ] || [ $first = 0 ] || echo "дисков нет; вставьте диск в USB"
+}
+
+# Стереть диск, разметить GPT и перенести /overlay на новый раздел.
+# Своп и раздел под файлы подключаются по меткам: в fstab anon_mount и
+# anon_swap выключены.
+cmd_prepare() {
+	local disk="$1" sz why n=1 spec ov sw="" data="" extra
+	[ -n "$disk" ] || die "использование: be7000-extroot prepare <диск> --yes [--split] [--swap]"
+	case "$disk" in /dev/sd[a-z]|/dev/mmcblk[0-9]) ;; *) die "$disk — не целый диск (нужен /dev/sdX)" ;; esac
+	[ -b "$disk" ] || die "$disk — не блочное устройство"
+	why="$(why_disk_unusable "$disk")"
+	[ -z "$why" ] || die "$disk не подходит: $why"
+	sz="$(size_mb "$disk")"
+	[ "$SPLIT" = 1 ] && [ "$sz" -lt $SPLIT_MIN_MB ] && die "раздел под файлы — только на диске от $((SPLIT_MIN_MB / 1024)) ГБ"
+	[ "$SWAP" = 1 ] && [ "$sz" -lt $((MIN_MB + SWAP_MB)) ] && die "для swap диск мал"
+	if [ "$YES" != 1 ]; then
+		echo "Диск $disk будет стёрт целиком, все разделы на нём пропадут."
+		echo "Запустите снова с --yes."
+		exit 1
+	fi
+
+	spec="label: gpt"
+	if [ "$SWAP" = 1 ]; then
+		spec="$spec\nsize=${SWAP_MB}MiB, type=S, name=$SWAP_LABEL"
+		sw="$(part_dev "$disk" $n)"; n=$((n + 1))
+	fi
+	if [ "$SPLIT" = 1 ]; then
+		spec="$spec\nsize=${SPLIT_OVERLAY_MB}MiB, type=L, name=$LABEL"
+		ov="$(part_dev "$disk" $n)"; n=$((n + 1))
+		spec="$spec\ntype=L, name=$DATA_LABEL"
+		data="$(part_dev "$disk" $n)"
+	else
+		spec="$spec\ntype=L, name=$LABEL"
+		ov="$(part_dev "$disk" $n)"
+	fi
+
+	echo "Размечаю $disk"
+	printf '%b\n' "$spec" | sfdisk -q --wipe always --wipe-partitions always "$disk" ||
+		die "разметка не удалась"
+	for n in 1 2 3 4 5 6 7 8 9 10; do
+		[ -b "$ov" ] && break
+		sleep 1
+	done
+	[ -b "$ov" ] || die "раздел $ov не появился после разметки"
+
+	if [ -n "$sw" ]; then
+		echo "Создаю swap на $sw"
+		mkswap -L "$SWAP_LABEL" "$sw" >/dev/null || die "mkswap не удалось"
+	fi
+	echo "Форматирую $ov в ext4 (под /overlay)"
+	mkfs.ext4 -q -F -L "$LABEL" "$ov" || die "mkfs.ext4 $ov не удалось"
+	if [ -n "$data" ]; then
+		echo "Форматирую $data в ext4 (под файлы, /mnt/data)"
+		mkfs.ext4 -q -F -m 0 -L "$DATA_LABEL" "$data" || die "mkfs.ext4 $data не удалось"
+	fi
+	# обе секции пишем всегда: повторная разметка без swap/раздела под файлы их выключит
+	extra="set fstab.be7000_swap=swap
+set fstab.be7000_swap.label='$SWAP_LABEL'
+set fstab.be7000_swap.enabled='$SWAP'
+set fstab.be7000_data=mount
+set fstab.be7000_data.target='/mnt/data'
+set fstab.be7000_data.label='$DATA_LABEL'
+set fstab.be7000_data.options='rw,noatime'
+set fstab.be7000_data.enabled='$SPLIT'
+commit fstab
+"
+	printf '%s' "$extra" | with_internal || die "не записать fstab во внутренний том"
+	[ "$(current_overlay_device)" = "$(rootfs_data_dev)" ] ||
+		printf '%s' "$extra" | uci -q batch
+
+	cmd_use "$ov" keep
+}
+
 # Копия настроек с диска во внутренний том при возврате
 copy_settings_back() {
 	local dir="$1" f
@@ -425,11 +548,13 @@ cmd_guard() {
 
 ACTION="$1"
 [ $# -gt 0 ] && shift
-YES=0; REBOOT=0; JSON=0; MODE=""; DEV=""
+YES=0; REBOOT=0; JSON=0; MODE=""; DEV=""; SPLIT=0; SWAP=0
 for a in "$@"; do
 	case "$a" in
 	--yes) YES=1; MODE="${MODE:-format}" ;;
 	--keep) MODE=keep ;;
+	--split) SPLIT=1 ;;
+	--swap) SWAP=1 ;;
 	--reboot) REBOOT=1 ;;
 	--json) JSON=1 ;;
 	*) DEV="$a" ;;
@@ -440,11 +565,13 @@ case "$ACTION" in
 status) cmd_status ;;
 list)   cmd_list ;;
 use)    cmd_use "$DEV" "$MODE" ;;
+disks)  cmd_disks ;;
+prepare) cmd_prepare "$DEV" ;;
 revert) cmd_revert ;;
 boot)   cmd_boot ;;
 guard)  cmd_guard ;;
 *)
-	echo "использование: be7000-extroot {status|list|use <раздел> --yes|--keep|revert --yes [--reboot]} [--json]" >&2
+	echo "использование: be7000-extroot {status|list|disks|use <раздел> --yes|--keep|prepare <диск> --yes [--split] [--swap]|revert --yes [--reboot]} [--json]" >&2
 	exit 1
 	;;
 esac

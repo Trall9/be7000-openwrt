@@ -36,25 +36,44 @@ function query(sub) {
 	};
 }
 
+// форматирование и копирование дольше таймаута запроса LuCI — фоновая задача
+function start(args) {
+	if (access(JOB_LOG) && !access(JOB_RC))
+		return { ok: false, output: 'перенос уже идёт' };
+	unlink(JOB_RC);
+	let cmd = `${shellquote(BIN)} ${join(' ', map(args, (a) => shellquote(a)))}`;
+	let fd = popen(`(${cmd} >${JOB_LOG} 2>&1; echo $? >${JOB_RC}) </dev/null >/dev/null 2>&1 &`, 'r');
+	if (fd)
+		fd.close();
+	return { ok: true, started: true };
+}
+
 return {
 	'be7000-storage': {
 		status: query('status'),
 		list: query('list'),
+		disks: query('disks'),
 		use: {
 			args: { device: '', keep: false },
 			call: function(req) {
 				let dev = req.args?.device ?? '';
 				if (!match(dev, /^\/dev\/(sd[a-z][0-9]*|mmcblk[0-9](p[0-9]+)?)$/))
 					return { ok: false, output: 'неверное устройство' };
-				if (access(JOB_LOG) && !access(JOB_RC))
-					return { ok: false, output: 'перенос уже идёт' };
-				unlink(JOB_RC);
-				// форматирование и копирование дольше таймаута запроса LuCI
-				let cmd = `${shellquote(BIN)} use ${shellquote(dev)} ${req.args?.keep ? '--keep' : '--yes'}`;
-				let fd = popen(`(${cmd} >${JOB_LOG} 2>&1; echo $? >${JOB_RC}) </dev/null >/dev/null 2>&1 &`, 'r');
-				if (fd)
-					fd.close();
-				return { ok: true, started: true };
+				return start([ 'use', dev, req.args?.keep ? '--keep' : '--yes' ]);
+			}
+		},
+		prepare: {
+			args: { device: '', split: false, swap: false },
+			call: function(req) {
+				let dev = req.args?.device ?? '';
+				if (!match(dev, /^\/dev\/(sd[a-z]|mmcblk[0-9])$/))
+					return { ok: false, output: 'неверный диск' };
+				let args = [ 'prepare', dev, '--yes' ];
+				if (req.args?.split)
+					push(args, '--split');
+				if (req.args?.swap)
+					push(args, '--swap');
+				return start(args);
 			}
 		},
 		job: {

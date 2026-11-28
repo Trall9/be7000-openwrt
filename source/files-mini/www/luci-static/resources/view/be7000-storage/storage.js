@@ -11,6 +11,9 @@ var callStatus = rpc.declare({ object: 'be7000-storage', method: 'status' });
 var callList = rpc.declare({ object: 'be7000-storage', method: 'list' });
 var callUse = rpc.declare({ object: 'be7000-storage', method: 'use', params: [ 'device', 'keep' ] });
 var callRevert = rpc.declare({ object: 'be7000-storage', method: 'revert' });
+var callDisks = rpc.declare({ object: 'be7000-storage', method: 'disks' });
+var callPrepare = rpc.declare({ object: 'be7000-storage', method: 'prepare', params: [ 'device', 'split', 'swap' ] });
+var SPLIT_MIN_MB = 16384;
 var callJob = rpc.declare({ object: 'be7000-storage', method: 'job' });
 var callReboot = rpc.declare({ object: 'system', method: 'reboot' });
 
@@ -42,7 +45,8 @@ return view.extend({
 	load: function() {
 		return Promise.all([
 			L.resolveDefault(callStatus(), {}),
-			L.resolveDefault(callList(), {})
+			L.resolveDefault(callList(), {}),
+			L.resolveDefault(callDisks(), {})
 		]);
 	},
 
@@ -100,6 +104,43 @@ return view.extend({
 		]);
 	},
 
+	handlePrepare: function(d) {
+		var self = this;
+		var canSplit = d.size_mb >= SPLIT_MIN_MB;
+		var whole = E('input', { 'type': 'radio', 'name': 'be-layout', 'id': 'be-whole', 'checked': '' });
+		var split = E('input', { 'type': 'radio', 'name': 'be-layout', 'id': 'be-split', 'disabled': canSplit ? null : '' });
+		var swap = E('input', { 'type': 'checkbox', 'id': 'be-swap' });
+		var agree = E('input', { 'type': 'checkbox', 'id': 'be-agree' });
+		var go = E('button', { 'class': 'btn cbi-button-negative', 'disabled': '' }, _('Стереть диск и перенести'));
+		agree.addEventListener('change', function() { go.disabled = !agree.checked; });
+		go.addEventListener('click', function() {
+			ui.showModal(_('Готовлю диск'), [ E('p', { 'class': 'spinning' }, _('Разметка, форматирование и копирование, это может занять пару минут')) ]);
+			callPrepare(d.device, split.checked, swap.checked).then(function(r) {
+				return (r && r.started) ? waitJob() : r;
+			}).then(function(r) {
+				if (r && r.ok)
+					self.done(_('Диск %s размечен, /overlay переедет на него после перезагрузки.').format(d.device));
+				else {
+					ui.hideModal();
+					ui.addNotification(null, E('pre', {}, (r && r.output) || _('Не получилось')), 'danger');
+				}
+			});
+		});
+		ui.showModal(_('Подготовить диск %s').format(d.device), [
+			E('p', { 'class': 'alert-message warning' }, [ d.device, d.model ? ' — ' + d.model : '', ', ', mb(d.size_mb * 1024), d.parts ? E('br') : '', d.parts ? _('Сейчас на нём: %s').format(d.parts) : '' ]),
+			E('p', {}, [ E('strong', {}, _('Диск будет стёрт целиком, все разделы и файлы на нём пропадут.')), ' ', _('Роутер сам разметит его и отформатирует в ext4.') ]),
+			E('p', {}, [ whole, ' ', E('label', { 'for': 'be-whole' }, _('Весь диск под /overlay — для флешки')) ]),
+			E('p', {}, [ split, ' ', E('label', { 'for': 'be-split' }, canSplit
+				? _('8 ГБ под /overlay, остальное — раздел ext4 под файлы и торренты в /mnt/data')
+				: _('8 ГБ под /overlay + раздел под файлы — для дисков от 16 ГБ')) ]),
+			E('p', {}, [ swap, ' ', E('label', { 'for': 'be-swap' }, _('Ещё раздел подкачки (swap) 1 ГБ')) ]),
+			E('p', { 'class': 'cbi-value-description' }, _('Swap обычно не нужен: в роутере уже есть сжатая подкачка в памяти (zram). Раздел на диске пригодится только под тяжёлые программы, а флешку он изнашивает.')),
+			E('p', {}, _('Изменение вступит в силу после перезагрузки. Пока /overlay на диске, не отключайте диск от работающего роутера.')),
+			E('p', {}, [ agree, ' ', E('label', { 'for': 'be-agree' }, _('Я понимаю, что всё на %s пропадёт').format(d.device)) ]),
+			E('div', { 'class': 'right' }, [ E('button', { 'class': 'btn', 'click': ui.hideModal }, _('Отмена')), ' ', go ])
+		]);
+	},
+
 	handleRevert: function() {
 		var self = this;
 		ui.showModal(_('Вернуть /overlay во флеш-память'), [
@@ -124,6 +165,7 @@ return view.extend({
 		var self = this;
 		var st = (data[0] && data[0].data) || {};
 		var disks = (data[1] && data[1].data) || [];
+		var whole = (data[2] && data[2].data) || [];
 		var state = STATE[st.state] || [ '', '—' ];
 		var configured = st.state && st.state != 'off' && st.state != 'fallback';
 
@@ -157,6 +199,27 @@ return view.extend({
 			]));
 		});
 
+		var wtable = E('table', { 'class': 'table' }, [
+			E('tr', { 'class': 'tr table-titles' }, [
+				E('th', { 'class': 'th' }, _('Диск')),
+				E('th', { 'class': 'th' }, _('Размер')),
+				E('th', { 'class': 'th' }, _('Модель')),
+				E('th', { 'class': 'th' }, _('Разделы')),
+				E('th', { 'class': 'th' }, '')
+			])
+		]);
+		whole.forEach(function(d) {
+			wtable.appendChild(E('tr', { 'class': 'tr' }, [
+				E('td', { 'class': 'td' }, d.device),
+				E('td', { 'class': 'td' }, mb(d.size_mb * 1024)),
+				E('td', { 'class': 'td' }, d.model || '—'),
+				E('td', { 'class': 'td' }, d.parts || _('нет')),
+				E('td', { 'class': 'td' }, d.busy
+					? E('span', { 'class': 'cbi-value-description' }, d.busy)
+					: E('button', { 'class': 'btn cbi-button-negative', 'click': function() { self.handlePrepare(d); } }, _('Подготовить диск')))
+			]));
+		});
+
 		return E('div', { 'id': 'be-storage' }, [
 			E('h2', {}, _('Оверлей на USB-диске')),
 			E('div', { 'class': 'cbi-map-descr' }, _('В /overlay хранится всё, что роутер помнит между перезагрузками: настройки, установленные пакеты, списки. Во флеш-памяти под него около 20 МБ. Его можно перенести на раздел USB-диска с файловой системой ext4 (extroot), тогда места будет столько, сколько на разделе.')),
@@ -170,10 +233,14 @@ return view.extend({
 			]),
 			configured ? E('p', {}, E('button', { 'class': 'btn cbi-button-reset', 'click': function() { self.handleRevert(); } }, _('Вернуть /overlay во флеш-память'))) : '',
 
+			E('h3', {}, _('Диски')),
+			E('div', { 'class': 'cbi-section-descr' }, _('Самый простой путь: «Подготовить диск» сотрёт его, разметит и перенесёт /overlay — ничего не нужно готовить на компьютере.')),
+			whole.length ? wtable : E('p', {}, _('Дисков нет. Вставьте диск в порт USB и обновите страницу.')),
+
 			E('h3', {}, _('Разделы')),
 			disks.length ? table : E('p', {}, _('Дисков нет. Вставьте диск в порт USB и обновите страницу.')),
 			E('div', { 'class': 'cbi-section-descr' }, [
-				E('p', {}, _('Нужен отдельный раздел от 256 МБ. NTFS, exFAT и FAT не подходят: на них нет прав доступа Linux, которые нужны системе. Раздел с данными (например, NTFS с фильмами) форматировать не нужно — создайте рядом второй раздел, например в «Управлении дисками» Windows, и выберите его здесь.')),
+				E('p', {}, _('Нужен отдельный раздел от 256 МБ. NTFS, exFAT и FAT не подходят: на них нет прав доступа Linux, которые нужны системе. Раздел с данными (например, NTFS с фильмами) форматировать не нужно — создайте рядом второй раздел, например в «Управлении дисками» Windows, и выберите его здесь. Если диск не жалко стереть, проще кнопка «Подготовить диск» выше.')),
 				E('p', {}, _('Обновление прошивки с сохранением настроек работает: при первой загрузке новой версии настройки сами переедут на диск, роутер перезагрузится ещё раз, затем вернутся пакеты, которые вы ставили. Старое содержимое диска остаётся в каталоге upper.prev.')),
 				E('p', {}, _('Если диск не подключится при загрузке, роутер запустится с настройками из флеш-памяти — теми, что были на момент переноса.'))
 			])

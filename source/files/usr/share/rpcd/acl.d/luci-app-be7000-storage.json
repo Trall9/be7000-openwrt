@@ -3,12 +3,12 @@
 		"description": "Move /overlay onto a USB disk (extroot)",
 		"read": {
 			"ubus": {
-				"be7000-storage": [ "status", "list", "job" ]
+				"be7000-storage": [ "status", "list", "disks", "job" ]
 			}
 		},
 		"write": {
 			"ubus": {
-				"be7000-storage": [ "use", "revert" ],
+				"be7000-storage": [ "use", "prepare", "revert" ],
 				"system": [ "reboot" ]
 			}
 		}
